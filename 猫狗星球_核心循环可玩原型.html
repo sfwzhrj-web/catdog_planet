@@ -1446,12 +1446,12 @@ function parseRegionName(spot){
   return tag;
 }
 const REGION_DEFS={
-  '河北':{id:'r_hebei',em:'🏞️',domestic:true},'山西':{id:'r_shanxi',em:'🏯',domestic:true},
-  '辽宁':{id:'r_liaoning',em:'🐎',domestic:true},'吉林':{id:'r_jilin',em:'🏺',domestic:true},
-  '黑龙江':{id:'r_heilongjiang',em:'🔔',domestic:true},'江苏':{id:'r_jiangsu',em:'🏡',domestic:true},
-  '安徽':{id:'r_anhui',em:'⚖️',domestic:true},'福建':{id:'r_fujian',em:'🧭',domestic:true},
-  '江西':{id:'r_jiangxi',em:'📜',domestic:true},'山东':{id:'r_shandong',em:'📜',domestic:true},
-  '河南':{id:'r_henan',em:'🪨',domestic:true},'湖北':{id:'r_hubei',em:'🎵',domestic:true},
+  '河北':{id:'r_hebei',em:'🏞️',art:'猫狗星球_省区美术/prov_hebei.png',domestic:true},'山西':{id:'r_shanxi',em:'🏯',art:'猫狗星球_省区美术/prov_shanxi.png',domestic:true},
+  '辽宁':{id:'r_liaoning',em:'🐎',art:'猫狗星球_省区美术/prov_liaoning.png',domestic:true},'吉林':{id:'r_jilin',em:'🏺',art:'猫狗星球_省区美术/prov_jilin.png',domestic:true},
+  '黑龙江':{id:'r_heilongjiang',em:'🔔',art:'猫狗星球_省区美术/prov_heilongjiang.png',domestic:true},'江苏':{id:'r_jiangsu',em:'🏡',art:'猫狗星球_省区美术/prov_jiangsu.png',domestic:true},
+  '安徽':{id:'r_anhui',em:'⚖️',art:'猫狗星球_省区美术/prov_anhui.png',domestic:true},'福建':{id:'r_fujian',em:'🧭',art:'猫狗星球_省区美术/prov_fujian.png',domestic:true},
+  '江西':{id:'r_jiangxi',em:'📜',art:'猫狗星球_省区美术/prov_jiangxi.png',domestic:true},'山东':{id:'r_shandong',em:'📜',art:'猫狗星球_省区美术/prov_shandong.png',domestic:true},
+  '河南':{id:'r_henan',em:'🪨',art:'猫狗星球_省区美术/prov_henan.png',domestic:true},'湖北':{id:'r_hubei',em:'🎵',art:'猫狗星球_省区美术/prov_hubei.png',domestic:true},
   '湖南':{id:'r_hunan',em:'📜',domestic:true},'广东':{id:'r_guangdong',em:'🪨',domestic:true},
   '海南':{id:'r_hainan',em:'🐚',domestic:true},'贵州':{id:'r_guizhou',em:'🥁',domestic:true},
   '云南':{id:'r_yunnan',em:'🪬',domestic:true},'甘肃':{id:'r_gansu',em:'🏜️',domestic:true},
@@ -1462,7 +1462,7 @@ const REGION_DEFS={
   '天津':{id:'r_tianjin',em:'⚖️',domestic:true},'上海':{id:'r_shanghai',em:'🏺',domestic:true},
   '重庆':{id:'r_chongqing',em:'🏹',domestic:true},'中国香港':{id:'r_hk',em:'🗼',domestic:true},
   '中国澳门':{id:'r_macau',em:'🧱',domestic:true},'浙江':{id:'r_zhejiang',em:'🌊',domestic:true},
-  '四川':{id:'r_sichuan',em:'🐼',domestic:true},'陕西':{id:'r_shaanxi',em:'🪔',domestic:true},
+  '四川':{id:'r_sichuan',em:'🐼',art:'猫狗星球_省区美术/prov_sichuan.png',domestic:true},'陕西':{id:'r_shaanxi',em:'🪔',domestic:true},
   '埃及':{id:'r_egypt',em:'🔺',domestic:false},'希腊':{id:'r_greece',em:'🏛️',domestic:false},
   '意大利':{id:'r_italy',em:'🏛️',domestic:false},'日本':{id:'r_japan',em:'🏯',domestic:false},
   '柬埔寨':{id:'r_cambodia',em:'🛕',domestic:false},'土耳其':{id:'r_turkey',em:'📜',domestic:false},
@@ -1505,8 +1505,12 @@ const REGION_BIOME = {
 function biomeOf(rn){ return BIOME_ART[REGION_BIOME[rn]] || ''; }
 // 渲染目的地/省份缩略图（写实地貌照片），无图回退 emoji
 function biomeThumb(rn, em, cls){
-  const bm=biomeOf(rn);
-  return bm ? `<img class="${cls||'biome-art'}" src="${bm}" alt="${rn}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">` : `<span class="em">${em}</span>`;
+  // 支持传入 region 对象（含 art 省区专属 CG）或纯字符串名称
+  const reg=typeof rn==='object'?rn:null;
+  const name=reg?reg.name:rn;
+  if(reg && reg.art) return `<img class="${cls||'biome-art'}" src="${reg.art}" alt="${name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">`;
+  const bm=biomeOf(name);
+  return bm ? `<img class="${cls||'biome-art'}" src="${bm}" alt="${name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">` : `<span class="em">${em}</span>`;
 }
 function itemIcon(it){ return it.art?`<img class="item-art" src="${it.art}" alt="${it.name}" onerror="this.outerHTML='${it.em}'">`:it.em; }
 function solarIcon(t){ return t.art?`<img class="item-art" src="${t.art}" alt="${t.name}" onerror="this.outerHTML='${t.em}'">`:t.em; }
@@ -2180,7 +2184,7 @@ function decideHTML(){
       const dtxt=dmin===dmax?`深度${dmin}`:`深度${dmin}–${dmax}`;
       const sel = (!draft.randomDest && draft.region===r.id) ? 'on' : '';
       d+=`<div class="dest ${sel}" data-region="${r.id}">
-        ${biomeThumb(r.name, r.em)}
+        ${biomeThumb(r, r.em)}
         <div class="info"><div class="t">${r.name}${(activeSeason().featured||[]).indexOf(r.id)>=0?' <span class="chip season-on" style="font-size:9px;padding:1px 5px">时令</span>':''}</div>
         <div class="d">${r.spotIds.length} 个目的地 · ${dtxt}</div></div></div>`;
     });
