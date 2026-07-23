@@ -1,0 +1,4 @@
+# 不需要打包进 Git 的记录文件（如有）
+.DS_Store
+Thumbs.db
+*.log
