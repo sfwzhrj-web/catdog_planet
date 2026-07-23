@@ -1519,7 +1519,7 @@ DEST.forEach(d=>{
   if(d.secret) return;                       // 隐藏秘境独立，不归入省份/国家
   const rn=parseRegionName(d); const def=REGION_DEFS[rn]; if(!def){ console.warn('未匹配省份/国家:',rn,d.id); return; }
   d.region=rn; d.regionId=def.id;
-  if(!_rmap[def.id]) _rmap[def.id]={id:def.id,name:rn,em:def.em,kind:def.domestic?'cn':'world',domestic:def.domestic,spotIds:[]};
+  if(!_rmap[def.id]) _rmap[def.id]={id:def.id,name:rn,em:def.em,art:def.art,kind:def.domestic?'cn':'world',domestic:def.domestic,spotIds:[]};
   _rmap[def.id].spotIds.push(d.id);
 });
 const REGIONS=Object.values(_rmap);
