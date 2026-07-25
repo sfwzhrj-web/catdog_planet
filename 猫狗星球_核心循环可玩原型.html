@@ -53,6 +53,11 @@
     background:radial-gradient(ellipse, rgba(60,50,40,.22), transparent 72%); filter:blur(3px);}
   .scene .pet{position:absolute; bottom:38px; left:50%; transform:translateX(-50%);
     animation:bob 3.2s ease-in-out infinite;}
+  /* 首页旅伴展示框：旧陈列架移至后续装饰系统，中央区域固定为头像安全区。 */
+  .scene.companion-showcase .shelf{display:none;}
+  .scene.companion-showcase .window-light{z-index:0;}
+  .scene.companion-showcase .floor-shadow{z-index:1;}
+  .scene.companion-showcase .pet{z-index:3; isolation:isolate;}
   @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0) rotate(-2deg);}50%{transform:translateX(-50%) translateY(-9px) rotate(2deg);}}
   .btn{border:none; border-radius:14px; padding:13px 18px; font-size:15px; font-weight:700;
     background:var(--accent); color:#fff; width:100%; cursor:pointer; transition:.15s; box-shadow:0 4px 0 #c8844f;}
@@ -2105,7 +2110,7 @@ function homeHTML(){
   }
   const _season=seasonOf((getCurrentTerm()||{m:today().getMonth()+1}).m);
   const _skin={'春':'linear-gradient(160deg,#eaf6e7,#f4faf0)','夏':'linear-gradient(160deg,#e6f1f8,#eef6fb)','秋':'linear-gradient(160deg,#fbf0dd,#fdf6ec)','冬':'linear-gradient(160deg,#eef2f7,#f5f8fb)'}[_season];
-  h+=`<div class="card"><div class="scene" style="background:${_skin}">
+  h+=`<div class="card"><div class="scene companion-showcase" style="background:${_skin}">
       <div class="window-light"></div>
       <div class="shelf"></div>
       <div class="floor-shadow"></div>
