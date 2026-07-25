@@ -58,6 +58,17 @@
   .scene.companion-showcase .window-light{z-index:0;}
   .scene.companion-showcase .floor-shadow{z-index:1;}
   .scene.companion-showcase .pet{z-index:3; isolation:isolate;}
+  /* 衣橱小窝：头像固定居中，已穿戴饰品在安全区内独立摆放。 */
+  .scene.wardrobe-scene .shelf{display:none;}
+  .scene.wardrobe-scene .pet{z-index:3; isolation:isolate; pointer-events:none;}
+  .wardrobe-decoration-layer{position:absolute; inset:0; z-index:4; pointer-events:none;}
+  .wardrobe-decoration{position:absolute; width:46px; height:46px; display:grid; place-items:center; padding:0; border:0; background:transparent;
+    transform:translate(-50%,-50%); touch-action:none; cursor:grab; user-select:none; pointer-events:auto;
+    filter:drop-shadow(0 3px 4px rgba(60,45,30,.24)); transition:filter .15s, transform .15s;}
+  .wardrobe-decoration img{display:block; width:46px; height:46px; object-fit:contain; pointer-events:none;}
+  .wardrobe-decoration:focus{outline:none;}
+  .wardrobe-decoration.dragging{cursor:grabbing; transform:translate(-50%,-50%) scale(1.08); filter:drop-shadow(0 8px 8px rgba(60,45,30,.28));}
+  .wardrobe-hint{margin:10px 0 0; font-size:12px; color:var(--muted); text-align:center;}
   @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0) rotate(-2deg);}50%{transform:translateX(-50%) translateY(-9px) rotate(2deg);}}
   .btn{border:none; border-radius:14px; padding:13px 18px; font-size:15px; font-weight:700;
     background:var(--accent); color:#fff; width:100%; cursor:pointer; transition:.15s; box-shadow:0 4px 0 #c8844f;}
@@ -947,14 +958,25 @@ const PETS = [
 ];
 // 玩家未选宠时强制进入选宠页；选宠后 companion 可为 emoji 或 data:image 头像
 let pendingPet=null, pendingImg=null;
-function companionHTML(){
+function companionHTML(showDecor=true){
   let pet;
   if(typeof S.companion==='string' && S.companion.indexOf('data:image')===0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴">`;
   else if(typeof S.companion==='string' && S.companion.indexOf('.png')>=0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴" onerror="this.outerHTML='<span class=&quot;cmp-em&quot;>🐱</span>'">`;
   else pet=`<span class="cmp-em">${S.companion||'🐱'}</span>`;
   // L8 单宠装扮：已装备的装扮作为小徽章环绕旅伴（纯表达，非任务）
-  const eq=(S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</span>`; }).join('');
+  const eq=showDecor?(S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</span>`; }).join(''):'';
   return `<span class="cmp-wrap">${pet}${eq}</span>`;
+}
+const DECOR_DEFAULT_POS={scarf:{x:72,y:67},hat:{x:30,y:30},glasses:{x:70,y:31},flower:{x:29,y:64},lantern:{x:72,y:42},crown:{x:50,y:22}};
+function decorPosition(id){
+  const p=(S.decorPositions&&S.decorPositions[id])||DECOR_DEFAULT_POS[id]||{x:50,y:25};
+  return {x:Math.max(10,Math.min(90,Number(p.x)||50)),y:Math.max(12,Math.min(88,Number(p.y)||25))};
+}
+function wardrobeDecorHTML(){
+  return (S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{
+    const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
+    return `<button class="wardrobe-decoration" type="button" data-decor-id="${id}" aria-label="拖动摆放${c.name}" title="拖动摆放 ${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</button>`;
+  }).join('');
 }
 // 伴侣/好友头像统一渲染：emoji 字符串、.png CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
 const FRIEND_ART = {'🐶':'猫狗星球_遇友美术/dog.png', '🐰':'猫狗星球_遇友美术/rabbit.png', '🐱':'猫狗星球_宠物美术/c_orange.png'};
@@ -1898,7 +1920,7 @@ const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1
   houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
   chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
   travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
-  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], visitorToday:null, titles:[], currentTitle:null, souvenirs:[],
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[],
   friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false };
 
 // 存档消毒：强制所有字段按 STARTER 类型对齐（防旧版/残缺 localStorage 数据崩溃）
@@ -1922,6 +1944,7 @@ function sanitize(s){
   if(!Array.isArray(s.souvenirs)) s.souvenirs=[];
   if(!Array.isArray(s.cosmetics)) s.cosmetics=[];
   if(!Array.isArray(s.equipped)) s.equipped=[];
+  if(typeof s.decorPositions!=='object'||s.decorPositions===null||Array.isArray(s.decorPositions)) s.decorPositions={};
   if(typeof s.friends!=='object'||Array.isArray(s.friends)) s.friends={dou:{name:'豆豆',companion:'🐶',since:1,met:false},hua:{name:'花花',companion:'🐰',since:1,met:false}};
   if(typeof s.metCount!=='number') s.metCount=0;
   if(!Array.isArray(s.photos)) s.photos=[];
@@ -2409,6 +2432,34 @@ function bind(){
     if(i>=0){ eq.splice(i,1); toast('已脱下'+COSMETICS.find(c=>c.id===id).name); }
     else { eq.push(id); toast('穿上了'+COSMETICS.find(c=>c.id===id).name+' ✨'); }
     S.equipped=eq; save(); render();
+  });
+  document.querySelectorAll('[data-decor-id]').forEach(el=>{
+    const startDecorDrag=(down)=>{
+      if(el.dataset.dragging==='1') return;
+      const scene=el.closest('.wardrobe-scene'); if(!scene) return;
+      const id=el.dataset.decorId, rect=scene.getBoundingClientRect();
+      const moveEvent=down.type==='mousedown'?'mousemove':'pointermove';
+      const endEvent=down.type==='mousedown'?'mouseup':'pointerup';
+      el.dataset.dragging='1';
+      if(down.pointerId!==undefined && el.setPointerCapture) el.setPointerCapture(down.pointerId);
+      el.classList.add('dragging');
+      const move=(ev)=>{
+        const x=Math.max(10,Math.min(90,((ev.clientX-rect.left)/rect.width)*100));
+        const y=Math.max(12,Math.min(88,((ev.clientY-rect.top)/rect.height)*100));
+        el.style.left=x+'%'; el.style.top=y+'%';
+      };
+      const end=(up)=>{
+        move(up); el.classList.remove('dragging');
+        const p={x:parseFloat(el.style.left),y:parseFloat(el.style.top)};
+        S.decorPositions=Object.assign({},S.decorPositions,{[id]:p}); save();
+        el.dataset.dragging='';
+        document.removeEventListener(moveEvent,move); document.removeEventListener(endEvent,end); document.removeEventListener('pointercancel',end);
+      };
+      document.addEventListener(moveEvent,move); document.addEventListener(endEvent,end,{once:true});
+      if(moveEvent==='pointermove') document.addEventListener('pointercancel',end,{once:true});
+    };
+    el.onpointerdown=startDecorDrag;
+    el.onmousedown=startDecorDrag;
   });
   // P2 繁荣度·稀客：收下致谢
   const vb=document.querySelector('[data-visitor]'); if(vb) vb.onclick=()=>{ S.visitorToday=null; save(); render(); audio.emit('game:gift'); toast('已收下来访的心意 💌'); };
@@ -3481,10 +3532,11 @@ function unlockHidden(id){
 /* ---------- 衣橱（L8 单宠装扮 + L9 世界观） ---------- */
 function wardrobeHTML(){
   let h='<div class="card"><h3>👗 我的旅伴</h3>';
-  h+=`<div class="scene" style="background:linear-gradient(160deg,#eaf6e7,#f4faf0)">
-      <div class="window-light"></div><div class="shelf"></div><div class="floor-shadow"></div>
-      <div class="pet" style="font-size:54px">${companionHTML()}</div></div>`;
-  h+=`<p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。点一下就能穿脱。</p></div>`;
+  h+=`<div class="scene wardrobe-scene" style="background:linear-gradient(160deg,#eaf6e7,#f4faf0)">
+      <div class="window-light"></div><div class="floor-shadow"></div>
+      <div class="pet" style="font-size:54px">${companionHTML(false)}</div>
+      <div class="wardrobe-decoration-layer">${wardrobeDecorHTML()}</div></div>`;
+  h+=`<p class="wardrobe-hint">已穿戴的饰品可在小窝内自由拖动摆放。</p><p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。点一下就能穿脱。</p></div>`;
   // L8 装扮清单
   h+='<div class="card"><h3>'+ic('wardrobe')+S.name+' 的衣橱（'+(S.cosmetics||[]).length+'/'+COSMETICS.length+'）</h3><div class="cos-grid">';
   COSMETICS.forEach(c=>{
