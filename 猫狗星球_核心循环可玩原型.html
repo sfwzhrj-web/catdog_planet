@@ -379,7 +379,8 @@
   .sb-done{margin-top:10px;padding:10px 12px;border-radius:12px;background:linear-gradient(120deg,#eafaf0,#eaf6ee);color:#2f6b46;font-size:12.5px;text-align:center;line-height:1.6;}
   /* L8 单宠装扮 */
   .cmp-wrap{display:inline-flex;align-items:flex-end;position:relative;}
-  .cos-badge{font-size:20px;margin-left:-.25em;margin-bottom:.1em;filter:drop-shadow(0 1px 2px rgba(60,45,30,.25));}
+  .cos-badge{width:24px;height:24px;display:inline-grid;place-items:center;margin-left:-.25em;margin-bottom:.1em;filter:drop-shadow(0 1px 2px rgba(60,45,30,.25));}
+  .cos-badge img{display:block;width:24px;height:24px;object-fit:contain;}
   .cos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-top:10px;}
   .cos-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(60,50,40,.06);}
   .cos-item .cos-em{width:54px;height:54px;display:grid;place-items:center;font-size:28px;overflow:hidden;}
@@ -826,7 +827,7 @@ const COSMETICS = [
   {id:'scarf',   name:'旅人围巾', em:'🧣', desc:'风雪路上偶遇的旅人相赠', src:'偶遇', art:'猫狗星球_装扮美术/scarf.png'},
   {id:'hat',     name:'探险帽',   em:'🎩', desc:'林间旧友落下的草帽',     src:'偶遇', art:'猫狗星球_装扮美术/hat.png'},
   {id:'glasses', name:'星夜眼镜', em:'🕶️', desc:'都市夜游时拾得',       src:'偶遇', art:'猫狗星球_装扮美术/glasses.png'},
-  {id:'flower',  name:'花环',     em:'🌸', desc:'春日出游偶得的野花',     src:'偶遇', art:'猫狗星球_装扮美术/flower.png'},
+  {id:'flower',  name:'花环',     em:'🌸', desc:'春日出游偶得的野花',     src:'偶遇', art:'猫狗星球_装扮美术/flower-v2.png'},
   {id:'lantern', name:'小灯笼',   em:'🏮', desc:'元宵灯会所得',         src:'节庆·元宵', art:'猫狗星球_装扮美术/lantern.png'},
   {id:'crown',   name:'草编皇冠', em:'👑', desc:'万象图鉴达成之礼',     src:'成就·万象图鉴', art:'猫狗星球_装扮美术/crown.png'},
 ];
@@ -952,7 +953,7 @@ function companionHTML(){
   else if(typeof S.companion==='string' && S.companion.indexOf('.png')>=0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴" onerror="this.outerHTML='<span class=&quot;cmp-em&quot;>🐱</span>'">`;
   else pet=`<span class="cmp-em">${S.companion||'🐱'}</span>`;
   // L8 单宠装扮：已装备的装扮作为小徽章环绕旅伴（纯表达，非任务）
-  const eq=(S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.em}</span>`; }).join('');
+  const eq=(S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</span>`; }).join('');
   return `<span class="cmp-wrap">${pet}${eq}</span>`;
 }
 // 伴侣/好友头像统一渲染：emoji 字符串、.png CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
@@ -1946,7 +1947,7 @@ function sanitize(s){
 // 专用满级测试账号：仅 ?demo=full 临时启用，不写入、不覆盖玩家正常本地存档。
 function buildFullDemoAccount(){
   const d=JSON.parse(JSON.stringify(STARTER));
-  d.__fullDemo=true; d.petId='demo_full'; d.companion='🐶'; d.name='满级测试旅伴'; d.chosen=true; d.seenSplash=true;
+  d.__fullDemo=true; d.petId='demo_full'; d.companion='猫狗星球_宠物美术/d_shiba.png'; d.name='满级测试旅伴'; d.chosen=true; d.seenSplash=true;
   d.level=30; d.xp=xpNeed(30); d.star=999999; d.starTotal=999999; d.food=9999; d.trips=999; d.day=365;
   d.deepTrips=999; d.secretTrips=999; d.synthCount=999; d.expandCount=5; d.fragTotal=9999; d.loginDays=365;
   d.gotLegend=true; d.gotRare=true; d.gotDay2Legend=true; d.randomTrips=20; d.fission=5;
@@ -1956,7 +1957,7 @@ function buildFullDemoAccount(){
   d.hiddenUnlocked=Object.fromEntries(HIDDEN.map(x=>[x.id,true])); d.secret=true; d.tmap=99; d.tmapFrag=99;
   d.solarTerms=SOLAR_TERMS.map(x=>x.id); d.houTerms=SOLAR_TERMS.flatMap(x=>(x.hou||[]).map(h=>h.id));
   d.houDup=Object.fromEntries(d.houTerms.map(id=>[id,2])); d.festivals=FESTIVALS.map(x=>x.id);
-  d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['scarf']; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
+  d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['flower']; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
   d.titleLv=Object.fromEntries(Object.keys(TITLES).map(id=>[id,3])); d.titleCycle=Object.fromEntries(Object.keys(TITLES).map(id=>[id,1]));
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
   d.journal=DEST.filter(x=>x.stories&&x.stories.length).slice(0,16).map((x,i)=>({
