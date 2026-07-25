@@ -58,6 +58,10 @@
   .scene.companion-showcase .window-light{z-index:0;}
   .scene.companion-showcase .floor-shadow{z-index:1;}
   .scene.companion-showcase .pet{z-index:3; isolation:isolate;}
+  .showcase-decoration-layer{position:absolute; inset:0; z-index:4; pointer-events:none;}
+  .showcase-decoration{position:absolute; width:46px; height:46px; display:grid; place-items:center;
+    transform:translate(-50%,-50%); filter:drop-shadow(0 3px 4px rgba(60,45,30,.24));}
+  .showcase-decoration img{display:block; width:46px; height:46px; object-fit:contain;}
   /* 衣橱小窝：头像固定居中，已穿戴饰品在安全区内独立摆放。 */
   .scene.wardrobe-scene .shelf{display:none;}
   .scene.wardrobe-scene .pet{z-index:3; isolation:isolate; pointer-events:none;}
@@ -976,6 +980,12 @@ function wardrobeDecorHTML(){
   return (S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{
     const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
     return `<button class="wardrobe-decoration" type="button" data-decor-id="${id}" aria-label="拖动摆放${c.name}" title="拖动摆放 ${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</button>`;
+  }).join('');
+}
+function showcaseDecorHTML(){
+  return (S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{
+    const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
+    return `<span class="showcase-decoration" title="${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</span>`;
   }).join('');
 }
 // 伴侣/好友头像统一渲染：emoji 字符串、.png CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
@@ -2165,9 +2175,9 @@ function homeHTML(){
   const _skin={'春':'linear-gradient(160deg,#eaf6e7,#f4faf0)','夏':'linear-gradient(160deg,#e6f1f8,#eef6fb)','秋':'linear-gradient(160deg,#fbf0dd,#fdf6ec)','冬':'linear-gradient(160deg,#eef2f7,#f5f8fb)'}[_season];
   h+=`<div class="card"><div class="scene companion-showcase" style="background:${_skin}">
       <div class="window-light"></div>
-      <div class="shelf"></div>
       <div class="floor-shadow"></div>
-      <div class="pet">${companionHTML()}</div>
+      <div class="pet">${companionHTML(false)}</div>
+      <div class="showcase-decoration-layer">${showcaseDecorHTML()}</div>
     </div>
     <p class="muted" style="margin:12px 0 4px">${S.trips>=DAILY_TRIPS?'今天它已经出游 '+S.trips+' 次，累了。明天再出发吧 🌙':'它在家等你为它策划下一场旅行。'}</p>
     <button class="btn" id="goBtn" ${S.trips>=DAILY_TRIPS?'disabled':''}>${ic('compass')} 为它策划一场旅行</button>
