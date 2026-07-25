@@ -2263,8 +2263,8 @@ function travelHTML(){
 function effDepth(base){ return Math.max(0, Math.min(6, base + DURATIONS[draft.dur].depthMod)); }
 
 function bind(){
-  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ view=b.dataset.view;
-    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b)); audio.emit('game:swipe'); render(); });
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ const nextView=b.dataset.view, changed=view!==nextView; view=nextView;
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b)); if(changed) audio.playFileSFX('sfx_swipe.wav',.28); render(); });
   const psb=document.getElementById('petSwitchBtn'); if(psb) psb.onclick=()=>{ audio.playSFX('click'); view='roster';render(); };
   document.querySelectorAll('[data-switch]').forEach(e=>e.onclick=()=>switchPet(e.dataset.switch));
   document.querySelectorAll('[data-rename]').forEach(e=>e.onclick=()=>renamePet(e.dataset.rename));
@@ -3905,6 +3905,12 @@ const audio = (function(){
     },
     // 向后兼容：audio.playSFX('depart') → audio.emit('game:depart')
     playSFX(id){ this.emit('game:'+id); },
+    // 复用随包音效：适合底部导航等必须有明确听感的交互。
+    playFileSFX(file, volume=.3){
+      if(!sfxOn) return;
+      const fx=new Audio('猫狗星球_音频美术/'+file); fx.preload='auto'; fx.volume=Math.max(0,Math.min(1,volume));
+      fx.play().catch(()=>{});
+    },
 
     // BGM 系统
     playBGM(id){
