@@ -430,7 +430,8 @@
   .splash .sdec:nth-child(4){bottom:18%;right:12%;animation-delay:3.6s}
   .splash .shead{padding-top:64px;text-align:center;position:relative;z-index:1}
   .splash .shead .sicon{font-size:24px;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.35);opacity:.85;letter-spacing:14px;margin-bottom:6px}
-  .brand-title,.splash .shead .stitle{font-family:'CatDogRound','CatDogUI',sans-serif;font-size:clamp(50px,13vw,70px);font-weight:400;line-height:1.02;letter-spacing:3px;margin-bottom:12px;background:linear-gradient(180deg,#e7fff8 0%,#a8f0df 22%,#54bfb3 54%,#1f7976 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;-webkit-text-stroke:1.4px rgba(255,249,229,.98);text-shadow:0 1px 0 #f5fff9,0 2px 0 #c9f5e9,0 3px 0 #94dfd3,0 4px 0 #5baea5,0 5px 0 #2f807b,0 6px 0 #1e625f,0 8px 2px rgba(75,39,29,.6),0 12px 22px rgba(45,25,20,.46),0 0 18px rgba(255,247,224,.62);filter:drop-shadow(0 2px 0 rgba(255,255,245,.28));}
+  .brand-title,.splash .shead .stitle{position:relative;isolation:isolate;font-family:'CatDogTitle','CatDogUI',sans-serif;font-size:clamp(54px,14vw,74px);font-weight:400;line-height:1;letter-spacing:2px;margin-bottom:14px;background:linear-gradient(180deg,#f5fffd 0%,#c9fff4 20%,#7ee0d1 48%,#3aafa7 72%,#1c7b77 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;-webkit-text-stroke:2px #fff9e8;paint-order:stroke fill;text-shadow:0 1px 0 #ffffff,0 2px 0 #e6fff8,0 3px 0 #c0f5ec,0 5px 0 #8bd8cd,0 7px 0 #4cafa6,0 9px 0 #287d78,0 11px 0 #175b58,0 14px 3px rgba(67,37,29,.58),0 19px 24px rgba(52,26,20,.44),0 0 18px rgba(255,249,225,.7);filter:drop-shadow(0 2px 0 rgba(255,255,255,.5));}
+  .brand-title::after,.splash .shead .stitle::after{content:attr(data-title);position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.62) 13%,rgba(255,255,255,.18) 32%,transparent 46%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;transform:translateY(-1px);}
   #preSplash .brand-title{position:relative;z-index:1;text-align:center;margin-top:0;}
   .splash .shead .ssub{font-size:14px;color:#fff8ec;text-shadow:0 1px 0 #c98a2a,0 2px 8px rgba(0,0,0,.55);letter-spacing:3px;margin-top:6px;-webkit-text-fill-color:#fff8ec}
   .splash .sbody{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;z-index:1;padding-bottom:80px}
@@ -469,7 +470,7 @@
 <div id="preSplash" style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.35)),url('猫狗星球_载入画面.png') center/cover no-repeat;z-index:9999;overflow:hidden">
   <div style="padding-top:64px;text-align:center;position:relative;z-index:1">
     <div style="font-size:24px;color:#fff;opacity:.85;letter-spacing:14px;margin-bottom:6px">✦ ─ ✦</div>
-    <div class="brand-title">猫狗星球</div>
+    <div class="brand-title" data-title="猫狗星球">猫狗星球</div>
     <div style="font-size:14px;color:#fff8ec;letter-spacing:3px;margin-top:6px">— 和旅伴一起环游世界 —</div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;z-index:1;padding-bottom:80px">
@@ -1971,7 +1972,7 @@ function splashHTML(){
   return `<div class="splash">
     <div class="shead">
       <div class="sicon">✦ ─ ✦</div>
-      <div class="stitle">猫狗星球</div>
+      <div class="stitle" data-title="猫狗星球">猫狗星球</div>
       <div class="ssub">— 和旅伴一起环游世界 —</div>
     </div>
     <div class="sbody">
