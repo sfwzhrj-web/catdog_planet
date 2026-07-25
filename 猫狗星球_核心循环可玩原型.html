@@ -3798,7 +3798,7 @@ const audio = (function(){
   let bgmLFOs = [];
   // 季节音乐使用已打包的实录音轨；载入/角色页保留轻量合成垫底，避免首屏额外下载。
   const BGM_FILES = {
-    frost:'bgm_frost.wav', thaw:'bgm_thaw.wav', bloom:'bgm_bloom.wav',
+    splash:'bgm_splash.wav', frost:'bgm_frost.wav', thaw:'bgm_thaw.wav', bloom:'bgm_bloom.wav',
     scorch:'bgm_scorch.wav', harvest:'bgm_harvest.wav', yearend:'bgm_yearend.wav'
   };
   // 偏好存储
@@ -3913,7 +3913,7 @@ const audio = (function(){
         bgmAudio.loop=true; bgmAudio.preload='auto'; bgmAudio.volume=0.2;
         bgmAudio.play().catch(()=>{
           // 浏览器阻止自动播放时，下一次用户点击会触发 render 并重新尝试。
-          if(bgmId===id) bgmAudio=null;
+          if(bgmId===id){ bgmAudio=null; bgmId=null; }
         });
         return;
       }
