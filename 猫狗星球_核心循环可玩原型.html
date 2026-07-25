@@ -382,7 +382,8 @@
   .cos-badge{font-size:20px;margin-left:-.25em;margin-bottom:.1em;filter:drop-shadow(0 1px 2px rgba(60,45,30,.25));}
   .cos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-top:10px;}
   .cos-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(60,50,40,.06);}
-  .cos-item .cos-em{font-size:28px;}
+  .cos-item .cos-em{width:54px;height:54px;display:grid;place-items:center;font-size:28px;overflow:hidden;}
+  .cos-item .cos-em img{display:block;width:46px;height:46px;object-fit:contain;}
   .cos-item .cos-n{font-weight:700;font-size:13px;}
   .cos-item .cos-s{font-size:11px;color:var(--soft);}
   .cos-item.on{border-color:var(--accent);background:#fff8ee;}
@@ -1958,6 +1959,13 @@ function buildFullDemoAccount(){
   d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['scarf']; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
   d.titleLv=Object.fromEntries(Object.keys(TITLES).map(id=>[id,3])); d.titleCycle=Object.fromEntries(Object.keys(TITLES).map(id=>[id,1]));
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
+  d.journal=DEST.filter(x=>x.stories&&x.stories.length).slice(0,16).map((x,i)=>({
+    day:365-i*3, destId:x.id, destName:x.name, destTag:x.tag||'', destEm:x.em,
+    story:x.stories[i%x.stories.length], season:['春','夏','秋','冬'][i%4],
+    items:x.souvenir?[{em:x.souvenir.em,name:x.souvenir.name}]:[],
+    festival:i<FESTIVALS.length?FESTIVALS[i].id:null, solarTerm:SOLAR_TERMS[i%SOLAR_TERMS.length].id, lost:false
+  }));
+  d.storybook=[...new Set([...d.items.filter(x=>!x.festival).map(x=>x.id),...d.souvenirs.map(x=>x.name)])];
   d.helped=30; d.helpedBy=20; d.friendGift=30; d.metCount=20; d.giftStreak=30; d.bondLevel=3; d.bondFill=999;
   d.durCount={2:10,4:10,8:10,12:10}; d.onboard=1; d.lastSeason='frost';
   return sanitize(d);
