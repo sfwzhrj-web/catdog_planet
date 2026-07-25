@@ -481,6 +481,9 @@
 document.getElementById('preStart').onclick=function(){
   if(this._done)return; this._done=true;
   window.__preSplashStarted=true;
+  // 首个载入页不经过 render 包装，用户点击后在此明确启动「夜院微光」（bgm_splash.wav）。
+  // 这样既符合浏览器的用户手势播放规则，也确保登录载入页不会被角色页音乐抢占。
+  if(typeof audio!=='undefined') audio.playBGM('splash');
   document.getElementById('preBar').style.width='100%';
   setTimeout(function(){
     document.getElementById('preSplash').style.display='none';
