@@ -3794,8 +3794,13 @@ const audio = (function(){
   const buses = {};
   ['master','sfx','bgm'].forEach(k=>{ buses[k]={gain:null,vol:1}; });
   // BGM 状态
-  let bgmNodes = []; let bgmId = null; let bgmGain = null;
+  let bgmNodes = []; let bgmId = null; let bgmGain = null; let bgmAudio = null;
   let bgmLFOs = [];
+  // 季节音乐使用已打包的实录音轨；载入/角色页保留轻量合成垫底，避免首屏额外下载。
+  const BGM_FILES = {
+    frost:'bgm_frost.wav', thaw:'bgm_thaw.wav', bloom:'bgm_bloom.wav',
+    scorch:'bgm_scorch.wav', harvest:'bgm_harvest.wav', yearend:'bgm_yearend.wav'
+  };
   // 偏好存储
   let sfxOn = true; let bgmOn = true;
 
@@ -3902,6 +3907,16 @@ const audio = (function(){
       const c=_ensure(); if(!c||bgmId===id) return;
       this.stopBGM(); bgmId=id;
       if(!bgmOn) return;
+      const file=BGM_FILES[id];
+      if(file){
+        bgmAudio=new Audio('猫狗星球_音频美术/'+file);
+        bgmAudio.loop=true; bgmAudio.preload='auto'; bgmAudio.volume=0.2;
+        bgmAudio.play().catch(()=>{
+          // 浏览器阻止自动播放时，下一次用户点击会触发 render 并重新尝试。
+          if(bgmId===id) bgmAudio=null;
+        });
+        return;
+      }
       bgmGain=c.createGain(); bgmGain.gain.value=0.08; bgmGain.connect(buses.bgm.gain);
       const sMap={splash:[180,270,360,0.04],roster:[330,440,550,0.06],frost:[200,300,400,0.05],
         thaw:[260,390,520,0.06],bloom:[260,390,520,0.06],scorch:[250,375,500,0.05],
@@ -3918,6 +3933,7 @@ const audio = (function(){
       });
     },
     stopBGM(){ bgmId=null;
+      if(bgmAudio){ try{ bgmAudio.pause(); bgmAudio.currentTime=0; }catch(e){} bgmAudio=null; }
       [...bgmNodes,...bgmLFOs].forEach(n=>{ try{n.stop();n.disconnect();}catch(e){} });
       bgmNodes=[]; bgmLFOs=[]; if(bgmGain) try{bgmGain.disconnect();}catch(e){} bgmGain=null;
     },
