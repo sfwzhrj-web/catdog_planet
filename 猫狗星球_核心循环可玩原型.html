@@ -1987,9 +1987,13 @@ function splashHTML(){
 
 /* ---------- 渲染 ---------- */
 function render(){
-  // URL 参数 ?reset=1 → 清空缓存、强制显示载入画面
+  // URL 参数 ?reset=1 → 仅首次清空缓存、强制显示载入画面。
+  // 重置后立即移除参数，避免“开始冒险”触发 render 时再次被重置而循环停在载入页。
   const _p=new URLSearchParams(window.location.search);
-  if(_p.get('reset')==='1'){ localStorage.clear(); S.seenSplash=false; S.chosen=false; }
+  if(_p.get('reset')==='1'&&!window.__resetHandled){
+    localStorage.clear(); S.seenSplash=false; S.chosen=false; window.__resetHandled=true;
+    try{ history.replaceState(null,'',window.location.pathname+window.location.hash); }catch(e){}
+  }
   if(typeof _ptLastView==='undefined') _ptLastView=view;
   if(typeof _ptLastView==='undefined') _ptLastView=view;
   else if(view!==_ptLastView){ _ptLastView=view; if(typeof track==='function') track('view',{v:view}); } // 试玩采集：视图切换埋点
