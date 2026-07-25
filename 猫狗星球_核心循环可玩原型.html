@@ -3803,9 +3803,9 @@ const audio = (function(){
   // BGM 状态
   let bgmNodes = []; let bgmId = null; let bgmGain = null; let bgmAudio = null;
   let bgmLFOs = [];
-  // 季节音乐使用已打包的实录音轨；载入/角色页保留轻量合成垫底，避免首屏额外下载。
+  // 载入与选择旅伴阶段共用「夜院微光」；避免角色页落入持续的合成底音。
   const BGM_FILES = {
-    splash:'bgm_splash.wav', frost:'bgm_frost.wav', thaw:'bgm_thaw.wav', bloom:'bgm_bloom.wav',
+    splash:'bgm_splash.wav', roster:'bgm_splash.wav', frost:'bgm_frost.wav', thaw:'bgm_thaw.wav', bloom:'bgm_bloom.wav',
     scorch:'bgm_scorch.wav', harvest:'bgm_harvest.wav', yearend:'bgm_yearend.wav'
   };
   // 偏好存储
