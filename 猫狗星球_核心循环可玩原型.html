@@ -400,6 +400,11 @@
   .cos-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;text-align:center;box-shadow:0 2px 6px rgba(60,50,40,.06);}
   .cos-item .cos-em{width:54px;height:54px;display:grid;place-items:center;font-size:28px;overflow:hidden;}
   .cos-item .cos-em img{display:block;width:46px;height:46px;object-fit:contain;}
+  .outfit-stories{padding-bottom:12px;}
+  .outfit-story{display:grid;grid-template-columns:32px 1fr;column-gap:8px;align-items:center;padding:9px 2px;border-bottom:1px dashed var(--line);}
+  .outfit-story:last-child{border-bottom:0;}
+  .outfit-story img{width:30px;height:30px;object-fit:contain;grid-row:span 2;}
+  .outfit-story b{font-size:13px;}.outfit-story .src{font-size:11px;color:var(--accent);margin-left:6px;}.outfit-story p{grid-column:2;margin:2px 0 0;font-size:12px;line-height:1.45;color:var(--muted);}
   .cos-item .cos-n{font-weight:700;font-size:13px;}
   .cos-item .cos-s{font-size:11px;color:var(--soft);}
   .cos-item.on{border-color:var(--accent);background:#fff8ee;}
@@ -839,13 +844,28 @@ const RARE_VISITORS = [
 ];
 // 装扮（单宠·纯表达，非任务）：来源=偶遇(enc)/节庆(fest)/成就(ach)
 const COSMETICS = [
-  {id:'scarf',   name:'旅人围巾', em:'🧣', desc:'风雪路上偶遇的旅人相赠', src:'偶遇', art:'猫狗星球_装扮美术/scarf.png'},
-  {id:'hat',     name:'探险帽',   em:'🎩', desc:'林间旧友落下的草帽',     src:'偶遇', art:'猫狗星球_装扮美术/hat.png'},
-  {id:'glasses', name:'星夜眼镜', em:'🕶️', desc:'都市夜游时拾得',       src:'偶遇', art:'猫狗星球_装扮美术/glasses.png'},
-  {id:'flower',  name:'花环',     em:'🌸', desc:'春日出游偶得的野花',     src:'偶遇', art:'猫狗星球_装扮美术/flower-v2.png'},
-  {id:'lantern', name:'小灯笼',   em:'🏮', desc:'元宵灯会所得',         src:'节庆·元宵', art:'猫狗星球_装扮美术/lantern.png'},
-  {id:'crown',   name:'草编皇冠', em:'👑', desc:'万象图鉴达成之礼',     src:'成就·万象图鉴', art:'猫狗星球_装扮美术/crown.png'},
+  {id:'scarf',name:'旅人围巾',em:'🧣',desc:'风雪路上偶遇的旅人相赠',src:'偶遇·雪原驿站',acquire:'encounter',art:'猫狗星球_装扮美术/scarf.png',story:'旅人说，围巾要留给还愿意继续走路的伙伴。'},
+  {id:'hat',name:'探险帽',em:'🎩',desc:'林间旧友落下的草帽',src:'偶遇·林间旧友',acquire:'encounter',art:'猫狗星球_装扮美术/hat.png',story:'帽檐压住的是阳光，也压住了第一次迷路的慌张。'},
+  {id:'glasses',name:'星夜眼镜',em:'🕶️',desc:'都市夜游时拾得',src:'偶遇·城市夜游',acquire:'encounter',art:'猫狗星球_装扮美术/glasses.png',story:'戴上它，连街角的灯都像远处的星。'},
+  {id:'flower',name:'花环',em:'🌸',desc:'春日出游偶得的野花',src:'偶遇·春日野径',acquire:'encounter',art:'猫狗星球_装扮美术/flower-v2.png',story:'花会谢，但被认真记住的春天不会。'},
+  {id:'lantern',name:'小灯笼',em:'🏮',desc:'元宵灯会所得',src:'节庆·元宵',acquire:'festival',art:'猫狗星球_装扮美术/lantern.png',story:'灯会散场后，它还替你把回家的路照亮。'},
+  {id:'crown',name:'草编皇冠',em:'👑',desc:'万象图鉴达成之礼',src:'成就·万象图鉴',acquire:'achievement',art:'猫狗星球_装扮美术/crown.png',story:'这不是奖赏，而是每一段旅程共同编成的冠冕。'},
+  {id:'compass_pendant',name:'星航罗盘坠',em:'🧭',desc:'首场秘境深潜的方向信物',src:'秘境·首场深潜',acquire:'encounter',unlock:()=>S.secretTrips>=1,art:'猫狗星球_装扮美术/compass_pendant.png',story:'它指向的不是北方，而是下一段值得出发的路。'},
+  {id:'ginkgo_cape',name:'银杏叶斗篷',em:'🍂',desc:'秋日山径的落叶裁成',src:'偶遇·秋日山径',acquire:'encounter',unlock:()=>S.trips>=6,art:'猫狗星球_装扮美术/ginkgo_cape.png',story:'每一片叶脉里，都藏着一阵轻轻推你前行的山风。'},
+  {id:'wind_bell',name:'山风铃铛',em:'🔔',desc:'高原风口的清脆回声',src:'偶遇·高原风口',acquire:'encounter',unlock:()=>S.trips>=10,art:'猫狗星球_装扮美术/wind_bell.png',story:'风穿过铃铛时，远方会回答一声“我在”。'},
+  {id:'shell_collar',name:'海盐贝壳项圈',em:'🐚',desc:'海岸退潮时拾得',src:'偶遇·海岸拾光',acquire:'encounter',unlock:()=>S.trips>=12,art:'猫狗星球_装扮美术/shell_collar.png',story:'贝壳里装着一小段潮声，想家的时候听一听。'},
+  {id:'ticket_clip',name:'夜行车票发夹',em:'🎫',desc:'随机出游的夜车纪念',src:'偶遇·夜行列车',acquire:'encounter',unlock:()=>S.randomTrips>=3,art:'猫狗星球_装扮美术/ticket_clip.png',story:'那张没有终点的车票，后来夹住了一晚的星光。'},
+  {id:'post_satchel',name:'信使小挎包',em:'📮',desc:'寄出心意后收到的回信',src:'互送·旅友回信',acquire:'encounter',unlock:()=>S.giftStreak>=2||S.trips>=18,art:'猫狗星球_装扮美术/post_satchel.png',story:'它不装贵重的东西，只装“我也想起你了”。'},
+  {id:'candy_glasses',name:'糖玻璃眼镜',em:'🍬',desc:'城市橱窗里折出的颜色',src:'偶遇·城市漫游',acquire:'encounter',unlock:()=>S.trips>=16,art:'猫狗星球_装扮美术/candy_glasses.png',story:'隔着琥珀色镜片，连普通的一天也甜了一点。'},
+  {id:'bamboo_cuff',name:'竹编护腕',em:'🎋',desc:'跟着节气收下的手作礼',src:'节气·候礼',acquire:'encounter',unlock:()=>S.solarTerms.length>=3,art:'猫狗星球_装扮美术/bamboo_cuff.png',story:'细细的竹篾记得雨声，也记得手心的温度。'},
+  {id:'glazed_gourd',name:'琉璃小葫芦',em:'🏺',desc:'秘境石门旁的蓝釉小物',src:'秘境·三次深潜',acquire:'encounter',unlock:()=>S.secretTrips>=3,art:'猫狗星球_装扮美术/glazed_gourd.png',story:'晃一晃，像有一片安静的蓝天在里面。'},
+  {id:'star_map_shawl',name:'星图披肩',em:'🌌',desc:'藏宝图拼合后显出的夜色',src:'藏宝图·初次合成',acquire:'encounter',unlock:()=>S.tmap>=1,art:'猫狗星球_装扮美术/star_map_shawl.png',story:'它把走过的夜路绣成星图，披在肩上也不会迷路。'},
+  {id:'moon_rabbit_hood',name:'月兔耳朵帽',em:'🐰',desc:'中秋夜的月光裁成',src:'节庆·中秋',acquire:'festival',art:'猫狗星球_装扮美术/moon_rabbit_hood.png',story:'月亮升起来时，帽尖会悄悄朝着团圆的方向。'},
+  {id:'winter_lights',name:'冬夜灯串项圈',em:'❄️',desc:'冬至夜市留下的暖光',src:'节庆·冬至',acquire:'festival',art:'猫狗星球_装扮美术/winter_lights.png',story:'最冷的夜里，也有一串小灯替你留住温暖。'},
+  {id:'comet_charm',name:'流星尾灯',em:'☄️',desc:'长途旅行后收到的夜行护符',src:'偶遇·三十次远行',acquire:'encounter',unlock:()=>S.trips>=30,art:'猫狗星球_装扮美术/comet_charm.png',story:'跑起来时，它会在身后拖出一颗很小的流星。'},
 ];
+const FESTIVAL_COSMETICS={yuanxiao:'lantern',zhongqiu:'moon_rabbit_hood',dongzhi:'winter_lights'};
+function availableEncounterCosmetics(owned){ return COSMETICS.filter(c=>owned.indexOf(c.id)<0&&c.acquire==='encounter'&&(!c.unlock||c.unlock())); }
 // 偶遇事件（L6：出游被动触发，给惊喜与装扮来源）
 const ENCOUNTERS = [
   {em:'🐾', name:'迷路的小猫', text:'它在巷口遇见一只同样迷路的小猫，互相蹭了蹭鼻子。', reward:'cos', art:'猫狗星球_偶遇美术/kitten.png'},
@@ -971,7 +991,7 @@ function companionHTML(showDecor=true){
   const eq=showDecor?(S.equipped||[]).filter(id=>COSMETICS.some(c=>c.id===id)).map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</span>`; }).join(''):'';
   return `<span class="cmp-wrap">${pet}${eq}</span>`;
 }
-const DECOR_DEFAULT_POS={scarf:{x:72,y:67},hat:{x:30,y:30},glasses:{x:70,y:31},flower:{x:29,y:64},lantern:{x:72,y:42},crown:{x:50,y:22}};
+const DECOR_DEFAULT_POS={scarf:{x:72,y:67},hat:{x:30,y:30},glasses:{x:70,y:31},flower:{x:29,y:64},lantern:{x:72,y:42},crown:{x:50,y:22},compass_pendant:{x:80,y:75},ginkgo_cape:{x:18,y:25},wind_bell:{x:83,y:20},shell_collar:{x:18,y:75},ticket_clip:{x:65,y:18},post_satchel:{x:84,y:58},candy_glasses:{x:34,y:18},bamboo_cuff:{x:16,y:48},glazed_gourd:{x:82,y:38},star_map_shawl:{x:50,y:84},moon_rabbit_hood:{x:50,y:12},winter_lights:{x:67,y:82},comet_charm:{x:30,y:84}};
 function decorPosition(id){
   const p=(S.decorPositions&&S.decorPositions[id])||DECOR_DEFAULT_POS[id]||{x:50,y:25};
   return {x:Math.max(10,Math.min(90,Number(p.x)||50)),y:Math.max(12,Math.min(88,Number(p.y)||25))};
@@ -2662,10 +2682,12 @@ function finishTrip(){
     }
     // 节庆图鉴（Phase A：春节/端午/中秋）：节日窗口内掉落对应"节庆碎片"，仅该节庆期间可获取
     for(const fid of af){
-      const fk=FESTIVAL_CLUSTERS[fid]; if(!fk) continue;
-      if(fid==='yuanxiao' && (S.cosmetics||[]).indexOf('lantern')<0){   // 元宵：节庆装扮「小灯笼」保底获取
-        S.cosmetics.push('lantern'); gained.push({type:'encounter', em:'🏮', name:'元宵灯会', text:'灯会上得了一盏小灯笼。', cosmetic:COSMETICS.find(c=>c.id==='lantern')});
+      const festivalCosmeticId=FESTIVAL_COSMETICS[fid];
+      if(festivalCosmeticId && (S.cosmetics||[]).indexOf(festivalCosmeticId)<0){
+        const c=COSMETICS.find(x=>x.id===festivalCosmeticId); S.cosmetics.push(festivalCosmeticId);
+        gained.push({type:'encounter', em:c.em, name:FESTIVALS.find(x=>x.id===fid).name+'夜游', text:c.story, cosmetic:c});
       }
+      const fk=FESTIVAL_CLUSTERS[fid]; if(!fk) continue;
       if(room<=0) break;
       const first=(S.festivals||[]).indexOf(fid)<0;   // 本行程前尚未参与过该节庆 → 首参与保底 1 片
       if(first || Math.random()<FEST_FRAG_P){ fragAdd[fk]++; room--; gained.push({type:'frag',cl:fk,rarity:'fest'}); }
@@ -2690,8 +2712,8 @@ function finishTrip(){
     if(Math.random() < ENCOUNTER_P){
       const e=pick(ENCOUNTERS);
       if(e.reward==='cos'){
-        const owned=(S.cosmetics||[]); const avail=COSMETICS.filter(c=>owned.indexOf(c.id)<0);
-        if(avail.length){ const c=pick(avail); S.cosmetics.push(c.id); gained.push({type:'encounter', em:e.em, name:e.name, text:e.text, cosmetic:c, art:e.art}); logEvent('encounter', `${e.name}→装扮「${c.name}」`); }
+        const owned=(S.cosmetics||[]); const avail=availableEncounterCosmetics(owned);
+        if(avail.length){ const c=pick(avail); S.cosmetics.push(c.id); gained.push({type:'encounter', em:e.em, name:e.name, text:c.story||e.text, cosmetic:c, art:e.art}); logEvent('encounter', `${e.name}→装扮「${c.name}」`); }
         else { const sv=6+Math.floor(Math.random()*8); S.star+=sv; S.starTotal+=sv; gained.push({type:'encounter', em:e.em, name:e.name, text:e.text, star:sv, art:e.art}); logEvent('encounter', `${e.name}→+${sv}星`); }
       } else {
         const sv=6+Math.floor(Math.random()*8); S.star+=sv; S.starTotal+=sv; gained.push({type:'encounter', em:e.em, name:e.name, text:e.text, star:sv, art:e.art}); logEvent('encounter', `${e.name}→+${sv}星`);
@@ -3559,6 +3581,12 @@ function wardrobeHTML(){
     }
   });
   h+='</div></div>';
+  const outfitStories=COSMETICS.filter(c=>(S.cosmetics||[]).indexOf(c.id)>=0);
+  if(outfitStories.length){
+    h+='<div class="card outfit-stories"><h3>🗺️ 旅行衣橱故事（'+outfitStories.length+'）</h3>';
+    outfitStories.forEach(c=>{ h+=`<div class="outfit-story">${c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`}<div><b>${c.name}</b><span class="src">${c.src}</span></div><p>${c.story||c.desc}</p></div>`; });
+    h+='</div>';
+  }
   // L9 世界观（收集深度解锁的剧情碎片）
   h+='<div class="card"><h3>'+ic('book')+'世界观（'+(LORE.filter(l=>l.cond()).length)+'/'+LORE.length+'）</h3><p class="muted">随着旅程越走越深，星球的故事会一段段亮起。这是只属于阅读者的奖励。</p>';
   LORE.forEach(l=>{
