@@ -2203,6 +2203,11 @@ if(!S.log) S.log = [];   // 单局行为日志（试玩回灌用）
 
 function load(){ return loadActivePet(); }
 function save(){ if(S.__fullDemo) return; savePet(S.petId||getMeta().activeId, S); }
+function clearGameSaves(){
+  const m=getMeta();
+  (m.roster||[]).forEach(id=>_L.removeItem('mdjh_proto_'+id));
+  _L.removeItem(PET_META_KEY);
+}
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1800); }
 // 每日结算：自然日切换时重置两类广告计数，并发放登录干粮补给
 function dayKey(){ return new Date().toDateString(); }
@@ -2255,10 +2260,9 @@ function render(){
   // 重置后立即移除参数，避免“开始冒险”触发 render 时再次被重置而循环停在载入页。
   const _p=new URLSearchParams(window.location.search);
   if(_p.get('reset')==='1'&&!window.__resetHandled){
-    localStorage.clear(); S.seenSplash=false; S.chosen=false; window.__resetHandled=true;
+    clearGameSaves(); S=loadActivePet(); window.__resetHandled=true;
     try{ history.replaceState(null,'',window.location.pathname+window.location.hash); }catch(e){}
   }
-  if(typeof _ptLastView==='undefined') _ptLastView=view;
   if(typeof _ptLastView==='undefined') _ptLastView=view;
   else if(view!==_ptLastView){ _ptLastView=view; if(typeof track==='function') track('view',{v:view}); } // 试玩采集：视图切换埋点
   if(!S.seenSplash){ document.getElementById('main').innerHTML=splashHTML(); bind(); return; }
@@ -3908,10 +3912,7 @@ function shopHTML(){
 }
 function buyFood(){ if(S.star<SHOP_FOOD_COST){ toast('星屑不足，去旅行赚点 ⭐'); return; } S.star-=SHOP_FOOD_COST; S.food+=SHOP_FOOD_GET; save(); logEvent('buy', `干粮+${SHOP_FOOD_GET}(花${SHOP_FOOD_COST}星)`); render(); toast('干粮 +'+SHOP_FOOD_GET+' 🍞'); }
 function resetAll(){
-  _L.removeItem(PET_META_KEY);
-  for(var _i=0;_i<5;_i++){ _L.removeItem('mdjh_proto_pet_'+(_i+1)); }
-  S=JSON.parse(JSON.stringify(STARTER)); S.petId='pet_1';
-  S.log=[]; getMeta(); S=loadActivePet();
+  clearGameSaves(); S=loadActivePet();
   view='home'; render(); toast('已重置');
 }
 function expandBackpack(){ audio.emit('game:bagExpand');
@@ -4212,7 +4213,7 @@ const audio = (function(){
     scorch:'bgm_scorch.wav', harvest:'bgm_harvest.wav', yearend:'bgm_yearend.wav'
   };
   // 偏好存储：开关和音量分别记入本地账号存档。
-  let sfxOn = true; let bgmOn = true; let sfxVol = 0.4; let bgmVol = 0.2;
+  let sfxOn = true; let bgmOn = true; let sfxVol = 0.4; let bgmVol = 0.2; let prefsSaveTimer = null;
 
   function _clampVolume(value, fallback){ const n=Number(value); return Number.isFinite(n)?Math.max(0,Math.min(1,n)):fallback; }
   function _prefs(){ return (typeof S!=='undefined'&&S&&S.audioPrefs)?S.audioPrefs:null; }
@@ -4221,10 +4222,12 @@ const audio = (function(){
     bgmOn=p.bgmOn!==false; sfxOn=p.sfxOn!==false;
     bgmVol=_clampVolume(p.bgmVol,0.2); sfxVol=_clampVolume(p.sfxVol,0.4);
   }
-  function _savePrefs(){
+  function _savePrefs(defer=false){
     const p=_prefs(); if(!p) return;
     p.bgmOn=bgmOn; p.sfxOn=sfxOn; p.bgmVol=bgmVol; p.sfxVol=sfxVol;
-    if(typeof save==='function') save();
+    if(prefsSaveTimer){ clearTimeout(prefsSaveTimer); prefsSaveTimer=null; }
+    if(defer){ prefsSaveTimer=setTimeout(()=>{ prefsSaveTimer=null; if(typeof save==='function') save(); },180); }
+    else if(typeof save==='function') save();
   }
   function _applyVolumes(){
     if(buses.bgm.gain) buses.bgm.gain.gain.value=bgmVol;
@@ -4382,8 +4385,9 @@ const audio = (function(){
       return bgmOn;
     },
     setSFXOn(v){ sfxOn=!!v; _savePrefs(); return sfxOn; },
-    setBGMVolume(v){ bgmVol=_clampVolume(v,bgmVol); _applyVolumes(); _savePrefs(); return bgmVol; },
-    setSFXVolume(v){ sfxVol=_clampVolume(v,sfxVol); _applyVolumes(); _savePrefs(); return sfxVol; },
+    setBGMVolume(v){ bgmVol=_clampVolume(v,bgmVol); _applyVolumes(); _savePrefs(true); return bgmVol; },
+    setSFXVolume(v){ sfxVol=_clampVolume(v,sfxVol); _applyVolumes(); _savePrefs(true); return sfxVol; },
+    commitPreferences(){ _savePrefs(); },
   };
 })();
 audio.init();
@@ -4427,9 +4431,10 @@ audio.init();
     const bgmVolume=document.getElementById('audioBgmVolume'); if(bgmVolume) bgmVolume.oninput=function(){
       const value=audio.setBGMVolume(Number(this.value)/100); const out=document.getElementById('audioBgmVolumeValue'); if(out) out.textContent=Math.round(value*100)+'%';
     };
+    if(bgmVolume) bgmVolume.onchange=function(){ audio.commitPreferences(); };
     const sfxVolume=document.getElementById('audioSfxVolume'); if(sfxVolume){
       sfxVolume.oninput=function(){ const value=audio.setSFXVolume(Number(this.value)/100); const out=document.getElementById('audioSfxVolumeValue'); if(out) out.textContent=Math.round(value*100)+'%'; };
-      sfxVolume.onchange=function(){ if(audio.sfxOn) audio.emit('ui:click'); };
+      sfxVolume.onchange=function(){ audio.commitPreferences(); if(audio.sfxOn) audio.emit('ui:click'); };
     }
   };
 })();
