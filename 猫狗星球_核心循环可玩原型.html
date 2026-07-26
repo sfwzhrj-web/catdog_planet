@@ -299,6 +299,8 @@
   .journal-atlas summary b{color:var(--accent);font-size:12px;}
   .journal-atlas p{margin:7px 0 9px;font-size:12px;line-height:1.45;color:var(--soft);}
   .journal-atlas-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}
+  .journal-region-wrap{position:relative;min-width:0;z-index:1;}
+  .journal-region-wrap.selected{z-index:8;}
   .journal-region{min-width:0;min-height:70px;padding:5px 3px;border:1px solid rgba(180,151,113,.28);border-radius:10px;background:rgba(255,255,255,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;font:inherit;cursor:pointer;appearance:none;}
   .journal-region.on:hover,.journal-region.on:focus-visible,.journal-region.selected{border-color:var(--accent);background:#fff8ed;box-shadow:0 3px 10px rgba(160,105,47,.16);outline:none;}
   .journal-region img{width:30px;height:30px;object-fit:cover;border-radius:8px;box-shadow:0 2px 6px rgba(80,60,40,.15);}
@@ -306,12 +308,17 @@
   .journal-region b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;line-height:1.2;color:var(--ink);}
   .journal-region span{font-size:9px;line-height:1.2;color:var(--soft);}
   .journal-region.locked{filter:saturate(.2);opacity:.58;}
-  .journal-atlas-detail{position:relative;margin-top:10px;padding:10px 34px 10px 10px;border:1px solid rgba(180,151,113,.35);border-radius:11px;background:#fffdf9;}
-  .journal-atlas-detail .atlas-detail-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--ink);}
-  .journal-atlas-detail .atlas-detail-head .biome-place{width:36px;height:36px;flex:0 0 auto;}
-  .journal-atlas-detail p{margin:7px 0 5px;font-size:12px;line-height:1.55;color:var(--soft);}
-  .journal-atlas-detail .atlas-close{position:absolute;right:7px;top:7px;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:#f4ede3;color:var(--soft);font-size:16px;line-height:20px;cursor:pointer;}
-  .journal-atlas-detail .atlas-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+  .journal-atlas-popover{position:absolute;z-index:10;bottom:calc(100% + 8px);left:50%;width:min(258px,calc(100vw - 46px));padding:10px 34px 10px 10px;transform:translateX(-50%);border:1px solid rgba(180,151,113,.55);border-radius:12px;background:#fffdf9;box-shadow:0 8px 20px rgba(80,60,40,.18);text-align:left;}
+  .journal-atlas-popover.align-start{left:0;transform:none;}
+  .journal-atlas-popover.align-end{left:auto;right:0;transform:none;}
+  .journal-atlas-popover::after{content:'';position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:#fffdf9;border-right:1px solid rgba(180,151,113,.55);border-bottom:1px solid rgba(180,151,113,.55);transform:translateX(-50%) rotate(45deg);}
+  .journal-atlas-popover.align-start::after{left:29px;}
+  .journal-atlas-popover.align-end::after{left:auto;right:23px;}
+  .journal-atlas-popover .atlas-detail-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--ink);}
+  .journal-atlas-popover .atlas-detail-head .biome-place{width:36px;height:36px;flex:0 0 auto;}
+  .journal-atlas-popover p{margin:7px 0 5px;font-size:12px;line-height:1.55;color:var(--soft);}
+  .journal-atlas-popover .atlas-close{position:absolute;z-index:1;right:7px;top:7px;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:#f4ede3;color:var(--soft);font-size:16px;line-height:20px;cursor:pointer;}
+  .journal-atlas-popover .atlas-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
   .journal-volume{margin:12px 0 0;border:1px solid rgba(180,151,113,.28);border-radius:14px;background:rgba(255,255,255,.58);overflow:hidden;}
   .journal-volume summary{min-height:43px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;font-weight:800;font-size:13px;color:var(--soft);}
   .journal-volume summary::-webkit-details-marker{display:none;}
@@ -3283,7 +3290,7 @@ function journalItemArt(it){
 }
 function journalChipHTML(it){ const art=journalItemArt(it); return `<span class="chip">${art?`<img class="chip-art" src="${art}" alt="">`:it.em} ${it.name}</span>`; }
 function postcardStamp(){ return `<span class="stamp-ring">${ic('paw')}</span><span class="stamp-bars"></span>`; }
-function journalRegionDetailHTML(r){
+function journalRegionPopoverHTML(r,align){
   const entries=(S.journal||[]).filter(e=>{
     const dest=DEST.find(d=>d.id===e.destId);
     return dest&&dest.regionId===r.id;
@@ -3292,23 +3299,24 @@ function journalRegionDetailHTML(r){
   if(entries.length){
     const e=entries[0];
     const chips=(e.items||[]).map(journalChipHTML).join('');
-    return `<div class="journal-atlas-detail"><button class="atlas-close" type="button" data-journal-atlas-close aria-label="关闭地区详情">×</button><div class="atlas-detail-head">${journalPlaceThumb(e)}<span>${r.name} · 最近一篇旅行手账</span></div><p>第 ${e.day} 天 · ${e.destName}：${e.story}</p><div class="atlas-chips"><span class="chip">${ic('map')} 已旅行 ${trips} 次</span>${chips}</div></div>`;
+    return `<div class="journal-atlas-popover ${align}" role="dialog" aria-label="${r.name}旅行详情"><button class="atlas-close" type="button" data-journal-atlas-close aria-label="关闭地区详情">×</button><div class="atlas-detail-head">${journalPlaceThumb(e)}<span>${r.name} · 最近一篇旅行手账</span></div><p>第 ${e.day} 天 · ${e.destName}：${e.story}</p><div class="atlas-chips"><span class="chip">${ic('map')} 已旅行 ${trips} 次</span>${chips}</div></div>`;
   }
   const dest=DEST.find(d=>d.regionId===r.id);
   const hint=dest&&dest.stories&&dest.stories[0]?dest.stories[0]:`下一次出发，去认识 ${r.name} 的风景与故事。`;
-  return `<div class="journal-atlas-detail"><button class="atlas-close" type="button" data-journal-atlas-close aria-label="关闭地区详情">×</button><div class="atlas-detail-head">${r.art?`<img class="biome-place" src="${r.art}" alt="${r.name}">`:`<span class="atlas-em">${r.em||'🗺️'}</span>`}<span>${r.name} · 待启程</span></div><p>${trips?`曾到访 ${trips} 次，但早期手账已归档。再去一次，让它补上一页新的见闻。`:hint}</p></div>`;
+  return `<div class="journal-atlas-popover ${align}" role="dialog" aria-label="${r.name}旅行详情"><button class="atlas-close" type="button" data-journal-atlas-close aria-label="关闭地区详情">×</button><div class="atlas-detail-head">${r.art?`<img class="biome-place" src="${r.art}" alt="${r.name}">`:`<span class="atlas-em">${r.em||'🗺️'}</span>`}<span>${r.name} · 待启程</span></div><p>${trips?`曾到访 ${trips} 次，但早期手账已归档。再去一次，让它补上一页新的见闻。`:hint}</p></div>`;
 }
 function journalRegionAtlasHTML(){
   const all=REGIONS.slice().sort((a,b)=>Number(b.domestic)-Number(a.domestic)||a.name.localeCompare(b.name,'zh-CN'));
   const reached=all.filter(r=>(S.regionCount&&S.regionCount[r.id])>0).length;
-  const tiles=all.map(r=>{
+  const tiles=all.map((r,index)=>{
     const count=(S.regionCount&&S.regionCount[r.id])||0;
     const visited=count>0;
+    const selected=journalAtlasSelected===r.id;
+    const align=index%4===0?'align-start':index%4===3?'align-end':'';
     const thumb=r.art?`<img src="${r.art}" alt="${r.name}" onerror="this.outerHTML='<span class=&quot;atlas-em&quot;>${r.em||'🗺️'}</span>'">`:`<span class="atlas-em">${r.em||'🗺️'}</span>`;
-    return `<button class="journal-region ${visited?'on':'locked'} ${journalAtlasSelected===r.id?'selected':''}" type="button" data-journal-region="${r.id}" title="${r.name}${visited?` · 已旅行 ${count} 次`:' · 尚未抵达'}" aria-pressed="${journalAtlasSelected===r.id}">${thumb}<b>${r.name}</b><span>${visited?`已达 ${count}`:'待启程'}</span></button>`;
+    return `<div class="journal-region-wrap ${selected?'selected':''}"><button class="journal-region ${visited?'on':'locked'} ${selected?'selected':''}" type="button" data-journal-region="${r.id}" title="${r.name}${visited?` · 已旅行 ${count} 次`:' · 尚未抵达'}" aria-pressed="${selected}">${thumb}<b>${r.name}</b><span>${visited?`已达 ${count}`:'待启程'}</span></button>${selected?journalRegionPopoverHTML(r,align):''}</div>`;
   }).join('');
-  const selected=all.find(r=>r.id===journalAtlasSelected);
-  return `<details class="journal-atlas" ${journalAtlasOpen?'open':''}><summary><span>${ic('map')} 地域旅行册</span><b>${reached}/${all.length}</b></summary><p>点按地区图标，即可查看它的旅行手账、纪念物或待启程故事。</p>${selected?journalRegionDetailHTML(selected):''}<div class="journal-atlas-grid">${tiles}</div></details>`;
+  return `<details class="journal-atlas" ${journalAtlasOpen?'open':''}><summary><span>${ic('map')} 地域旅行册</span><b>${reached}/${all.length}</b></summary><p>点按地区图标，即可在图标上方查看它的旅行手账、纪念物或待启程故事。</p><div class="journal-atlas-grid">${tiles}</div></details>`;
 }
 function journalCardHTML(e){
   const chips=(e.items||[]).map(journalChipHTML).join('');
