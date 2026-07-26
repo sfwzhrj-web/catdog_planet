@@ -1,0 +1,3917 @@
+// 设置点击事件
+document.getElementById('preStart').onclick=function(){
+  if(this._done)return; this._done=true;
+  window.__preSplashStarted=true;
+  // 首个载入页不经过 render 包装，用户点击后在此明确启动「夜院微光」（bgm_splash.ogg）。
+  // 这样既符合浏览器的用户手势播放规则，也确保登录载入页不会被角色页音乐抢占。
+  if(typeof audio!=='undefined') audio.playBGM('splash');
+  document.getElementById('preBar').style.width='100%';
+  setTimeout(function(){
+    document.getElementById('preSplash').style.display='none';
+    document.getElementById('app').style.display='';
+    if(window.__appReady){
+      S.seenSplash=true;
+      save();
+      render();
+    }
+  },400);
+};
+
+// [ls-polyfill] 沙箱 iframe memory fallback：缺少 allow-same-origin 时 localStorage 会抛 SecurityError
+(function(){
+  var _m={};
+  try{ localStorage.getItem('__test_ls'); }catch(e){
+    window._lsSandboxed=true;
+    Object.defineProperty(window, '__ls', { value: {
+      getItem: function(k){ return _m[k]||null; },
+      setItem: function(k,v){ _m[k]=String(v); },
+      removeItem: function(k){ delete _m[k]; },
+      clear: function(){ for(var k in _m) delete _m[k]; },
+      get length(){ return Object.keys(_m).length; }
+    }, configurable: true, writable: true });
+  }
+})();
+// [wechat-bridge] 微信小程序 WebView 桥接：localStorage/分享/广告
+(function(){
+  if(typeof wx==='undefined'||typeof wx.miniProgram==='undefined') return;
+  wx.miniProgram.navigateBack = wx.miniProgram.navigateBack || function(){};
+  var _origSet = window.localStorage.setItem.bind(window.localStorage);
+  var _origGet = window.localStorage.getItem.bind(window.localStorage);
+  // localStorage 写操作同步到微信存储（异步通知）
+  window.localStorage.setItem = function(k,v){
+    try{ _origSet(k,v); }catch(e){}
+    try{ wx.miniProgram.postMessage({ action:'saveData', key:k, value:v }); }catch(e){}
+  };
+  window.localStorage.getItem = function(k){
+    try{ return _origGet(k); }catch(e){ return null; }
+  };
+  // 分享/广告桥接
+  window.__wechatShare = function(title, img){
+    try{ wx.miniProgram.postMessage({ action:'share', title:title||'', imageUrl:img||'' }); }catch(e){}
+  };
+  window.__wechatAd = function(adUnitId){
+    try{ wx.miniProgram.postMessage({ action:'showAd', adUnitId:adUnitId||'' }); }catch(e){}
+  };
+  console.log('[wechat-bridge] 微信桥接已激活');
+})();
+var _L = window.__ls || localStorage;
+
+/* ============ 多宠槽层 (2026-07-17) ============ */
+const PET_META_KEY = 'mdjh_proto_meta';
+const MAX_PET_SLOTS = 5;
+
+function getMeta(){
+  var m=null; try{ m=JSON.parse(_L.getItem(PET_META_KEY)); }catch(e){}
+  if(!m){
+    var old=_L.getItem('mdjh_proto');
+    if(old){ try{ var pd=JSON.parse(old); pd.petId='pet_1'; _L.setItem('mdjh_proto_pet_1',JSON.stringify(pd)); _L.removeItem('mdjh_proto'); }catch(e){} }
+    m={activeId:'pet_1', roster:['pet_1'], nextId:2};
+    _L.setItem(PET_META_KEY, JSON.stringify(m));
+  }
+  return m;
+}
+function saveMeta(m){ _L.setItem(PET_META_KEY, JSON.stringify(m)); }
+function savePet(id, data){ _L.setItem('mdjh_proto_'+id, JSON.stringify(data)); }
+function loadPet(id){
+  var r=null; try{ r=JSON.parse(_L.getItem('mdjh_proto_'+id)); }catch(e){}
+  if(!r||!r.frags||typeof r.frags!=='object') r=JSON.parse(JSON.stringify(STARTER));
+  return sanitize(r);
+}
+function loadActivePet(){
+  var m=getMeta(); var s=loadPet(m.activeId); s.petId=m.activeId; return s;
+}
+// 全局切换 / 新建
+function switchPet(newId){
+  if(newId===getMeta().activeId){ toast('已是当前角色'); return; }
+  audio.playSFX('click');
+  if(!confirm('确定切换到「'+(loadPet(newId).name||'旅伴')+'」吗？')) return;
+  var _old=getMeta().activeId;
+  save();
+  var m=getMeta(); m.activeId=newId; saveMeta(m);
+  track('pet_switch',{from:_old, to:newId});
+  S=loadActivePet(); audio.playSFX('petPick');
+  view='home'; render(); toast('已切换到 '+S.name);
+}
+function newPet(){
+  var m=getMeta();
+  if(m.roster.length>=MAX_PET_SLOTS){ toast('已达上限 '+MAX_PET_SLOTS+' 个角色'); return; }
+  save();
+  var newId='pet_'+m.nextId; m.nextId++; m.roster.push(newId); m.activeId=newId;
+  saveMeta(m);
+  var firstMulti=(m.roster.length===2);
+  track('pet_add',{pet_id:newId, roster_size:m.roster.length});
+  if(firstMulti) track('multi_active',{roster_size:2});
+  S=JSON.parse(JSON.stringify(STARTER)); S.petId=newId;
+  view='home'; render();
+  if(firstMulti) toast('多角色共享同一实名信息，未成年保护对所有角色统一生效');
+}
+function listPets(){
+  var m=getMeta();
+  return m.roster.map(function(id){
+    var d=loadPet(id);
+    return {id:id, name:d.name||'旅伴', companion:d.companion||'🐱', star:d.star||0, level:d.level||1};
+  });
+}
+function isOwnPet(id){ var m=getMeta(); return m.roster.indexOf(id)>=0; }
+function rosterHTML(){
+  var pets=listPets(), m=getMeta();
+  var h='<div class="card"><h3>🐾 宠物角色（'+pets.length+'/'+MAX_PET_SLOTS+'）</h3><p class="muted">每只宠物的星屑、干粮、图鉴进度、背包、装扮、好友、手账全部独立，互不影响。</p>'+
+    '<p class="muted" style="margin-top:6px;color:#b8860b">⚠️ 多角色均归属同一账号，实名认证与未成年保护对所有角色统一生效，切换不改变账号身份。</p>';
+  pets.forEach(function(p){
+    var act=p.id===m.activeId;
+    var isPng = typeof p.companion==='string' && /\.(?:png|webp)$/i.test(p.companion);
+    var thumb = isPng ? '<img class="cmp-thumb" src="'+p.companion+'" alt="" onerror="this.outerHTML=\'<span class=&quot;cmp-em&quot;>🐱</span>\'">' : '<span class="cmp-em">'+(p.companion||'🐱')+'</span>';
+    var acts = '<div style="display:flex;gap:6px;flex-shrink:0">';
+    if(!act) acts += '<button class="btn ghost" data-switch="'+p.id+'" style="font-size:12px;padding:4px 10px">切换</button>';
+    acts += '<button class="btn ghost" data-rename="'+p.id+'" style="font-size:12px;padding:4px 10px">改名</button>';
+    if(!act) acts += '<button class="btn ghost" data-del="'+p.id+'" style="font-size:12px;padding:4px 10px;color:#c0392b">删宠</button>';
+    acts += '</div>';
+    h+='<div class="codex-item pet-row" style="align-items:center">'+
+      '<div class="em">'+thumb+'</div>'+
+      '<div style="flex:1;min-width:0"><div class="t">'+escapeHtml(p.name)+(act?' <span style="color:var(--accent)">· 当前</span>':'')+'</div>'+
+      '<div class="s">Lv'+(p.level||1)+' · '+(p.star||0)+' 星屑</div></div>'+
+      acts+
+      '</div>';
+  });
+  if(pets.length<MAX_PET_SLOTS) h+='<button class="btn" id="newPetBtn" style="margin-top:10px">＋ 新建角色</button>';
+  h+='<button class="btn ghost" onclick="view=\'home\';render()" style="margin-top:6px">← 返回首页</button></div>';
+  return h;
+}
+// 改名 / 删宠（P1 打磨）
+function renamePet(id){
+  var cur = id===getMeta().activeId ? (S.name||'旅伴') : (loadPet(id).name||'旅伴');
+  var np = normalizePetName(prompt('给这只旅伴起个名字：', cur), '');
+  if(!np) return;
+  if(id===getMeta().activeId){ S.name=np; save(); }
+  else { var d=loadPet(id); d.name=np; savePet(id,d); }
+  render(); toast('已改名为「'+np+'」');
+}
+function deletePet(id){
+  var m=getMeta();
+  if(id===m.activeId){ toast('不能删除当前角色，请先切换到其他角色'); return; }
+  if(m.roster.length<=1){ toast('至少保留 1 个角色'); return; }
+  var d=loadPet(id);
+  if(!confirm('确定删除「'+(d.name||'旅伴')+'」吗？它的全部进度将永久清除，不可恢复。')) return;
+  m.roster = m.roster.filter(function(x){return x!==id;});
+  saveMeta(m);
+  try{ _L.removeItem('mdjh_proto_'+id); }catch(e){}
+  render(); toast('已删除「'+(d.name||'旅伴')+'」');
+}
+// 全局错误兜底：任何未捕获异常直接显示在界面中间（含重置按钮）
+window.onerror = function(msg, url, line, col, err){
+  var m = document.getElementById('main');
+  var d = 'msg: '+(msg||'')+'  line:'+(line||'')+':'+(col||'');
+  if(err&&err.stack) d += '\n\n' + String(err.stack).split('\n').slice(0,5).join('\n');
+  if(m) m.innerHTML = '<div class="card" style="border:2px solid #c0392b;padding:20px;margin:20px">' +
+    '<h3>⚠️ 运行时错误</h3>' +
+    '<p style="color:#c0392b;font-size:11px;white-space:pre-wrap;word-break:break-all;font-family:CatDogUI,sans-serif">' + (d||'').replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</p>' +
+    '<p class="muted">通常因为浏览器残留旧版存档与新字段不兼容。点击下方清除后重试。</p>' +
+    '<button class="btn" onclick="try{_L.clear()}catch(e){};location.reload()" style="margin-top:10px">♻️ 重置并刷新</button>' +
+    '<p class="muted" style="margin-top:8px">若仍不行，请手动：F12 → 应用程序 → 存储 → 清除站点数据 → 刷新</p></div>';
+  return true;
+};
+/* ===================== 设计基线（来自 GDD 总纲 §5 + 数值纸面模拟） =====================
+   - depthWeight[0..6] = 0.3/0.5/0.8/1.0/1.3/1.6/2.0
+   - 自定义旅行时长：2/4/8/12/16h → 深度修正 0/0/0/1/1，回报倍率 0.4/0.6/0.9/1.3/1.7，食耗 1/1/2/3/4，仅 16h 有迷路 3%
+   - k_food = 0.15 × 携带干粮等级（携带越多稀有加成越高、消耗也越多）
+   - 分享邀请：+星屑/干粮 + 1 次额外广告机会（K 因子），每日上限 3
+   - 藏宝图残片独立掉率 0.07/次（不复用史诗池稀释） + M_Treasure=12 保底（针对"单张残片"；3 张残片合成 1 张完整图 → 首张完整图中位约 9 天）
+   - 传说仅在 depth>=5 出现；每日出游上限 3；星屑 15/次
+   - 加速广告省时 30%（非强制 IAA）
+   - 合成：普通/稀有/史诗簇 5 张；藏宝图 3 张
+============================================================================ */
+const DW = [0.3,0.5,0.8,1.0,1.3,1.6,2.0];
+let K_FOOD = 0.15;            // [可调] 干粮稀有加成系数（调参面板可覆盖）
+let TREASURE_P = 0.07;        // [可调] 藏宝图残片独立掉率
+let M_TREASURE = 12;          // [可调] 藏宝图保底阈值
+const DAILY_TRIPS = 3;
+const STAR_PER_TRIP = 15;
+const SYNTH = {normal:5, rare:5, epic:5, treasure:2};
+const SECRET_CLUSTERS = ['stardust','tide','time','prism','primor'];  // 秘境专属 5 簇：仅秘境产出 + 普通程兜底
+let FALLBACK_SECRET_P = 0.08;   // [可调] 深度普通程兜底掉秘境簇残片概率（解除"陶瓷(普) vs 棱镜(秘)"对秘境访问率的争夺）
+const LOC_SOUV_P = 0.15;   // 地点专属纪念品掉落概率（仅该目的地、未拥有时，独立于 3 簇合成）
+const FEST_FRAG_P = 0.30;  // [可调] 节庆图鉴：节日窗口内每程掉落"节庆碎片"概率（首参与保底 1 片；Phase A 春节/端午/中秋）
+// —— IAA 广告位（路径 A 纯广告变现，按你的口径分两类、互不共享）——
+// ① 出行加速广告：每日出游 3 次 → 每出行 1 次可看 1 次，硬顶 AD_CAP_TRAVEL=3/日（只省时，不给币）
+// ② 补给广告（星屑/干粮）：两者共享硬顶 AD_CAP_SUPPLY=5/日，只给效率资源，绝不碰残片/藏宝图/传说（ADR-1 / P4 红线）
+// 数值经「猫狗星球_变现反推模型.xlsx」§2.7 校准：收入=展示×eCPM（与奖励额无关），奖励为「观看意愿+经济配平」旋钮，护 P1 不提频次
+let AD_CAP_TRAVEL = 3;      // [可调] 出行加速广告：每日次数 = 每日出游上限
+let AD_CAP_SUPPLY = 5;      // [可调] 星屑/干粮补给广告：两者共享 5 次/日
+// ③ 节气掉率倾向（md §5 / 节气系统）：当前节气 bias 簇温和加权
+let W_TERM = 0.04;   // [可调] 偏好档权重附加（温和，不破稀有度曲线 / P4 红线）
+let B_TERM = 3;      // [可调] 偏好簇在所属档内的权重倍数（同档其余簇权重=1）
+let AD_STAR_REWARD = 8;     // [可调] 看广告得星屑
+let AD_FOOD_REWARD = 2;     // [可调] 看广告得干粮
+let LOGIN_FOOD = 4;         // [可调] 每日登录干粮补给（与广告供给配平）
+const SHOP_FOOD_COST = 10;  // 星屑购干粮：花 10 星屑
+const SHOP_FOOD_GET = 5;    // → 得 5 干粮（星屑主要消耗出口）
+// 分享邀请（K 因子 / 裂变）：得星屑+干粮，并奖励 1 次额外广告机会（扩 IAA 库存）
+let SHARE_STAR = 20;        // [可调] 分享得星屑
+let SHARE_FOOD = 5;         // [可调] 分享得干粮
+let SHARE_DAILY_CAP = 3;    // [可调] 每日分享奖励上限（轻绑定 P3，防刷）
+// 互送防刷/限频（轻绑定红线）：频率由「每日可收上限 + 单好友每日上限 + 关系时长门槛」约束，不靠广告墙
+let GIFT_PER_FRIEND_CAP = 2;  // [可调] 单好友每日互送上限（防同一对高频互刷/自刷小号）
+let FRIEND_MIN_DAYS = 1;      // [可调] 建立关系满 N 天才可互送（防小号互刷；真实关系链后端前置）
+// 背包容量系统（残片仓库上限 + 星屑扩容）
+const INIT_BACKPACK = 20;     // [可调] 初始背包容量（残片+藏宝图残片总数上限）；首次看补给广告再 +10
+const EXPAND_COST = 30;       // [可调] 扩容消耗星屑
+const EXPAND_SLOTS = 10;      // [可调] 每次扩容增加格数
+function backpackUsed(){ return Object.values(S.frags).reduce((a,b)=>a+b,0)+S.tmapFrag; }
+
+// —— 节气 / 节日系统（Phase 3/4：时间线驱动内容，仅增深度与留存，不碰 IAA 频次，守 P1）——
+const SPRING_STAR = 15, SPRING_FOOD = 3;   // 春节红包：随机给星屑/干粮
+const ZHONGQIU_FOOD = 3;                  // 中秋：归来额外干粮
+const CHONGYANG_STAR = 8;                 // 重阳：临时"登高"加成（星屑代理）
+const LABA_FOOD = 5;                      // 腊八：登录赠送腊八粥（干粮）
+// 二十四节气（按公历区间自然推进，每节气~15 天）。bias 仅作叙事软导向，不硬改掉率。
+const SOLAR_TERMS = [
+  {id:'lichun',art:'猫狗星球_节气美术/lichun.webp',  name:'立春', em:'🌱', m:2,  d:4,  bias:'fabric',  flavor:'春天从哪里开始的？它说是一阵风先知道了。',
+    hou:[{id:'lichun_1',name:'东风解冻',em:'🌬️',flavor:'风先知道春天来了。',art:'猫狗星球_候美术/lichun_1.webp'},{id:'lichun_2',name:'蛰虫始振',em:'🐛',flavor:'土里的虫，伸了第一个懒腰。',art:'猫狗星球_候美术/lichun_2.webp'},{id:'lichun_3',name:'鱼陟负冰',em:'🐟',flavor:'鱼贴着薄冰，往上探了探。',art:'猫狗星球_候美术/lichun_3.webp'}]},
+  {id:'yushui',art:'猫狗星球_节气美术/yushui.webp',  name:'雨水', em:'💧', m:2,  d:19, bias:'ceramic', flavor:'湖面蒙了一层水汽，它假装自己是雾。',
+    hou:[{id:'yushui_1',name:'獭祭鱼',em:'🦦',flavor:'水獭把鱼摆成一排，像在数算。',art:'猫狗星球_候美术/yushui_1.webp'},{id:'yushui_2',name:'候雁北',em:'🪿',flavor:'大雁掉头，往北边去了。',art:'猫狗星球_候美术/yushui_2.webp'},{id:'yushui_3',name:'草木萌动',em:'🌱',flavor:'泥土里，有什么要冒头了。',art:'猫狗星球_候美术/yushui_3.webp'}]},
+  {id:'jingzhe',art:'猫狗星球_节气美术/jingzhe.webp', name:'惊蛰', em:'⚡', m:3,  d:6,  bias:'primor',  flavor:'第一声雷的时候，它竖起了耳朵。',
+    hou:[{id:'jingzhe_1',name:'桃始华',em:'🌸',flavor:'第一朵桃花，先开了。',art:'猫狗星球_候美术/jingzhe_1.webp'},{id:'jingzhe_2',name:'仓庚鸣',em:'🐦',flavor:'黄鹂叫得比昨天更响。',art:'猫狗星球_候美术/jingzhe_2.webp'},{id:'jingzhe_3',name:'鹰化为鸠',em:'🕊️',flavor:'老鹰不见了，布谷鸟来了。',art:'猫狗星球_候美术/jingzhe_3.webp'}]},
+  {id:'chunfen',art:'猫狗星球_节气美术/chunfen.webp', name:'春分', em:'🌗', m:3,  d:21, bias:null,     flavor:'今天白天和黑夜一样长，它走了刚好一半的路。',
+    hou:[{id:'chunfen_1',name:'玄鸟至',em:'🐦',flavor:'燕子剪着风回来了。',art:'猫狗星球_候美术/chunfen_1.webp'},{id:'chunfen_2',name:'雷乃发声',em:'⚡',flavor:'天边闷闷的，第一声雷。',art:'猫狗星球_候美术/chunfen_2.webp'},{id:'chunfen_3',name:'始电',em:'🌩️',flavor:'闪电在云后，眨了一下。',art:'猫狗星球_候美术/chunfen_3.webp'}]},
+  {id:'qingming',art:'猫狗星球_节气美术/qingming.webp',name:'清明', em:'🌿', m:4,  d:5,  bias:'ceramic', flavor:'它在一座桥头停下来，像是等什么人。',
+    hou:[{id:'qingming_1',name:'桐始华',em:'🌳',flavor:'桐花开得安静又白。',art:'猫狗星球_候美术/qingming_1.webp'},{id:'qingming_2',name:'田鼠化为鴽',em:'🐭',flavor:'田鼠躲了，鹌鹑出来了。',art:'猫狗星球_候美术/qingming_2.webp'},{id:'qingming_3',name:'虹始见',em:'🌈',flavor:'雨刚停，天上挂了半道弓。',art:'猫狗星球_候美术/qingming_3.webp'}]},
+  {id:'guyu',art:'猫狗星球_节气美术/guyu.webp',    name:'谷雨', em:'🌾', m:4,  d:20, bias:'fabric',  flavor:'雨打在叶子上，它说那是谷子在说话。',
+    hou:[{id:'guyu_1',name:'萍始生',em:'🍃',flavor:'水面的浮萍，一夜铺开。',art:'猫狗星球_候美术/guyu_1.webp'},{id:'guyu_2',name:'鸣鸠拂其羽',em:'🐦',flavor:'斑鸠梳着羽毛，要下雨了。',art:'猫狗星球_候美术/guyu_2.webp'},{id:'guyu_3',name:'戴胜降于桑',em:'🐦',flavor:'戴胜落在桑枝上，像簪了朵花。',art:'猫狗星球_候美术/guyu_3.webp'}]},
+  {id:'lixia',art:'猫狗星球_节气美术/lixia.webp',   name:'立夏', em:'🌞', m:5,  d:6,  bias:'primor',  flavor:'夏天突然就到了，它的影子变短了。',
+    hou:[{id:'lixia_1',name:'蝼蝈鸣',em:'🦗',flavor:'蝼蛄在墙根，唱得欢。',art:'猫狗星球_候美术/lixia_1.webp'},{id:'lixia_2',name:'蚯蚓出',em:'🪱',flavor:'蚯蚓翻出湿泥，空气潮潮的。',art:'猫狗星球_候美术/lixia_2.webp'},{id:'lixia_3',name:'王瓜生',em:'🥒',flavor:'王瓜的藤，悄悄爬上了架。',art:'猫狗星球_候美术/lixia_3.webp'}]},
+  {id:'xiaoman',art:'猫狗星球_节气美术/xiaoman.webp', name:'小满', em:'🌾', m:5,  d:21, bias:null,     flavor:'麦穗刚开始饱满，它偷偷尝了一颗。',
+    hou:[{id:'xiaoman_1',name:'苦菜秀',em:'🌿',flavor:'苦菜开着小黄花，不张扬。',art:'猫狗星球_候美术/xiaoman_1.webp'},{id:'xiaoman_2',name:'靡草死',em:'🥀',flavor:'软弱的草，先撑不住了。',art:'猫狗星球_候美术/xiaoman_2.webp'},{id:'xiaoman_3',name:'麦秋至',em:'🌾',flavor:'麦子黄了尖，像提前入了秋。',art:'猫狗星球_候美术/xiaoman_3.webp'}]},
+  {id:'mangzhong',art:'猫狗星球_节气美术/mangzhong.webp',name:'芒种',em:'🌱', m:6,  d:6,  bias:'ceramic', flavor:'田里有人在忙碌，它坐在田埂上看了一下午。',
+    hou:[{id:'mangzhong_1',name:'螳螂生',em:'🦗',flavor:'螳螂破卵，举起小镰。',art:'猫狗星球_候美术/mangzhong_1.webp'},{id:'mangzhong_2',name:'鵙始鸣',em:'🐦',flavor:'伯劳站在最高的枝上叫。',art:'猫狗星球_候美术/mangzhong_2.webp'},{id:'mangzhong_3',name:'反舌无声',em:'🤫',flavor:'反舌鸟不学了，安静下来。',art:'猫狗星球_候美术/mangzhong_3.webp'}]},
+  {id:'xiazhi',art:'猫狗星球_节气美术/xiazhi.webp',  name:'夏至', em:'☀️', m:6,  d:21, bias:'primor',  flavor:'今天是一年中最长的一天，它走了最远的路。',
+    hou:[{id:'xiazhi_1',name:'鹿角解',em:'🦌',flavor:'鹿角脱落，像卸下旧冠。',art:'猫狗星球_候美术/xiazhi_1.webp'},{id:'xiazhi_2',name:'蜩始鸣',em:'🪲',flavor:'知了拉开长嗓，夏天正午。',art:'猫狗星球_候美术/xiazhi_2.webp'},{id:'xiazhi_3',name:'半夏生',em:'🌿',flavor:'半夏在荫处，悄悄长了出来。',art:'猫狗星球_候美术/xiazhi_3.webp'}]},
+  {id:'xiaoshu',art:'猫狗星球_节气美术/xiaoshu.webp', name:'小暑', em:'🔥', m:7,  d:7,  bias:null,     flavor:'它在树荫下趴着，连尾巴都不想动。',
+    hou:[{id:'xiaoshu_1',name:'温风至',em:'🍃',flavor:'风是热的，贴着脸。',art:'猫狗星球_候美术/xiaoshu_1.webp'},{id:'xiaoshu_2',name:'蟋蟀居壁',em:'🦗',flavor:'蟋蟀躲到墙角，怕晒。',art:'猫狗星球_候美术/xiaoshu_2.webp'},{id:'xiaoshu_3',name:'鹰始鸷',em:'🦅',flavor:'小鹰学着眼神变利。',art:'猫狗星球_候美术/xiaoshu_3.webp'}]},
+  {id:'dashu',art:'猫狗星球_节气美术/dashu.webp',   name:'大暑', em:'🌡️', m:7,  d:23, bias:'fabric',  flavor:'热得连石板都烫脚，它跳着走完了全程。',
+    hou:[{id:'dashu_1',name:'腐草为萤',em:'🪰',flavor:'腐草里飞出第一点流萤。',art:'猫狗星球_候美术/dashu_1.webp'},{id:'dashu_2',name:'土润溽暑',em:'💧',flavor:'泥土发烫，湿气往上蒸。',art:'猫狗星球_候美术/dashu_2.webp'},{id:'dashu_3',name:'大雨时行',em:'🌧️',flavor:'雷雨说来就来，酣畅。',art:'猫狗星球_候美术/dashu_3.webp'}]},
+  {id:'liqiu',art:'猫狗星球_节气美术/liqiu.webp',   name:'立秋', em:'🍂', m:8,  d:7,  bias:'ceramic', flavor:'第一片叶子落下来的时候，它刚好接住了。',
+    hou:[{id:'liqiu_1',name:'凉风至',em:'🍂',flavor:'风里，有了秋天的凉。',art:'猫狗星球_候美术/liqiu_1.webp'},{id:'liqiu_2',name:'白露降',em:'💧',flavor:'夜里草尖，凝了第一滴露。',art:'猫狗星球_候美术/liqiu_2.webp'},{id:'liqiu_3',name:'寒蝉鸣',em:'🦗',flavor:'寒蝉叫得，有点惜别。',art:'猫狗星球_候美术/liqiu_3.webp'}]},
+  {id:'chushu',art:'猫狗星球_节气美术/chushu.webp',  name:'处暑', em:'🌤️', m:8,  d:23, bias:null,     flavor:'暑气终于散了，它伸了一个很长的懒腰。',
+    hou:[{id:'chushu_1',name:'鹰乃祭鸟',em:'🦅',flavor:'鹰把猎物排开，像在谢天。',art:'猫狗星球_候美术/chushu_1.webp'},{id:'chushu_2',name:'天地始肃',em:'🌫️',flavor:'天地收起喧闹，安静了。',art:'猫狗星球_候美术/chushu_2.webp'},{id:'chushu_3',name:'禾乃登',em:'🌾',flavor:'稻穗低头，是成熟的样子。',art:'猫狗星球_候美术/chushu_3.webp'}]},
+  {id:'bailu',art:'猫狗星球_节气美术/bailu.webp',   name:'白露', em:'💦', m:9,  d:8,  bias:'primor',  flavor:'早上草叶上有露水，它的爪尖沾湿了。',
+    hou:[{id:'bailu_1',name:'鸿雁来',em:'🪿',flavor:'大雁排成人字，往南。',art:'猫狗星球_候美术/bailu_1.webp'},{id:'bailu_2',name:'玄鸟归',em:'🐦',flavor:'燕子走了，梁上空了。',art:'猫狗星球_候美术/bailu_2.webp'},{id:'bailu_3',name:'群鸟养羞',em:'🐦',flavor:'鸟儿藏起粮食，备着冬。',art:'猫狗星球_候美术/bailu_3.webp'}]},
+  {id:'qiufen',art:'猫狗星球_节气美术/qiufen.webp', name:'秋分', em:'🌕', m:9,  d:23, bias:'ceramic', flavor:'今晚月光很淡，它说像谁没说完的话。',
+    hou:[{id:'qiufen_1',name:'雷始收声',em:'🔇',flavor:'雷收了声，天高气爽。',art:'猫狗星球_候美术/qiufen_1.webp'},{id:'qiufen_2',name:'蛰虫坯户',em:'🐛',flavor:'虫儿封了洞口，准备眠。',art:'猫狗星球_候美术/qiufen_2.webp'},{id:'qiufen_3',name:'水始涸',em:'💧',flavor:'池塘浅了，倒映更清。',art:'猫狗星球_候美术/qiufen_3.webp'}]},
+  {id:'hanlu',art:'猫狗星球_节气美术/hanlu.webp',   name:'寒露', em:'🍁', m:10, d:8,  bias:'fabric',  flavor:'露水变冷了，它开始怀念夏天的阳光。',
+    hou:[{id:'hanlu_1',name:'鸿雁来宾',em:'🪿',flavor:'最后一批雁，也走了。',art:'猫狗星球_候美术/hanlu_1.webp'},{id:'hanlu_2',name:'雀入大水为蛤',em:'🐦',flavor:'小鸟不见了，海边多了蛤。',art:'猫狗星球_候美术/hanlu_2.webp'},{id:'hanlu_3',name:'菊有黄华',em:'🌼',flavor:'菊花偏在冷里，开得烈。',art:'猫狗星球_候美术/hanlu_3.webp'}]},
+  {id:'shuangjiang',art:'猫狗星球_节气美术/shuangjiang.webp',name:'霜降',em:'❄️', m:10, d:23, bias:null,     flavor:'第一次看见霜，它以为是谁撒的糖。',
+    hou:[{id:'shuangjiang_1',name:'豺乃祭兽',em:'🐺',flavor:'豺把猎物摆好，像在计数。',art:'猫狗星球_候美术/shuangjiang_1.webp'},{id:'shuangjiang_2',name:'草木黄落',em:'🍁',flavor:'叶子黄了，一片片落。',art:'猫狗星球_候美术/shuangjiang_2.webp'},{id:'shuangjiang_3',name:'蛰虫咸俯',em:'🐛',flavor:'虫儿都俯身，藏进土里。',art:'猫狗星球_候美术/shuangjiang_3.webp'}]},
+  {id:'lidong',art:'猫狗星球_节气美术/lidong.webp',  name:'立冬', em:'🍂', m:11, d:7,  bias:'primor',  flavor:'冬天到了，它开始囤积干粮和故事。',
+    hou:[{id:'lidong_1',name:'水始冰',em:'🧊',flavor:'水面结了薄薄一层。',art:'猫狗星球_候美术/lidong_1.webp'},{id:'lidong_2',name:'地始冻',em:'❄️',flavor:'地硬了，踩上去脆。',art:'猫狗星球_候美术/lidong_2.webp'},{id:'lidong_3',name:'雉入大水为蜃',em:'🐔',flavor:'野鸡少了，海边现了蜃。',art:'猫狗星球_候美术/lidong_3.webp'}]},
+  {id:'xiaoxue',art:'猫狗星球_节气美术/xiaoxue.webp', name:'小雪', em:'🌨️', m:11, d:22, bias:'ceramic', flavor:'第一片雪花落在它鼻尖上，它打了个喷嚏。',
+    hou:[{id:'xiaoxue_1',name:'虹藏不见',em:'🌫️',flavor:'天冷了，虹也藏起来。',art:'猫狗星球_候美术/xiaoxue_1.webp'},{id:'xiaoxue_2',name:'天气上升地气下降',em:'🌪️',flavor:'天清地浊，各归各处。',art:'猫狗星球_候美术/xiaoxue_2.webp'},{id:'xiaoxue_3',name:'闭塞而成冬',em:'🚪',flavor:'万物收口，冬天真的来了。',art:'猫狗星球_候美术/xiaoxue_3.webp'}]},
+  {id:'daxue',art:'猫狗星球_节气美术/daxue.webp',   name:'大雪', em:'⛄', m:12, d:7,  bias:'fabric',  flavor:'雪没过它的爪子，它在雪地里踩了一串梅花。',
+    hou:[{id:'daxue_1',name:'鹖鴠不鸣',em:'🐦',flavor:'寒号鸟不叫了，太冷。',art:'猫狗星球_候美术/daxue_1.webp'},{id:'daxue_2',name:'虎始交',em:'🐯',flavor:'老虎在雪里，开始求偶。',art:'猫狗星球_候美术/daxue_2.webp'},{id:'daxue_3',name:'荔挺出',em:'🌿',flavor:'荔挺顶着寒，抽出细叶。',art:'猫狗星球_候美术/daxue_3.webp'}]},
+  {id:'dongzhi',art:'猫狗星球_节气美术/dongzhi.webp', name:'冬至', em:'🌑', m:12, d:21, bias:null,     flavor:'今天是最长的一夜，它和影子做游戏。',
+    hou:[{id:'dongzhi_1',name:'蚯蚓结',em:'🪱',flavor:'蚯蚓蜷成结，躲在土里。',art:'猫狗星球_候美术/dongzhi_1.webp'},{id:'dongzhi_2',name:'麋角解',em:'🦌',flavor:'麋鹿卸角，像卸下旧饰。',art:'猫狗星球_候美术/dongzhi_2.webp'},{id:'dongzhi_3',name:'水泉动',em:'💧',flavor:'泉眼底下，还温着。',art:'猫狗星球_候美术/dongzhi_3.webp'}]},
+  {id:'xiaohan',art:'猫狗星球_节气美术/xiaohan.webp', name:'小寒', em:'🥶', m:1,  d:6,  bias:'primor',  flavor:'冷得不想出门，但它说"正因为冷才要出发"。',
+    hou:[{id:'xiaohan_1',name:'雁北乡',em:'🪿',flavor:'大雁望向北，心先回了。',art:'猫狗星球_候美术/xiaohan_1.webp'},{id:'xiaohan_2',name:'鹊始巢',em:'🐦',flavor:'喜鹊衔枝，开始筑巢。',art:'猫狗星球_候美术/xiaohan_2.webp'},{id:'xiaohan_3',name:'雉始雊',em:'🐔',flavor:'野鸡在晨雾里，第一次叫。',art:'猫狗星球_候美术/xiaohan_3.webp'}]},
+  {id:'dahan',art:'猫狗星球_节气美术/dahan.webp',   name:'大寒', em:'🧊', m:1,  d:20, bias:'ceramic', flavor:'一年中最冷的一天，它带回来一团雪。',
+    hou:[{id:'dahan_1',name:'鸡始乳',em:'🐔',flavor:'母鸡抱窝，要孵春了。',art:'猫狗星球_候美术/dahan_1.webp'},{id:'dahan_2',name:'征鸟厉疾',em:'🦅',flavor:'鹰飞得又高又急。',art:'猫狗星球_候美术/dahan_2.webp'},{id:'dahan_3',name:'水泽腹坚',em:'🧊',flavor:'湖心冻得最厚，能走人。',art:'猫狗星球_候美术/dahan_3.webp'}]},
+];
+// 传统节日（短期活动，公历近似区间；真实版应接农历，原型以可持续供给为先）。effect 在 finishTrip/rollover 注入。
+const FESTIVALS = [
+  {id:'spring',   name:'春节', em:'🧧', m:2,  d:1,  e:2,  d2:15},  // 除夕–初七（近似）
+  {id:'yuanxiao', name:'元宵', em:'🏮', m:2,  d:15, e:2,  d2:22},  // 正月十五（近似）
+  {id:'duanwu',   name:'端午', em:'🐉', m:6,  d:1,  e:6,  d2:14},  // 五月初五（近似）
+  {id:'qixi',     name:'七夕', em:'🎋', m:8,  d:1,  e:8,  d2:14},  // 七月初七（近似）
+  {id:'zhongqiu', name:'中秋', em:'🥮', m:9,  d:15, e:9,  d2:30},  // 八月十五（近似）
+  {id:'chongyang',name:'重阳', em:'🏔️', m:10, d:1,  e:10, d2:9},  // 九月初九（近似）
+  {id:'laba',     name:'腊八', em:'🥣', m:1,  d:1,  e:1,  d2:15},  // 腊月初八（近似）
+  {id:'qingming', name:'清明', em:'🌿', m:4,  d:4,  e:4,  d2:8},   // 清明（近似）
+  {id:'dongzhi',  name:'冬至', em:'❄️', m:12, d:21, e:12, d2:30},  // 冬至（近似）
+  {id:'crossyear',name:'跨年', em:'🎆', m:12, d:31, e:1,  d2:2},   // 跨年（12/31–1/2，跨年边界）
+];
+// —— P2 繁荣度·稀客 / 单宠装扮 / 偶遇事件 / 世界观（轻留存，不动收集曲线）——
+const ENCOUNTER_P = 0.12;   // [可调] 单次出游偶遇事件概率（被动惊喜，不增肝度）
+// 稀客：登录偶发来访，概率随繁荣度提升（rollover 已计星屑），此处仅定义卡面
+const RARE_VISITORS = [
+  {em:'🕊️', name:'信差鸽',   gift:8,  word:'捎来一封远方旅友的信', art:'猫狗星球_稀客美术/pigeon.webp'},
+  {em:'🎻', name:'流浪乐手', gift:12, word:'在窗台拉了一支温柔的小曲',   art:'猫狗星球_稀客美术/musician.webp'},
+  {em:'⚓', name:'老船长',   gift:15, word:'讲了一段海上的旧事',         art:'猫狗星球_稀客美术/captain.webp'},
+  {em:'📮', name:'邮筒猫',   gift:10, word:'送来你寄出明信片的回音',     art:'猫狗星球_稀客美术/mailboxcat.webp'},
+  {em:'🌟', name:'拾光童',   gift:18, word:'把一捧星光留在了窗台',       art:'猫狗星球_稀客美术/lightchild.webp'},
+];
+// 装扮（单宠·纯表达，非任务）：来源=偶遇(enc)/节庆(fest)/成就(ach)
+const COSMETICS = [
+  {id:'scarf',name:'旅人围巾',em:'🧣',desc:'风雪路上偶遇的旅人相赠',src:'偶遇·雪原驿站',acquire:'encounter',art:'猫狗星球_装扮美术/scarf.webp',story:'旅人说，围巾要留给还愿意继续走路的伙伴。'},
+  {id:'hat',name:'探险帽',em:'🎩',desc:'林间旧友落下的草帽',src:'偶遇·林间旧友',acquire:'encounter',art:'猫狗星球_装扮美术/hat.webp',story:'帽檐压住的是阳光，也压住了第一次迷路的慌张。'},
+  {id:'glasses',name:'星夜眼镜',em:'🕶️',desc:'都市夜游时拾得',src:'偶遇·城市夜游',acquire:'encounter',art:'猫狗星球_装扮美术/glasses.webp',story:'戴上它，连街角的灯都像远处的星。'},
+  {id:'flower',name:'花环',em:'🌸',desc:'春日出游偶得的野花',src:'偶遇·春日野径',acquire:'encounter',art:'猫狗星球_装扮美术/flower-v2.webp',story:'花会谢，但被认真记住的春天不会。'},
+  {id:'lantern',name:'小灯笼',em:'🏮',desc:'元宵灯会所得',src:'节庆·元宵',acquire:'festival',art:'猫狗星球_装扮美术/lantern.webp',story:'灯会散场后，它还替你把回家的路照亮。'},
+  {id:'crown',name:'草编皇冠',em:'👑',desc:'万象图鉴达成之礼',src:'成就·万象图鉴',acquire:'achievement',art:'猫狗星球_装扮美术/crown.webp',story:'这不是奖赏，而是每一段旅程共同编成的冠冕。'},
+  {id:'compass_pendant',name:'星航罗盘坠',em:'🧭',desc:'首场秘境深潜的方向信物',src:'秘境·首场深潜',acquire:'encounter',unlock:()=>S.secretTrips>=1,art:'猫狗星球_装扮美术/compass_pendant.webp',story:'它指向的不是北方，而是下一段值得出发的路。'},
+  {id:'ginkgo_cape',name:'银杏叶斗篷',em:'🍂',desc:'秋日山径的落叶裁成',src:'偶遇·秋日山径',acquire:'encounter',unlock:()=>S.trips>=6,art:'猫狗星球_装扮美术/ginkgo_cape.webp',story:'每一片叶脉里，都藏着一阵轻轻推你前行的山风。'},
+  {id:'wind_bell',name:'山风铃铛',em:'🔔',desc:'高原风口的清脆回声',src:'偶遇·高原风口',acquire:'encounter',unlock:()=>S.trips>=10,art:'猫狗星球_装扮美术/wind_bell.webp',story:'风穿过铃铛时，远方会回答一声“我在”。'},
+  {id:'shell_collar',name:'海盐贝壳项圈',em:'🐚',desc:'海岸退潮时拾得',src:'偶遇·海岸拾光',acquire:'encounter',unlock:()=>S.trips>=12,art:'猫狗星球_装扮美术/shell_collar.webp',story:'贝壳里装着一小段潮声，想家的时候听一听。'},
+  {id:'ticket_clip',name:'夜行车票发夹',em:'🎫',desc:'随机出游的夜车纪念',src:'偶遇·夜行列车',acquire:'encounter',unlock:()=>S.randomTrips>=3,art:'猫狗星球_装扮美术/ticket_clip.webp',story:'那张没有终点的车票，后来夹住了一晚的星光。'},
+  {id:'post_satchel',name:'信使小挎包',em:'📮',desc:'寄出心意后收到的回信',src:'互送·旅友回信',acquire:'encounter',unlock:()=>S.giftStreak>=2||S.trips>=18,art:'猫狗星球_装扮美术/post_satchel.webp',story:'它不装贵重的东西，只装“我也想起你了”。'},
+  {id:'candy_glasses',name:'糖玻璃眼镜',em:'🍬',desc:'城市橱窗里折出的颜色',src:'偶遇·城市漫游',acquire:'encounter',unlock:()=>S.trips>=16,art:'猫狗星球_装扮美术/candy_glasses.webp',story:'隔着琥珀色镜片，连普通的一天也甜了一点。'},
+  {id:'bamboo_cuff',name:'竹编护腕',em:'🎋',desc:'跟着节气收下的手作礼',src:'节气·候礼',acquire:'encounter',unlock:()=>S.solarTerms.length>=3,art:'猫狗星球_装扮美术/bamboo_cuff.webp',story:'细细的竹篾记得雨声，也记得手心的温度。'},
+  {id:'glazed_gourd',name:'琉璃小葫芦',em:'🏺',desc:'秘境石门旁的蓝釉小物',src:'秘境·三次深潜',acquire:'encounter',unlock:()=>S.secretTrips>=3,art:'猫狗星球_装扮美术/glazed_gourd.webp',story:'晃一晃，像有一片安静的蓝天在里面。'},
+  {id:'star_map_shawl',name:'星图披肩',em:'🌌',desc:'藏宝图拼合后显出的夜色',src:'藏宝图·初次合成',acquire:'encounter',unlock:()=>S.tmap>=1,art:'猫狗星球_装扮美术/star_map_shawl.webp',story:'它把走过的夜路绣成星图，披在肩上也不会迷路。'},
+  {id:'moon_rabbit_hood',name:'月兔耳朵帽',em:'🐰',desc:'中秋夜的月光裁成',src:'节庆·中秋',acquire:'festival',art:'猫狗星球_装扮美术/moon_rabbit_hood.webp',story:'月亮升起来时，帽尖会悄悄朝着团圆的方向。'},
+  {id:'winter_lights',name:'冬夜灯串项圈',em:'❄️',desc:'冬至夜市留下的暖光',src:'节庆·冬至',acquire:'festival',art:'猫狗星球_装扮美术/winter_lights.webp',story:'最冷的夜里，也有一串小灯替你留住温暖。'},
+  {id:'comet_charm',name:'流星尾灯',em:'☄️',desc:'长途旅行后收到的夜行护符',src:'偶遇·三十次远行',acquire:'encounter',unlock:()=>S.trips>=30,art:'猫狗星球_装扮美术/comet_charm.webp',story:'跑起来时，它会在身后拖出一颗很小的流星。'},
+];
+const FESTIVAL_COSMETICS={yuanxiao:'lantern',zhongqiu:'moon_rabbit_hood',dongzhi:'winter_lights'};
+const MAX_HOME_DECOR=8;
+// 星屑长期消耗：纯视觉小窝主题，不影响掉落、秘境或稀有收集。
+// 主题均可永久保留并自由切换，避免把星屑变成一次性、不可逆的惩罚。
+const HOME_THEMES=[
+  {id:'seasonal',name:'四季窗台',em:'🌿',cost:0,desc:'跟随当下节气变换窗外的颜色。',bg:null},
+  {id:'sunroom',name:'晨光花房',em:'🌤️',cost:80,desc:'把一次远行换来的暖光，留在小窝里。',bg:'linear-gradient(160deg,#fff1c9,#fce6d8)'},
+  {id:'rainstudy',name:'雨夜书房',em:'📚',cost:140,desc:'雨声、旧地图与尚未寄出的明信片。',bg:'linear-gradient(160deg,#dce9f0,#e9e3f1)'},
+  {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)'},
+  {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)'}
+];
+const HOME_THEME_BY_ID=Object.fromEntries(HOME_THEMES.map(t=>[t.id,t]));
+const JOURNAL_FRAME_COST=15;
+function availableEncounterCosmetics(owned){ return COSMETICS.filter(c=>owned.indexOf(c.id)<0&&c.acquire==='encounter'&&(!c.unlock||c.unlock())); }
+// 偶遇事件（L6：出游被动触发，给惊喜与装扮来源）
+const ENCOUNTERS = [
+  {em:'🐾', name:'迷路的小猫', text:'它在巷口遇见一只同样迷路的小猫，互相蹭了蹭鼻子。', reward:'cos', art:'猫狗星球_偶遇美术/kitten.webp'},
+  {em:'🍂', name:'落叶信使',   text:'一片写着字的落叶飘到它脚边，风替它读完了。',     reward:'star', art:'猫狗星球_偶遇美术/leaf.webp'},
+  {em:'🕯️', name:'守夜人',     text:'深夜的驿站里，守夜人分了它半截蜡烛。',         reward:'cos', art:'猫狗星球_偶遇美术/watchman.webp'},
+  {em:'🐚', name:'海螺歌者',   text:'它把耳朵贴上贝壳，听见了去年夏天的歌。',       reward:'star', art:'猫狗星球_偶遇美术/conch.webp'},
+  {em:'📜', name:'旧书摊主',   text:'旧书摊主送它一张泛黄的地图碎片。',             reward:'cos', art:'猫狗星球_偶遇美术/bookstall.webp'},
+  {em:'🌌', name:'梦境旅人',   text:'它梦见自己也成了一颗流星，划过别人的窗。',     reward:'star', art:'猫狗星球_偶遇美术/dream.webp'},
+];
+// 世界观（L9：收集深度解锁的剧情碎片，纯阅读，复用 fn 条件）
+const LORE = [
+  {id:'origin', name:'起始之章', hint:'集齐任意 3 件整件', prog:()=>`${S.items.length}/3`, cond:()=>S.items.length>=3,
+   text:'猫狗星球上没有地图，只有无数条还没走过的路。旅伴们出发时并不知道会在哪一站停下——但每一站都记得它们来过。'},
+  {id:'secret', name:'秘境之章', hint:'解锁一处隐藏秘境', prog:()=>S.secret?'✓':'✗', cond:()=>!!S.secret,
+   text:'有些地方不在任何名录上。它们只在你足够好奇、也足够耐心的时候，才肯露出入口。'},
+  {id:'bond', name:'羁绊之章', hint:'向友人赠出 10 次残片', prog:()=>`${S.helped||0}/10`, cond:()=>(S.helped||0)>=10,
+   text:'残片会用完，但递出去的那一刻，两个小窝之间多了一条看不见的路。'},
+  {id:'time', name:'岁时之章', hint:'收集 12 个节气信物', prog:()=>`${(S.solarTerms||[]).length}/12`, cond:()=>(S.solarTerms||[]).length>=12,
+   text:'二十四个节气是星球的心跳。跟着它走，你会发现同一片湖在立春和冬至是两副模样。'},
+  {id:'all', name:'万象之章', hint:'集齐所有主簇整件', prog:()=>{const ks=Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival);const got=ks.filter(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id))).length;return `${got}/${ks.length}`;}, cond:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id))),
+   text:'当所有图鉴都亮起，旅伴停在窗前——原来整颗星球，都是它带回来的故事拼成的。'},
+];
+// —— L10 遇友（途中遇陌生旅友→加游戏内宠物ID好友）——
+// 决策：仅精确同目的地触发；MEET_P=1.5% 稀有；服务器按[窗口∩同D]匹配，无真人时 synthetic 填充保底；
+//       仅游戏内宠物ID好友（可互送，不涉微信）；合影仅私藏手账，不分享/K因子。
+const MEET_P = 0.015;   // [可调] 遇友概率：先掷骰决定本次是否有偶遇，再匹配共游者（稀有惊喜）
+// 合成快照填充：原型无服务端，按当前目的地 D 生成 synthetic 共游者 = 后端 synthetic 填充的本地等价物（保证每次都有共游者）
+const MEET_NAMES = ['阿岩','小满','豆泥','糯米','灯笼客','云朵','石头','栗子','布丁','年糕','芝麻','柚子','三七','阿橘'];
+const MEET_COMPANIONS = [
+  {id:'dog',em:'🐶',art:'猫狗星球_遇友美术/dog.webp'},
+  {id:'rabbit',em:'🐰',art:'猫狗星球_遇友美术/rabbit.webp'},
+  {id:'bear',em:'🐻',art:'猫狗星球_遇友美术/bear.webp'},
+  {id:'fox',em:'🦊',art:'猫狗星球_遇友美术/fox.webp'},
+  {id:'tiger',em:'🐯',art:'猫狗星球_遇友美术/tiger.webp'},
+  {id:'koala',em:'🐨',art:'猫狗星球_遇友美术/koala.webp'},
+  {id:'panda',em:'🐼',art:'猫狗星球_遇友美术/panda.webp'},
+  {id:'hamster',em:'🐹',art:'猫狗星球_遇友美术/hamster.webp'},
+  {id:'penguin',em:'🐧',art:'猫狗星球_遇友美术/penguin.webp'},
+  {id:'frog',em:'🐸',art:'猫狗星球_遇友美术/frog.webp'},
+  {id:'octopus',em:'🐙',art:'猫狗星球_遇友美术/octopus.webp'},
+  {id:'cow',em:'🐮',art:'猫狗星球_遇友美术/cow.webp'},
+  {id:'rooster',em:'🐔',art:'猫狗星球_遇友美术/rooster.webp'},
+  {id:'mouse',em:'🐭',art:'猫狗星球_遇友美术/mouse.webp'},
+];
+// 双人相遇故事模板（m=对方旅友对象，含 name/companion；dest=目的地）
+const MEET_STORIES = [
+  m=>`你和 ${m.name} 在 ${m.destName} 同时停下——${m.companion.em} 和你的旅伴凑近闻了闻背包，像在核对出发清单。`,
+  m=>`${m.companion.em}（${m.name} 的旅伴）和你的旅伴在 ${m.destName} 一起追同一只蚂蚱，跑丢了半片夕阳。`,
+  m=>`${m.destTag} 的雨说来就来，你和 ${m.name} 挤在亭子下，把干粮掰成了两半。`,
+  m=>`你与 ${m.name} 在 ${m.destName} 的石碑前相遇，两只旅伴并排坐着，看同一片云慢慢飘走。`,
+  m=>`你与 ${m.name} 在 ${m.destName} 各自举着一盏灯，合影里两团光叠成了一团。`,
+  m=>`风把 ${m.name} 的明信片吹到了你脚边，两只旅伴同时弯腰去捡，脑袋磕在了一起。`,
+];
+// 测试/演示用：MOCK_TODAY 非空时替代 new Date()，便于跨节气/节日验证
+var MOCK_TODAY = null;
+function today(){ return MOCK_TODAY || new Date(); }
+// 轮回标记：以自然年为单位（每年自转一轮，驱动称号等级/候复得）。测试可用 MOCK_TODAY 跨年模拟。
+function curCycle(){ return today().getFullYear(); }
+// 按 today() 在节气内的天数定位当前候（初/次/末候，每候约5日）
+function currentHou(term){
+  if(!term || !term.hou || !term.hou.length) return null;
+  const start=new Date(today().getFullYear(), term.m-1, term.d);
+  const dayIn=Math.floor((today()-start)/86400000);
+  const idx=Math.max(0, Math.min(term.hou.length-1, Math.floor(dayIn/5)));
+  return term.hou[idx] || null;
+}
+function _ord(mo,da){ return mo*100+da; }
+function termAt(date){
+  const mo=date.getMonth()+1, da=date.getDate();
+  const ord=_ord(mo,da);
+  for(let i=0;i<SOLAR_TERMS.length;i++){
+    const cur=SOLAR_TERMS[i], nxt=SOLAR_TERMS[(i+1)%SOLAR_TERMS.length];
+    const oCur=_ord(cur.m,cur.d), oNxt=_ord(nxt.m,nxt.d);
+    if(oNxt>oCur){ if(ord>=oCur && ord<oNxt) return cur; }      // 同一年内窗口
+    else { if(ord>=oCur || ord<oNxt) return cur; }              // 跨年窗口（如冬至→小寒）
+  }
+  return SOLAR_TERMS[0];
+}
+function getCurrentTerm(){ return termAt(today()); }
+function isFestival(id){
+  const f=FESTIVALS.find(x=>x.id===id); if(!f) return false;
+  const mo=today().getMonth()+1, da=today().getDate();
+  if(f.e>=f.m){ // 同一年内窗口
+    return (mo>f.m || (mo===f.m && da>=f.d)) && (mo<f.e || (mo===f.e && da<=f.d2));
+  } else { // 跨年窗口（如 12/31–1/2）：仅 [m/d 当日] ∪ [年初, e/d2]，中间月份不活动
+    return (mo===f.m && da>=f.d) || (mo===f.e && da<=f.d2);
+  }
+}
+function activeFestivals(){ return FESTIVALS.filter(f=>isFestival(f.id)).map(f=>f.id); }
+
+// —— 旅伴形象库（猫 9 + 狗 9 = 18 种；首次进游戏供玩家选择；亦支持上传自家宠物照片）——
+// 品种清单与《猫狗星球_内容资产表.md》§1 保持一致（权威来源）
+const PETS = [
+  // 猫 cat（9）—— art 为 v3 CG 高保真立绘（守 ADR-1：纯外观、零数值影响），无图时回退 em
+  {id:'c_orange',  kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_orange.webp',  name:'橘猫',     desc:'贪吃又慵懒，晒太阳是毕生事业。'},
+  {id:'c_british', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_british.webp', name:'英国短毛猫', desc:'英伦绅士，沉稳慵懒，瘫着也优雅。'},
+  {id:'c_ragdoll', kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_ragdoll.webp', name:'布偶猫',   desc:'软萌佛系，被抱也乖乖的。'},
+  {id:'c_siamese', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_siamese.webp', name:'暹罗猫',   desc:'话多爱叫，看法都要唠叨两句。'},
+  {id:'c_lihua',   kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_lihua.webp',   name:'狸花猫',   desc:'机敏野性，抓虫小能手。'},
+  {id:'c_calico',  kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_calico.webp',  name:'三花猫',   desc:'温柔黏人，认定你就赖着不走。'},
+  {id:'c_persian', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_persian.webp', name:'波斯猫',   desc:'高贵安静，像从古波斯壁画里走出来。'},
+  {id:'c_american',kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_american.webp',name:'美国短毛猫', desc:'健壮友善，邻家全能好伙伴。'},
+  {id:'c_bombay',  kind:'cat', em:'🐈‍⬛', art:'猫狗星球_宠物美术/c_bombay.webp',  name:'孟买猫',   desc:'神秘灵动，黑曜石般的小影子。'},
+  // 狗 dog（9）
+  {id:'d_native',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_native.webp',  name:'中华田园犬', desc:'忠诚乡土，看家护院的老黄牛。'},
+  {id:'d_golden',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_golden.webp',  name:'金毛',     desc:'阳光暖男，谁都愿意摇尾巴。'},
+  {id:'d_corgi',   kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_corgi.webp',   name:'柯基',     desc:'短腿电臀，跑起来像小马达。'},
+  {id:'d_poodle',  kind:'dog', em:'🐩',  art:'猫狗星球_宠物美术/d_poodle.webp',  name:'泰迪',     desc:'卷毛精致，出门必梳妆。'},
+  {id:'d_husky',   kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_husky.webp',   name:'哈士奇',   desc:'拆家戏精，眼神里写满无辜。'},
+  {id:'d_french',  kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_french.webp',  name:'法国斗牛犬', desc:'呆萌温和，皱眉都在卖萌。'},
+  {id:'d_bichon',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_bichon.webp',  name:'比熊',     desc:'棉花糖甜，软乎乎一团。'},
+  {id:'d_shiba',   kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_shiba.webp',   name:'柴犬',     desc:'倔强表情包，内心戏十足。'},
+  {id:'d_samoyed', kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_samoyed.webp', name:'萨摩耶',   desc:'微笑天使，毛白得像云。'},
+];
+// 玩家未选宠时强制进入选宠页；选宠后 companion 可为 emoji 或 data:image 头像
+let pendingPet=null, pendingImg=null;
+const MAX_PET_AVATAR_BYTES=5*1024*1024;
+const PET_AVATAR_EDGE=512;
+function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>'"]/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; }); }
+function normalizePetName(raw, fallback){
+  const name=String(raw==null?'':raw).replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,8);
+  return name||fallback||'';
+}
+function deliveryArtPath(v){ return typeof v==='string' && v.indexOf('猫狗星球_')===0 ? v.replace(/\.png$/i,'.webp') : v; }
+function migrateArtworkInSave(v){
+  if(Array.isArray(v)){ v.forEach(migrateArtworkInSave); return; }
+  if(!v||typeof v!=='object') return;
+  Object.keys(v).forEach(function(k){ const value=v[k]; if(typeof value==='string') v[k]=deliveryArtPath(value); else if(value&&typeof value==='object') migrateArtworkInSave(value); });
+}
+function equippedCosmetics(){ return [...new Set(S.equipped||[])].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR); }
+function companionHTML(showDecor=true){
+  let pet;
+  if(typeof S.companion==='string' && S.companion.indexOf('data:image')===0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴">`;
+  else if(typeof S.companion==='string' && /\.(?:png|webp)$/i.test(S.companion)) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴" onerror="this.outerHTML='<span class=&quot;cmp-em&quot;>🐱</span>'">`;
+  else pet=`<span class="cmp-em">${S.companion||'🐱'}</span>`;
+  // L8 单宠装扮：已装备的装扮作为小徽章环绕旅伴（纯表达，非任务）
+  const eq=showDecor?equippedCosmetics().map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</span>`; }).join(''):'';
+  return `<span class="cmp-wrap">${pet}${eq}</span>`;
+}
+const DECOR_DEFAULT_POS={scarf:{x:72,y:67},hat:{x:30,y:30},glasses:{x:70,y:31},flower:{x:29,y:64},lantern:{x:72,y:42},crown:{x:50,y:22},compass_pendant:{x:80,y:75},ginkgo_cape:{x:18,y:25},wind_bell:{x:83,y:20},shell_collar:{x:18,y:75},ticket_clip:{x:65,y:18},post_satchel:{x:84,y:58},candy_glasses:{x:34,y:18},bamboo_cuff:{x:16,y:48},glazed_gourd:{x:82,y:38},star_map_shawl:{x:50,y:84},moon_rabbit_hood:{x:50,y:12},winter_lights:{x:67,y:82},comet_charm:{x:30,y:84}};
+function decorPosition(id){
+  const p=(S.decorPositions&&S.decorPositions[id])||DECOR_DEFAULT_POS[id]||{x:50,y:25};
+  return {x:Math.max(10,Math.min(90,Number(p.x)||50)),y:Math.max(12,Math.min(88,Number(p.y)||25))};
+}
+function wardrobeDecorHTML(){
+  return equippedCosmetics().map(id=>{
+    const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
+    return `<button class="wardrobe-decoration" type="button" data-decor-id="${id}" aria-label="拖动摆放${c.name}" title="拖动摆放 ${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</button>`;
+  }).join('');
+}
+function showcaseDecorHTML(){
+  return equippedCosmetics().map(id=>{
+    const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
+    return `<span class="showcase-decoration" title="${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</span>`;
+  }).join('');
+}
+function journalDecorHTML(){
+  return equippedCosmetics().map(id=>{
+    const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
+    return `<span class="journal-decoration" title="${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</span>`;
+  }).join('');
+}
+function journalCompanionHTML(){ return `<span class="journal-pet-stage">${companionHTML(false)}<span class="journal-decoration-layer">${journalDecorHTML()}</span></span>`; }
+// 伴侣/好友头像统一渲染：emoji 字符串、.webp CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
+const FRIEND_ART = {'🐶':'猫狗星球_遇友美术/dog.webp', '🐰':'猫狗星球_遇友美术/rabbit.webp', '🐱':'猫狗星球_宠物美术/c_orange.webp'};
+function cmp(c){
+  if(c && typeof c==='object'){ return c.art?`<img class="cmp-img" src="${c.art}" alt="">`:`<span class="cmp-em">${c.em||'🐱'}</span>`; }
+  if(typeof c==='string' && /\.(?:png|webp)$/i.test(c)) return `<img class="cmp-img" src="${c}" alt="">`;
+  const a=FRIEND_ART[c]; if(a) return `<img class="cmp-img" src="${a}" alt="">`;
+  return `<span class="cmp-em">${c||'🐱'}</span>`;
+}
+// 写实 CG 图标（与宠物高保真头像同档渲染；缺失键回退到线描 SVG）
+const CG = {
+  compass:'猫狗星球_图标美术/compass.webp',
+  home:'猫狗星球_图标美术/home.webp',
+  book:'猫狗星球_图标美术/book.webp',
+  social:'猫狗星球_图标美术/social.webp',
+  shop:'猫狗星球_图标美术/shop.webp',
+  tune:'猫狗星球_图标美术/tune.webp',
+  star:'猫狗星球_图标美术/star.webp',
+  food:'猫狗星球_图标美术/food.webp',
+  crystal:'猫狗星球_图标美术/crystal.webp',
+  map:'猫狗星球_图标美术/map.webp',
+  backpack:'猫狗星球_图标美术/backpack.webp',
+  paw:'猫狗星球_图标美术/paw.webp',
+  play:'猫狗星球_图标美术/play.webp',
+  pin:'猫狗星球_图标美术/pin.webp',
+  dice:'猫狗星球_图标美术/dice.webp',
+  minus:'猫狗星球_图标美术/minus.webp',
+  plus:'猫狗星球_图标美术/plus.webp',
+  plane:'猫狗星球_图标美术/plane.webp',
+  x:'猫狗星球_图标美术/x.webp',
+  stamp:'猫狗星球_图标美术/stamp.webp',
+  lost:'猫狗星球_图标美术/lost.webp',
+  gift:'猫狗星球_图标美术/gift.webp',
+  journal:'猫狗星球_图标美术/journal.webp',
+  wardrobe:'猫狗星球_图标美术/wardrobe.webp',
+  leaf:'猫狗星球_图标美术/leaf.webp',
+  bell:'猫狗星球_图标美术/bell.webp',
+  lantern:'猫狗星球_图标美术/lantern.webp',
+  camera:'猫狗星球_图标美术/camera.webp',
+  flower:'猫狗星球_图标美术/flower.webp'
+};
+function ic(n){ return CG[n] ? `<img class="ui-ic" src="${CG[n]}" alt="">` : ''; }
+
+function applyCompanion(o){
+  if(o.img){ S.companion=o.img; S.petId=null; }
+  else if(o.petId){ const p=PETS.find(x=>x.id===o.petId); if(!p) return false; S.companion=p.art||p.em; S.petId=p.id; if(!o.name) o.name=p.name; }
+  else { toast('请先选一只旅伴，或上传你家毛孩子的照片'); return false; }
+  S.name = normalizePetName(o.name, '旅伴');
+  S.chosen=true; S.onboard=1; save();
+  toast(`欢迎 ${S.name} 加入旅程 🐾`);
+  pendingPet=null; pendingImg=null; view='home'; render(); return true;
+}
+
+// —— 等级系统（Phase 5：XP + 等级 + 等级称号）——
+function xpNeed(L){ let s=0; for(let i=2;i<=L;i++) s += 60 + (i-1)*25; return s; } // 升到 L 级所需累计 XP
+function levelFromXp(xp){ let L=1; while(xp >= xpNeed(L+1)) L++; return L; }
+
+/* ===================== 调参覆盖机制（试玩回灌 · 持久化） =====================
+   - 游戏常量默认值见上方；调参面板写入 localStorage 覆盖，刷新不丢、不动源码基线
+   - 变现反推输入（eCPM/DAU/watch/conv/ARPU 目标）独立存储，即时算可达性/K 地板
+   - 数值口径与「猫狗星球_变现反推模型.xlsx」§2.7 完全一致
+============================================================================ */
+const O_KEY='mdjh_overrides', R_KEY='mdjh_rev';
+let O = {};
+let REV = {watch:0.7, ecpm:30, dau:10000, arpu:0.15, conv:0.15, shareFill:0, activePets:1};
+try{ O = JSON.parse(_L.getItem(O_KEY))||{}; }catch(e){}
+try{ REV = Object.assign(REV, JSON.parse(_L.getItem(R_KEY))||{}); }catch(e){}
+const BASELINE = {AD_CAP_TRAVEL:3,AD_CAP_SUPPLY:5,AD_STAR_REWARD:8,AD_FOOD_REWARD:2,LOGIN_FOOD:4,
+  SHARE_STAR:20,SHARE_FOOD:5,SHARE_DAILY_CAP:3,TREASURE_P:0.07,M_TREASURE:12,K_FOOD:0.15};
+function saveOverrides(){ _L.setItem(O_KEY, JSON.stringify(O)); }
+function saveRev(){ _L.setItem(R_KEY, JSON.stringify(REV)); }
+// 覆盖优先于基线；缺省回退基线（resetTune 清 O 后恢复默认值）
+function applyOverrides(){
+  AD_CAP_TRAVEL   = (O.AD_CAP_TRAVEL   !== undefined) ? O.AD_CAP_TRAVEL   : BASELINE.AD_CAP_TRAVEL;
+  AD_CAP_SUPPLY   = (O.AD_CAP_SUPPLY   !== undefined) ? O.AD_CAP_SUPPLY   : BASELINE.AD_CAP_SUPPLY;
+  AD_STAR_REWARD  = (O.AD_STAR_REWARD  !== undefined) ? O.AD_STAR_REWARD  : BASELINE.AD_STAR_REWARD;
+  AD_FOOD_REWARD  = (O.AD_FOOD_REWARD  !== undefined) ? O.AD_FOOD_REWARD  : BASELINE.AD_FOOD_REWARD;
+  LOGIN_FOOD      = (O.LOGIN_FOOD      !== undefined) ? O.LOGIN_FOOD      : BASELINE.LOGIN_FOOD;
+  SHARE_STAR      = (O.SHARE_STAR      !== undefined) ? O.SHARE_STAR      : BASELINE.SHARE_STAR;
+  SHARE_FOOD      = (O.SHARE_FOOD      !== undefined) ? O.SHARE_FOOD      : BASELINE.SHARE_FOOD;
+  SHARE_DAILY_CAP = (O.SHARE_DAILY_CAP !== undefined) ? O.SHARE_DAILY_CAP : BASELINE.SHARE_DAILY_CAP;
+  TREASURE_P      = (O.TREASURE_P      !== undefined) ? O.TREASURE_P      : BASELINE.TREASURE_P;
+  M_TREASURE      = (O.M_TREASURE      !== undefined) ? O.M_TREASURE      : BASELINE.M_TREASURE;
+  K_FOOD          = (O.K_FOOD          !== undefined) ? O.K_FOOD          : BASELINE.K_FOOD;
+}
+function gameCur(k){ return {AD_CAP_TRAVEL,AD_CAP_SUPPLY,AD_STAR_REWARD,AD_FOOD_REWARD,LOGIN_FOOD,
+  SHARE_STAR,SHARE_FOOD,SHARE_DAILY_CAP,TREASURE_P,M_TREASURE,K_FOOD}[k]; }
+
+// —— 地点库（md §2：国内 34 省+名城 / 世界古文明 / 隐藏秘境）——
+// 国内/世界 数据：[id, name, em, depth, tag, legend(传说奖励)]；故事/纪念品由 builder 依模板生成（md §6 可持续供给框架）
+const CN_RAW = [
+  ['sjz','石家庄·赵州桥','🌉',3,'河北·中国','赵州桥石构件'],
+  ['ty','太原·晋阳','🏯',3,'山西·中国','晋商古币'],
+  ['sy','沈阳·辽东','🐎',3,'辽宁·中国','辽代鎏金马具'],
+  ['cc','长春·渤海国','🏺',3,'吉林·中国','渤海国瓦当'],
+  ['hrb','哈尔滨·上京','🔔',3,'黑龙江·中国','金代铜镜'],
+  ['nj','南京·明初都','🐉',4,'江苏·中国','明孝陵石像生'],
+  ['hf','合肥·三国','⚖️',3,'安徽·中国','三国铜权'],
+  ['fz','福州·闽都','🧭',4,'福建·中国','海上丝路罗盘'],
+  ['nc','南昌·滕王阁','📜',3,'江西·中国','滕王阁诗文卷'],
+  ['jn','济南·泉城','📜',3,'山东·中国','齐鲁竹简'],
+  ['ly','洛阳·龙门','🪨',4,'河南·中国','龙门石龛残件'],
+  ['wh','武汉·黄鹤','🎵',4,'湖北·中国','编钟残片'],
+  ['cs','长沙·马王堆','📜',4,'湖南·中国','马王堆帛书'],
+  ['gz','广州·南越','🪨',3,'广东·中国','南越玉印'],
+  ['haikou','海口·珠崖','🐚',3,'海南·中国','南海珊瑚信物'],
+  ['gy','贵阳·夜郎','🥁',3,'贵州·中国','夜郎铜鼓'],
+  ['km','昆明·滇国','🪬',3,'云南·中国','滇王金印'],
+  ['lz','兰州·河西','📜',3,'甘肃·中国','河西简牍'],
+  ['xn','西宁·吐谷浑','🪙',4,'青海·中国','吐谷浑金饰'],
+  ['taipei','台北·淡水河口','🧱',3,'中国台湾','红砖厝信物'],
+  ['hhht','呼和浩特·盛乐','🪙',3,'内蒙古·中国','北魏鎏金佛'],
+  ['nn','南宁·骆越','🥁',3,'广西·中国','骆越铜鼓'],
+  ['ls','拉萨·唐蕃古道','🪙',4,'西藏·中国','鎏金小佛像'],
+  ['yc','银川·兴庆府','🪨',4,'宁夏·中国','西夏文残碑'],
+  ['wlmq','乌鲁木齐·西域','🧵',5,'新疆·中国','楼兰织锦'],
+  ['tj','天津·天津卫','⚖️',3,'中国','漕运铜砝码'],
+  ['sh','上海·华亭','🏺',3,'中国','元青花瓷片'],
+  ['cq','重庆·钓鱼城','🏹',4,'中国','钓鱼城弩机'],
+  ['hk','香港·维港','🗼',3,'中国香港','维港灯塔模型'],
+  ['macau','澳门·葡式','🧱',3,'中国澳门','葡式瓷砖'],
+  ['qz','泉州·刺桐港','🧭',4,'福建·中国','刺桐港罗盘'],
+  ['yz','扬州·运河','🐎',3,'江苏·中国','唐三彩马'],
+  ['kf','开封·东京','🧵',3,'河南·中国','北宋汴绣'],
+  ['lj','丽江·茶马古道','🪵',3,'云南·中国','东巴木牌'],
+  // —— 方向② 内容扩展：同省增名城（复用既有地貌/纪念品美术，零新图）——
+  ['hs','黄山·云海','🌄',3,'安徽·中国','黄山松石'],
+  ['ts','泰山·岱顶','⛰️',3,'山东·中国','泰山经石峪刻石'],
+  ['py','平遥·古城','🏯',3,'山西·中国','平遥古钱币'],
+  ['tl','南靖·土楼','🏠',3,'福建·中国','土楼夯土砖'],
+  ['jz','九寨沟·海子','💧',3,'四川·中国','九寨彩石'],
+  ['gl','桂林·漓江','🛶',3,'广西·中国','漓江鸬鹚信物'],
+  ['kn','喀纳斯·湖','🏞️',4,'新疆·中国','喀纳斯鹿石'],
+  ['gly','厦门·鼓浪屿','🏝️',3,'福建·中国','鼓浪屿琴键'],
+];
+const WORLD_RAW = [
+  ['cairo','开罗·金字塔','🔺',5,'埃及·古文明','圣甲虫护符'],
+  ['athens','雅典·广场','🏛️',5,'希腊·古文明','黑绘陶罐'],
+  ['rome','罗马·议政','🏛️',5,'意大利·古文明','罗马金币'],
+  ['kyoto','京都·平安京','🏯',4,'日本·古文明','平安画卷'],
+  ['nara','奈良·古都','🗿',4,'日本·古文明','铜佛残片'],
+  ['angkor','吴哥窟·高棉','🛕',5,'柬埔寨·古文明','神殿石雕'],
+  ['istanbul','伊斯坦布尔·拜占庭','🕌',5,'土耳其·古文明','圣索菲亚马赛克'],
+  ['babylon','巴比伦·美索','📜',5,'伊拉克·古文明','汉谟拉比法典残片'],
+  ['persepolis','波斯波利斯','🏆',5,'伊朗·古文明','波斯金杯'],
+  ['maya','玛雅遗址','💎',5,'墨西哥·古文明','翡翠面具'],
+  ['inca','印加遗址','☀️',5,'秘鲁·古文明','黄金太阳盘'],
+  ['timbuktu','廷巴克图·西非','📜',4,'马里·古文明','古卷残页'],
+  ['lanka','斯里兰卡·锡兰','🪷',4,'斯里兰卡·古文明','佛牙匣残片'],
+  ['paris','巴黎·中世纪','🌈',3,'法国·古文明','中世纪彩窗'],
+  // —— 方向② 内容扩展：增古文明国家（同步补 REGION_DEFS / REGION_BIOME）——
+  ['india','阿格拉·泰姬陵','🕌',4,'印度·古文明','泰姬白玉'],
+  ['russia','圣彼得堡·冬宫','🏛️',4,'俄罗斯·古文明','琥珀宫残片'],
+  ['uk','索尔兹伯里·巨石阵','🪨',5,'英国·古文明','巨石阵石楔'],
+  ['germany','巴伐利亚·新天鹅堡','🏰',4,'德国·古文明','城堡铜钥'],
+  ['spain','格拉纳达·阿尔罕布拉','🕌',5,'西班牙·古文明','摩尔彩陶'],
+  ['vietnam','会安·古城','🏮',3,'越南·古文明','会安锦灯'],
+  ['thailand','大城·遗迹','🛕',4,'泰国·古文明','大城佛首'],
+  ['nepal','加德满都·谷地','🛕',4,'尼泊尔·古文明','鎏金塔刹'],
+  // —— 方向② Batch2：再扩一批世界古文明国家（同步补 REGION_DEFS / REGION_BIOME）——
+  ['korea','庆州·新罗','🏯',4,'韩国·古文明','新罗金冠'],
+  ['mongolia','哈拉和林·突厥','🐎',4,'蒙古·古文明','突厥金饰'],
+  ['jordan','佩特拉·玫瑰城','🏜️',5,'约旦·古文明','佩特拉石龛'],
+  ['ethiopia','拉利贝拉·岩教堂','⛪',4,'埃塞俄比亚·古文明','岩石教堂残件'],
+  ['austria','维也纳·美泉宫','🏛️',4,'奥地利·古文明','美泉宫瓷盘'],
+  ['czech','布拉格·老城','🏰',3,'捷克·古文明','布拉格铜钟残件'],
+  ['myanmar','蒲甘·佛塔林','🛕',4,'缅甸·古文明','蒲甘佛塔砖'],
+  ['indonesia','婆罗浮屠','🛕',5,'印度尼西亚·古文明','浮屠石佛'],
+  ['uzbek','撒马尔罕·丝路','🕌',4,'乌兹别克斯坦·古文明','撒马尔罕釉砖'],
+  ['hungary','布达佩斯·城堡山','🏰',3,'匈牙利·古文明','城堡山铜钥'],
+];
+// 故事模板（md §6 生成模板）：依地点 id 稳定选取，保证每地风格一致且各异
+const STORY_TPLS = [
+  (p,l)=>`它在${p}的角落发现一枚${l}，揣进兜里时，像揣住了一小块那里的光阴。`,
+  (p,l)=>`${p}的人递给它${l}，说"带回去吧，替我们看看外面的世界"。`,
+  (p,l)=>`它把${l}举过头顶，${p}的夕阳正好落进纹路里，金灿灿的。`,
+  (p,l)=>`离别时它回头望${p}，${l}在包里轻轻响了一声，像在说"再来"。`,
+  (p,l)=>`它在${p}睡了一觉，梦见${l}活了过来，陪它走完剩下的路。`,
+  (p,l)=>`据说${l}只认真心旅行的人，它得到时，${p}刚好下起了温柔的雨。`,
+  // —— 方向② Batch2：故事模板 6 → 15，显著降低自动生成目的地叙事重复 ——
+  (p,l)=>`它在${p}的旧书摊前蹲了很久，最后只带走了这枚${l}，说别的都记在心里了。`,
+  (p,l)=>`${p}的夜市灯火通明，它把${l}贴在胸口，说这样回家的路就不黑了。`,
+  (p,l)=>`它爬上${p}最高的那级台阶，把${l}对着风举了举，像在和整座城打招呼。`,
+  (p,l)=>`离开${p}那天，卖早点的阿婆往它包里塞了${l}，说"路上当个念想"。`,
+  (p,l)=>`它在${p}的桥下躲雨，遇见一只同样在避雨的猫，两只用${l}当了半天的暗号。`,
+  (p,l)=>`${p}的雪落得很慢，它把${l}埋进雪里又挖出来，说这样就能把冬天带走一点。`,
+  (p,l)=>`它说${p}的清晨有一种味道，它把这种味道偷偷装进了${l}的纹路里。`,
+  (p,l)=>`在${p}的最后一天，它把${l}举到窗前，光从背面透过来，像把整座城都收了进去。`,
+  (p,l)=>`它没舍得用${l}，说要留着，等下次再回${p}时，拿它换一个旧梦。`,
+];
+// —— 方向② Batch3：国外目的地国别文化故事池（按 tag 首段"国家"索引；与国内 STORY_TPLS 区分，每国文化不同、故事不同）——
+const WORLD_STORIES = {
+  '埃及':[`它在尼罗河边的沙丘上数金字塔，数到第三座时，说自己也成了一粒被太阳晒暖的沙。`,
+    `它遇见一只被奉若神明的猫雕像，学它蹲在门槛上，仿佛守了一千年的安静。`,
+    `它把脚探进河里，说这条河见过太多王朝，却还愿意载它一程。`],
+  '希腊':[`它坐在断柱之间，海风把它的毛吹成一面小小的希腊旗。`,
+    `它在橄榄树下打盹，醒来时嘴里多了一颗路人塞的青橄榄，酸得它眯起眼。`,
+    `它沿着白房子蓝屋顶的小巷走，说这种蓝是被爱琴海腌入味的。`],
+  '意大利':[`它在许愿池边学着别人扔硬币，许的愿望是"下次还来"。`,
+    `它闻着巷口刚出炉的披萨香，说意大利的风都是番茄和罗勒味的。`,
+    `它在喷泉广场的鸽群里坐下，说这里的鸽子比它还懂享受广场。`],
+  '日本':[`它在苔寺的石灯笼旁坐了很久，说这里的安静是有重量的。`,
+    `奈良的小鹿用鼻子拱了拱它，它大方地分了一半鹿仙贝，两只成了饭搭子。`,
+    `它看艺伎匆匆走过，说这座城把旧的规矩也梳得一丝不苟。`],
+  '柬埔寨':[`它在巨石佛塔的阴影里穿行，说每一道裂痕里都长着一棵倔强的树。`,
+    `它仰望那些没有眼睛的微笑石脸，觉得被温柔地原谅了什么。`,
+    `它踩过漫长的引道，说通往神圣的路总是又长又热。`],
+  '土耳其':[`它站在横跨两片海的桥上，左边是欧洲，右边是亚洲，它说自己两边都算。`,
+    `街角的猫比它还自在，它虚心请教了"如何优雅地躺平晒太阳"。`,
+    `它在有顶的大集市的香料山前打转，说这里的气味能讲一整本故事书。`],
+  '伊拉克':[`它在幼发拉底河畔的泥砖废墟上踩出一串小印，说这是它给古老帝国的留言。`,
+    `它听说这里曾有一座空中花园，便抬头找了半天，只找到一片真正的星空。`,
+    `它摸了摸风化的楔形文字，说有些话被时间磨成了谜。`],
+  '伊朗':[`它在波斯地毯的纹样里迷了路，说每一根线都藏着一个没讲完的故事。`,
+    `它闻见院子里盛开的玫瑰，说伊朗人把诗和花都种在了同一片土里。`,
+    `它在彩色玻璃的穹顶下抬头，说光在这里被折成了一首安静的诗。`],
+  '墨西哥':[`它在玛雅金字塔的台阶上数到第一百级，说每一步都像踩在日历上。`,
+    `它遇见一场热闹的亡灵节，说这里的死亡也被打扮得五彩斑斓。`,
+    `它尝了口玉米饼和辣椒，说墨西哥的味道是敢爱敢恨的。`],
+  '秘鲁':[`它在云海里的石城上走，说印加人把房子盖在了离天最近的地方。`,
+    `一只羊驼低头蹭了蹭它，它回赠了一撮自己掉的毛，算是礼尚往来。`,
+    `它沿着山脊的梯田走，说这里的每一层都是人和山商量出来的。`],
+  '马里':[`它在撒哈拉边缘的古城里，听说这里曾藏满用骆驼驮来的智慧，便对着风鞠了一躬。`,
+    `它踩着滚烫的沙，说这里的安静是被太阳晒透了千万年的。`,
+    `它钻进泥砖垒成的古学堂，说知识曾经比黄金更值得远行。`],
+  '斯里兰卡':[`它在红茶山的雾里走，说这里的空气都带着一点回甘。`,
+    `它把脚泡进印度洋的浪里，说这一岸的蓝和家里那片湖的蓝不一样。`,
+    `它在佛塔的白墙下合十，说信仰在这座岛上晒得很暖。`],
+  '法国':[`它在塞纳河畔的旧书摊前蹲成一尊雕塑，说巴黎连流浪都讲究情调。`,
+    `它咬了一口刚买的牛角包，酥皮掉了一身，却笑得比谁都满足。`,
+    `它在黄昏的街角听了一段手风琴，说浪漫是被认真活出来的。`],
+  '印度':[`它在泰姬陵的白大理石前愣了神，说这世上真有人把思念盖成了一座宫殿。`,
+    `街上的色彩像打翻的颜料盘，它站在中间，觉得自己也成了一笔。`,
+    `它看人往河里放一盏小灯，说这片土地连祈祷都漂在水上。`],
+  '俄罗斯':[`它在飘雪的宫殿长廊里走，说这里的冷都被艺术焐暖了。`,
+    `它看见一只套娃打开还是一只，说俄罗斯人连孤独都层层包裹着。`,
+    `它在芭蕾散场的人潮里走，说美是可以让人忘记寒冷的。`],
+  '英国':[`它在巨石阵的石柱间绕圈，说这些石头比任何城堡都更像一个谜。`,
+    `它在雨里喝了一口带去的茶，说英国的浪漫是湿漉漉的。`,
+    `它在雾里的老桥上站了会儿，说故事总爱挑这种天气开场。`],
+  '德国':[`它仰望山尖上的城堡，说童话是真的，只是住进了现实里。`,
+    `它在黑森林的小径上走，听见远处教堂的钟，说时间在这里走得很慢很稳。`,
+    `它钻进半木结构的老巷，说每一道横梁都记着几个世纪的雪。`],
+  '西班牙':[`它在摩尔风格的庭院里，看水流过千年不歇的渠，说安静也可以很华丽。`,
+    `它听见远处传来踢踏的节奏，尾巴不自觉跟着打起了拍子。`,
+    `它在晚祷的钟声里抬头，说这座城把白天的热烈留给了夜晚的宁静。`],
+  '越南':[`入夜的古城挂满灯笼，它提着一盏小小的，说把整条河都提在了手里。`,
+    `它在窄巷里被摩托声包围，却觉得这座城闹得很有烟火气。`,
+    `它坐在河边的咖啡馆看人放河灯，说温柔是可以慢慢漂远的。`],
+  '泰国':[`它在残破佛塔间合十坐下，说即使是废墟，也还在被人温柔地记得。`,
+    `它看河上人家把花放进水流，说自己也想托一朵给远方。`,
+    `它在夜市的香气里穿行，说泰国的热闹是带着笑意的。`],
+  '尼泊尔':[`它在雪山脚下的小城转经，说这里的每一步都像在替谁祈福。`,
+    `它望着屋顶层叠的庙宇，说神在这里住得很拥挤也很热闹。`,
+    `它看人往山顶扛木料修庙，说信仰是肯弯下腰的力气。`],
+  '韩国':[`它在千年古都的坟冢间走，说历史在这儿不是书，是脚下的土。`,
+    `它尝了一口邻家阿妈给的泡菜，辣得原地转了个圈又觉得痛快。`,
+    `它在韩屋的暖炕边蜷成一团，说这种暖是从地底升上来的。`],
+  '蒙古':[`它在无边的草原上奔跑，说这里的天低得好像一跃就能碰着。`,
+    `夜里它躺在蒙古包外，说草原的星空比任何城市的灯都慷慨。`,
+    `它看牧人套马，说自由在这片土地上是有形状的。`],
+  '约旦':[`它穿过玫瑰色的峡谷，说这座城是大地用一整块石头雕出来的梦。`,
+    `它在凿出来的宫殿前抬头，说人类真敢向岩石借一个家。`,
+    `它摸了摸风蚀的岩壁，说时间在这里是一把很慢的刀。`],
+  '埃塞俄比亚':[`它钻进岩石里凿出的教堂，说信仰硬是把山掏空成了殿堂。`,
+    `它闻见第一杯咖啡的香，说埃塞俄比亚人把清醒也煮得很隆重。`,
+    `它在高原的晨光里站定，说这里的海拔连呼吸都更靠近天空。`],
+  '奥地利':[`它在金色大厅外的台阶上听了一段排练，说连空气都在哼歌。`,
+    `它在咖啡馆的露台晒太阳，说维也纳的悠闲是被施了魔法的。`,
+    `它在宫殿的花园里追蝴蝶，说规矩之外也有肆意的角落。`],
+  '捷克':[`它在查理大桥的雕像下走，说每一尊都在替这座城守着秘密。`,
+    `它盯着老市政厅的天文钟，说时间在这座城是被认真对待的客人。`,
+    `它在黄昏的巷口听手风琴，说波西米亚的风是自由的。`],
+  '缅甸':[`它在千塔平原的黄昏里坐，说夕阳把每一座塔都镀成了金。`,
+    `它数不清平原上有多少佛塔，便干脆闭眼，听风里全是经文。`,
+    `它在热气球升起前抬头，说这片土地连醒来都很温柔。`],
+  '印度尼西亚':[`它沿着佛塔的回廊一层层往上，说这是用石头写的一本朝圣书。`,
+    `远处的火山冒了点烟，它说这片土地连呼吸都带着热度。`,
+    `它在雨林的潮气里走，说绿意在这里浓得能拧出水。`],
+  '乌兹别克斯坦':[`它在蓝色穹顶的集市里穿行，说这里曾是骆驼队把世界缝在一起的地方。`,
+    `它闻着烤馕和藏红花的香，说丝绸之路把味道也一路带了过来。`,
+    `它在釉砖拼出的穹顶下抬头，说蓝色在这里被用到了极致。`],
+  '匈牙利':[`它在链子桥上望两岸，说一条河把一座城分成了两种温柔。`,
+    `它泡了泡城里的温泉，说匈牙利人连放松都泡得很认真。`,
+    `它在多瑙河的灯影里走，说这座城把夜晚也布置得很郑重。`],
+};
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h; }
+// —— 写实纪念品道具立绘（Track B · 方向①）：4 类通用道具按关键词映射到全部 souvenir ——
+const SOUVENIR_ART = {
+  ceramic:'猫狗星球_纪念品美术/ceramic.webp',
+  fabric:'猫狗星球_纪念品美术/fabric.webp',
+  badge:'猫狗星球_纪念品美术/badge.webp',
+  snackbox:'猫狗星球_纪念品美术/snackbox.webp',
+};
+// 小窝精选陈列：每件均有独立 CG 道具图，避免不同故事共用同一张泛化占位图。
+const FEATURED_SOUVENIR_ART = {
+  '西湖团扇':'猫狗星球_纪念品美术/精选陈列/westlake_fan.webp',
+  '竹叶书签':'猫狗星球_纪念品美术/精选陈列/bamboo_bookmark.webp',
+  '园林窗棂':'猫狗星球_纪念品美术/精选陈列/garden_window.webp',
+  '陶土兵俑':'猫狗星球_纪念品美术/精选陈列/terracotta_warrior.webp',
+  '飞天壁画':'猫狗星球_纪念品美术/精选陈列/apsara_mural.webp',
+  '故宫脊兽':'猫狗星球_纪念品美术/精选陈列/roof_beast.webp',
+  '武陵石峰':'猫狗星球_纪念品美术/精选陈列/wuling_peaks.webp',
+  '鎏金坛城':'猫狗星球_纪念品美术/精选陈列/gilded_mandala.webp',
+  '木鱼':'猫狗星球_纪念品美术/精选陈列/wooden_fish.webp',
+  '太极玉牌':'猫狗星球_纪念品美术/精选陈列/taiji_jade.webp',
+  '南海潮音贝':'猫狗星球_纪念品美术/精选陈列/tide_shell.webp',
+  '唐三彩马':'猫狗星球_纪念品美术/精选陈列/tang_horse.webp',
+};
+const FEATURED_SOUVENIR_NAMES=Object.keys(FEATURED_SOUVENIR_ART);
+// 全图鉴 104 件一物一图；序号与目的地纪念品清单保持固定，便于后续增量补图。
+const COMPLETE_SOUVENIR_NAMES=[
+  '西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝',
+  '星屑瓶','古境徽记','沉钟铃','回廊沙漏','棱镜坠','地宫钥匙','迷宫星盘','圣殿符牌','星轨车票','云虹坠','龙宫贝','树心琥珀','镜湖沙','星梦种子','遗迹藤种','渊晶核','停钟芯','棱镜碎片','锻炉余烬',
+  '赵州桥石构件','晋商古币','辽代鎏金马具','渤海国瓦当','金代铜镜','明孝陵石像生','三国铜权','海上丝路罗盘','滕王阁诗文卷','齐鲁竹简','龙门石龛残件','编钟残片','马王堆帛书','南越玉印','南海珊瑚信物','夜郎铜鼓','滇王金印','河西简牍','吐谷浑金饰','红砖厝信物','北魏鎏金佛','骆越铜鼓','鎏金小佛像','西夏文残碑','楼兰织锦','漕运铜砝码','元青花瓷片','钓鱼城弩机','维港灯塔模型','葡式瓷砖','刺桐港罗盘','唐三彩马','北宋汴绣','东巴木牌','黄山松石','泰山经石峪刻石','平遥古钱币','土楼夯土砖','九寨彩石','漓江鸬鹚信物','喀纳斯鹿石','鼓浪屿琴键',
+  '圣甲虫护符','黑绘陶罐','罗马金币','平安画卷','铜佛残片','神殿石雕','圣索菲亚马赛克','汉谟拉比法典残片','波斯金杯','翡翠面具','黄金太阳盘','古卷残页','佛牙匣残片','中世纪彩窗','泰姬白玉','琥珀宫残片','巨石阵石楔','城堡铜钥','摩尔彩陶','会安锦灯','大城佛首','鎏金塔刹','新罗金冠','突厥金饰','佩特拉石龛','岩石教堂残件','美泉宫瓷盘','布拉格铜钟残件','蒲甘佛塔砖','浮屠石佛','撒马尔罕釉砖','城堡山铜钥'
+];
+function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); if(i<0) return null; const n=i+1; const tuned=[6,10,11].includes(n)?'?visual-center=2':''; return `猫狗星球_纪念品美术/全图鉴_居中/s${String(n).padStart(3,'0')}.webp${tuned}`; }
+function souvenirArt(s){ return completeSouvenirArt(s)||FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
+const HOME_SHOWCASE_LIMIT=14;
+const HOME_SHOWCASE_DEFAULT=['西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝','唐三彩马','星屑瓶','古境徽记'];
+function defaultHomeShowcase(owned){
+  const preferred=HOME_SHOWCASE_DEFAULT.map(n=>owned.find(s=>s.name===n)).filter(Boolean);
+  const rest=owned.filter(s=>HOME_SHOWCASE_DEFAULT.indexOf(s.name)<0);
+  return preferred.concat(rest).slice(0,HOME_SHOWCASE_LIMIT);
+}
+function homeSouvenirSelection(){
+  const owned=S.souvenirs||[];
+  const excluded=S.homeShowcaseExcluded||[];
+  const chosen=(S.homeShowcase||[]).map(n=>owned.find(s=>s.name===n)).filter(Boolean);
+  const unique=chosen.filter((s,i,a)=>a.findIndex(x=>x.name===s.name)===i);
+  const filler=defaultHomeShowcase(owned).filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name));
+  const overflow=owned.filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name)&&!filler.some(x=>x.name===s.name));
+  return unique.concat(filler,overflow).slice(0,HOME_SHOWCASE_LIMIT);
+}
+function souvenirCat(name){
+  if(/瓷|陶|窑|俑|砂|琉璃/.test(name)) return 'ceramic';
+  if(/织|绣|帛|简|卷|书|画|扇|竹|木|窗|叶|幡|毯|牌/.test(name)) return 'fabric';
+  if(/石|碑|龛|雕|瓦|砖/.test(name)) return 'snackbox'; // snackbox 槽位现为石雕摆件
+  return 'badge'; // 其余金属/杂项文物→青铜印玺
+}
+function buildDest(raw, cat){
+  const [id,name,em,depth,tag,legend]=raw;
+  const place=name.split('·')[0];
+  const country=tag.split('·')[0];
+  const h=hashStr(id);
+  let stories;
+  if(cat==='world' && WORLD_STORIES[country]){
+    // 国外目的地：按"国家"取专属文化故事，各国风格各异（呼应需求"每个国家的文化特色不同"）
+    const ws=WORLD_STORIES[country];
+    const i1=h%ws.length;
+    const i2=(i1+1+((h>>>3)%Math.max(1,ws.length-1)))%ws.length;
+    stories=[ws[i1], ws[i2]];
+  } else {
+    // 国内及兜底：通用故事模板（md §6 生成模板，依 id 稳定选取）
+    const i1=h%STORY_TPLS.length, i2=(h>>>3)%STORY_TPLS.length;
+    stories=[STORY_TPLS[i1](place,legend), STORY_TPLS[i2](place,legend)];
+  }
+  const souvenir={em, name:legend, story:`从${place}带回的${legend}，是它此行最舍不得的纪念。`, art:SOUVENIR_ART[souvenirCat(legend)]};
+  return {id,name,em,depth,tag,cat,country,legend,stories,souvenir};
+}
+// 展示型深度目的地（手写更丰富的故事，承载"深度探索"体验；id 稳定供探索类称号使用）
+const SHOWCASE = [
+  {id:'hz', name:'杭州·西湖', em:'🌊', depth:1, tag:'浙江·中国', cat:'cn', stories:[
+    '它在断桥边蹲了很久，说是在等一场雨。雨没来，它带回了一枚贝壳。',
+    '湖面的雾散开时，它把头靠在石栏上，像在听谁讲完了半句话。'],
+    souvenir:{em:'🪭', name:'西湖团扇', story:'扇面画着断桥，风一摇，桥就活了。'}},
+  {id:'cd', name:'成都·熊猫基地', em:'🐼', depth:2, tag:'四川·中国', cat:'cn', stories:[
+    '它和一只真熊猫对视了三分钟，谁也没动。回来时怀里多了一片竹叶。',
+    '竹林的风很慢，它说终于懂了什么叫"慢慢来"。'],
+    souvenir:{em:'🎋', name:'竹叶书签', story:'竹片上还留着一点清香，它说那是熊猫蹭过的。'}},
+  {id:'su', name:'苏州·园林', em:'🏡', depth:2, tag:'江苏·中国', cat:'cn', stories:[
+    '它在回廊里转晕了，却记住了一扇雕花的窗。窗后好像有人笑。',
+    '它说江南的午后，连影子都是温的。'],
+    souvenir:{em:'🪟', name:'园林窗棂', story:'一扇雕花小窗，框住了半座江南。'}},
+  {id:'xa', name:'西安·兵马俑', em:'🪔', depth:3, tag:'陕西·中国', cat:'cn', stories:[
+    '它站在队列最前面，被误认成新出土的陶俑。它很骄傲。',
+    '两千年前的士兵不说话，它替他们看了一会儿今天的月亮。'],
+    souvenir:{em:'🗿', name:'陶土兵俑', story:'巴掌大的小陶俑，站姿和它出发前一模一样。'}},
+  {id:'dh', name:'敦煌·莫高窟', em:'🏜️', depth:5, tag:'甘肃·中国', cat:'cn', stories:[
+    '壁画上的飞天少了一只耳朵，它说自己愿意当那只耳朵。',
+    '它在洞窟里听见了风沙下面的诵经声，回来时眼里有沙。'],
+    souvenir:{em:'🖼️', name:'飞天壁画', story:'一小角飞天的衣袖，颜料还没褪。'}},
+  {id:'bj', name:'北京·故宫', em:'🏯', depth:5, tag:'北京·中国', cat:'cn', stories:[
+    '它溜进了一只旧钟表，听见时间在自己身体里走动。',
+    '传说屋脊上的走兽会在子时散步，它赌上了一整夜，带回了一段传说。'],
+    souvenir:{em:'🐉', name:'故宫脊兽', story:'屋脊上走下来的小兽，据说会半夜散步。'}},
+  // —— 方向② 内容扩展：增手写深度目的地（更丰富故事 + 自定义纪念品）——
+  {id:'zjj', name:'张家界·武陵源', em:'🏞️', depth:2, tag:'湖南·中国', cat:'cn', stories:[
+    '石峰像被谁竖起来的一排排琴键，它顺着风弹奏了一整座山。',
+    '云从脚底漫上来时，它说原来站在天上，是这种感觉。'],
+    souvenir:{em:'🪨', name:'武陵石峰', story:'一小块砂岩，纹理里还卡着一片云。'}},
+  {id:'xzp', name:'拉萨·布达拉宫', em:'🏯', depth:5, tag:'西藏·中国', cat:'cn', stories:[
+    '它数到第一千级台阶时，决定把这趟路当成一次朝拜。',
+    '金顶在烈日下反着光，它眯起眼，说看见了很久以前的朝圣者。'],
+    souvenir:{em:'🛕', name:'鎏金坛城', story:'掌心大的坛城，金粉还没凉。'}},
+  {id:'shaolin', name:'登封·少林寺', em:'🛕', depth:3, tag:'河南·中国', cat:'cn', stories:[
+    '它在晨钟里跟着僧人的影子比划了半天，姿势乱但认真。',
+    '它说寺里的猫都比它稳，便虚心请教了一招"翻肚皮"。'],
+    souvenir:{em:'🪵', name:'木鱼', story:'一只小木鱼，敲一下，心就静半拍。'}},
+  {id:'wudang', name:'武当山·金顶', em:'⚡', depth:4, tag:'湖北·中国', cat:'cn', stories:[
+    '山雾里它仿佛看见一道白影在打拳，醒来以为是梦。',
+    '它在金顶合十坐了一会儿，说学会了和自己和解。'],
+    souvenir:{em:'☯️', name:'太极玉牌', story:'玉牌上刻着半圈太极，另一半留给了下次。'}},
+  {id:'putuo', name:'舟山·普陀', em:'🏝️', depth:2, tag:'浙江·中国', cat:'cn', stories:[
+    '海潮一遍遍念着同一句话，它听成了"回来、回来"。',
+    '它在礁石上捡到一只空贝壳，贴耳一听，是南海的早课。'],
+    souvenir:{em:'🐚', name:'南海潮音贝', story:'贝壳里锁着一段潮声，心烦时一听就平。'}},
+];
+// 隐藏秘境（md §2.4：藏宝图解锁 · 稀有以上产出 · 虚构原生场景，规避真实地理/领土）
+const HIDDEN = [
+  {id:'star', name:'星屑裂隙', em:'✨', depth:6, tag:'隐藏地点·星海', cat:'secret', era:'星穹', secret:true,
+    drop:{cl:'stardust',min:'rare'},
+    stories:['裂隙里飘着会发光的尘埃，它伸手接住一把，兜里从此多了片星空。','它在星屑里看见自己的影子被拉得很长，像要走去很远的地方。'],
+    souvenir:{em:'🌟', name:'星屑瓶', story:'瓶里装的是从裂隙带回来的一小捧星尘，夜里会微微发亮。'}},
+  {id:'mao', name:'喵汪古境', em:'🐾', depth:6, tag:'隐藏地点·原生文明', cat:'secret', era:'古境', secret:true,
+    drop:{cl:'primor',min:'rare'},
+    stories:['古境里住着和它长得一模一样的生灵，两只对着彼此看了好久。','它带回一块刻着陌生符号的牌子，说那是"欢迎"。'],
+    souvenir:{em:'🪬', name:'古境徽记', story:'喵汪古境的信物，据说佩戴的人会被好运轻轻托住。'}},
+  {id:'belltower', name:'沉没钟楼', em:'🌊', depth:6, tag:'隐藏地点·海底', cat:'secret', era:'海底', secret:true,
+    req:{tmap:1,item:'古钟'}, drop:{cl:'tide',min:'rare'},
+    stories:['钟楼沉在海底，钟还在走，它贴着钟面听见了很久以前的潮声。','它捞起一只随波而来的罗盘，指针固执地指向海面之上的家。'],
+    souvenir:{em:'🔔', name:'沉钟铃', story:'从钟楼带出的小铃，摇一摇，像有海浪在回应。'}},
+  {id:'corridor', name:'时之回廊', em:'⏳', depth:6, tag:'隐藏地点·时间', cat:'secret', era:'时之卷', secret:true,
+    drop:{cl:'time',min:'epic'},
+    stories:['回廊两侧的门通向不同的年份，它隔着门和童年的自己挥了挥手。','它捡到一粒倒流的沙，握紧时，想念的人离它近了一寸。'],
+    souvenir:{em:'⏳', name:'回廊沙漏', story:'沙漏里的沙偶尔会倒流，那是时间给它的小偏心。'}},
+  {id:'mirror', name:'万花镜原', em:'🔺', depth:6, tag:'隐藏地点·幻境', cat:'secret', era:'镜之境', secret:true,
+    drop:{cl:'prism',min:'rare'},
+    stories:['镜���里每面镜子都映出不同的它，它终于选了最开心的一面带回家。','光在棱镜间折了七次，它说那是思念的七种颜色。'],
+    souvenir:{em:'🔺', name:'棱镜坠', story:'坠子把普通的光折成彩虹，挂起来，屋里就有了晴天。'}},
+  {id:'bellcrypt', name:'古钟地宫', em:'🏯', depth:6, tag:'隐藏地点·地下', cat:'secret', era:'古之章', secret:true,
+    req:{tmap:1,item:'古钟'}, drop:{cl:'bell',min:'epic'},
+    special:{cl:'bell',item:{id:'镇魂钟',em:'🔔',name:'镇魂钟',story:'据说敲响它，沉睡的安宁便会归来——它只轻轻碰了一下，便已满足。'},p:0.25},
+    stories:['地宫中央悬着一口谁也不敢敲的钟，它只是静静陪钟坐了一夜。','它在钟下拾得一枚锈钉，说这是"镇住慌张的钉子"。'],
+    souvenir:{em:'🗝️', name:'地宫钥匙', story:'开门的钥匙，也是关上门、把安宁留下来的钥匙。'}},
+  {id:'maze', name:'罗盘迷宫', em:'🧭', depth:6, tag:'隐藏地点·机关', cat:'secret', era:'古之章', secret:true,
+    req:{tmap:1,item:'罗盘'}, drop:{cl:'compass',min:'rare'},
+    stories:['迷宫的墙会转，它靠一枚老罗盘走出了所有死路。','出口处立着星盘，它说那是指给迷路的人看的。'],
+    souvenir:{em:'🧭', name:'迷宫星盘', story:'从迷宫带出的星盘，指针永远指向"出口"，也指向"回家"。'}},
+  {id:'sanctum', name:'信物圣殿', em:'🪬', depth:6, tag:'隐藏地点·祭祀', cat:'secret', era:'古之章', secret:true,
+    drop:{cl:'primor',min:'epic'},
+    special:{cl:'primor',item:{id:'先民信物',art:'猫狗星球_整件美术/primor_relic.webp',em:'🪬',name:'先民信物',story:'圣殿深处的信物，传说握着它的人会被先民温柔地记住。'},p:0.2},
+    stories:['圣殿无人，却处处是供奉的痕迹，它放下一朵野花，算作回礼。','它在祭台前听见古老的低语，说的是：你来了，真好。'],
+    souvenir:{em:'🪬', name:'圣殿符牌', story:'符牌上刻着问候的纹路，是它从信物圣殿带回的善意。'}},
+  {id:'station', name:'银河驿站', em:'🌌', depth:6, tag:'隐藏地点·星际', cat:'secret', era:'星穹', secret:true,
+    drop:{cl:'stardust',min:'rare'},
+    stories:['驿站的灯牌写着各处的星名，它给自己也挂了一块：家。','它在驿站遇见赶路的其他旅人，互道了一声"一路顺风"。'],
+    souvenir:{em:'🚉', name:'星轨车票', story:'一张去往任何星球的车票，背面写着"随时回家"。'}},
+  {id:'isle', name:'云上猫屿', em:'☁️', depth:6, tag:'隐藏地点·天空', cat:'secret', era:'镜之境', secret:true,
+    drop:{cl:'prism',min:'rare'},
+    stories:['云上的小岛只接待毛茸茸的旅人，它在那里睡了个没有重量的午觉。','阳光穿过云隙折成七色，它把那一小截彩虹悄悄揣进了兜里。'],
+    souvenir:{em:'🔺', name:'云虹坠', story:'一缕被云滤过的彩虹光，挂在窗边，屋里便常有晴天。'}},
+  // —— 方向② 内容扩展：增 3 个 depth6 秘境（复用既有 cluster，零新图）——
+  {id:'deepsea', name:'深海龙宫', em:'🐉', depth:6, tag:'隐藏地点·海底', cat:'secret', era:'海底', secret:true,
+    drop:{cl:'tide',min:'legend'},
+    special:{cl:'tide',item:{id:'定海珠',em:'🔵',name:'定海珠',story:'传说握着它，再狂的海也会乖下来——它只敢轻轻碰一下。'},p:0.2},
+    stories:['龙宫的珊瑚灯一盏盏亮着，它像走进了沉在水底的星空。','它从龙王座下捡到一枚会发光的珠子，说是"替我守着这片海"。'],
+    souvenir:{em:'🐚', name:'龙宫贝', story:'从深海龙宫带出的贝，夜里会泛起幽蓝的光。'}},
+  {id:'worldtree', name:'世界树洞', em:'🌳', depth:6, tag:'隐藏地点·古树', cat:'secret', era:'古之章', secret:true,
+    drop:{cl:'primor',min:'epic'},
+    stories:['树洞比想象中深，它顺着年轮走，像翻完了一整本古老的日记。','树心淌出一滴琥珀，它接住时，听见了很远很远的呼吸。'],
+    souvenir:{em:'🌿', name:'树心琥珀', story:'封着一只远古小虫的琥珀，是时间舍不得丢下的信。'}},
+  {id:'mirrorlake', name:'时之镜湖', em:'💧', depth:6, tag:'隐藏地点·幻境', cat:'secret', era:'时之卷', secret:true,
+    drop:{cl:'time',min:'epic'},
+    stories:['湖面把过去的它和现在的它对在一起，两只隔着水悄悄挥手。','它往湖里丢一粒石子，涟漪把倒影里的童年推得更近了些。'],
+    souvenir:{em:'⏳', name:'镜湖沙', story:'一捧从镜湖底捞起的沙，握紧时，想念的人离你近了一寸。'}},
+  // —— 方向③ 内容扩展：增 6 个 depth6 秘境（ImageGen+rembg 流水线已跑，6 张 realm_*.webp 已落位）——
+  {id:'stardream', name:'星梦原野', em:'🌌', depth:6, tag:'隐藏地点·星海', cat:'secret', era:'星穹', secret:true,
+    drop:{cl:'stardust',min:'rare'},
+    stories:['原野上的星尘随着脚步飘起，每走一步就像在画一条新的银河。','它躺在草地上一整晚，直到自己也被草间的星光染亮。'],
+    souvenir:{em:'🌟', name:'星梦种子', story:'一颗从原野带回的星种，入土便能长出一小片属于自己的星空。'}},
+  {id:'ruin', name:'遗迹之森', em:'🏛️', depth:6, tag:'隐藏地点·原生文明', cat:'secret', era:'古境', secret:true,
+    drop:{cl:'primor',min:'rare'},
+    stories:['石缝里的藤蔓像时间写下的文字，它读不懂，却觉得被记住了。','它在祭坛上放了一颗果子，转身时，果子不见了，多了一粒种子。'],
+    souvenir:{em:'🌱', name:'遗迹藤种', story:'一颗能长成古境植物的种子，种下后，记忆会跟着发芽。'}},
+  {id:'trench', name:'海渊之眼', em:'🌀', depth:6, tag:'隐藏地点·海底', cat:'secret', era:'海底', secret:true,
+    drop:{cl:'tide',min:'epic'},
+    stories:['深渊里有发光的水母群，像一盏盏掉进海里的月亮。','它在最深处听见了无声的歌，那是整片海在哼同一个调子。'],
+    souvenir:{em:'🐙', name:'渊晶核', story:'海渊深处的发光结晶，握在手里，会听到极轻极远的潮声。'}},
+  {id:'clock', name:'古钟塔', em:'🕰️', depth:6, tag:'隐藏地点·时间', cat:'secret', era:'时之卷', secret:true,
+    drop:{cl:'time',min:'rare'},
+    req:{tmap:1,item:'古钟'},
+    stories:['钟塔里每座钟都停在同一秒——那是世上最温柔的一刻。','它拧了一下发条，钟开始走了，走得比从前更慢、更稳。'],
+    souvenir:{em:'⌛', name:'停钟芯', story:'从古钟塔取下的一枚齿轮，安回去时，时间会为你停一小会儿。'}},
+  {id:'prism', name:'棱镜回廊', em:'🔷', depth:6, tag:'隐藏地点·幻境', cat:'secret', era:'镜之境', secret:true,
+    drop:{cl:'prism',min:'rare'},
+    stories:['回廊的每一面镜子里都住着一个不同的它，它们都朝它笑了笑。','光在棱镜间折来折去，最后落在它手里，变成了一颗彩虹糖。'],
+    souvenir:{em:'🌈', name:'棱镜碎片', story:'一片折射彩虹的碎片，对着光看，能看见平时看不见的颜色。'}},
+  {id:'forge', name:'锻炉遗址', em:'🔨', depth:6, tag:'隐藏地点·机关', cat:'secret', era:'古之章', secret:true,
+    drop:{cl:'bell',min:'epic'},
+    stories:['炉火已熄千年，却有风穿过风箱发出轻微的呼吸声。','它在废料堆里找到一只未完成的铃，轻轻一摇，铃音带着铁的余温。'],
+    souvenir:{em:'⚒️', name:'锻炉余烬', story:'从锻炉遗址带回的余烬，握在掌心还会有微暖——是属于匠人的温度。'}},
+];
+// —— v1.2 月度秘境轮换（内容可持续框架）——
+const SEASONS = [
+  // 6 微赛季（贴合节气节奏，每季 2 个月）
+  {id:'frost', name:'霜序', months:[1,2], em:'❄️',
+   secrets:['star','station','stardream'], desc:'霜雪覆地，星尘在冰面上格外明亮', flavor:'霜把世界裹进安静的壳里，星星的声音就变得清楚了。', scene:'猫狗星球_秘境美术/scene_frost.webp', featured:['r_jilin','r_heilongjiang'], skin:{c1:'#e6ecfb',c2:'#d4def7',border:'#7b9fe0'}},
+  {id:'thaw', name:'融春', months:[3,4], em:'🌸',
+   secrets:['isle','mao','worldtree','ruin'], desc:'冻土初融，古境与树海在暖风中醒来', flavor:'冻土化了，第一朵花替整座山醒了过来。', scene:'猫狗星球_秘境美术/scene_thaw.webp', featured:['r_beijing','r_zhejiang'], skin:{c1:'#f8eedd',c2:'#efdcbb',border:'#c89b5a'}},
+  {id:'bloom', name:'花月', months:[5,6], em:'🌺',
+   secrets:['mirrorlake','trench'], desc:'花满枝头，镜湖水暖、海渊初醒', flavor:'花开到第七层的时候，风里满是甜味和泡泡。', scene:'猫狗星球_秘境美术/scene_bloom.webp', featured:['r_jiangsu','r_hubei'], skin:{c1:'#eaf6e7',c2:'#d6efd8',border:'#7fae8c'}},
+  {id:'scorch', name:'炎夏', months:[7,8], em:'☀️',
+   secrets:['belltower','deepsea','clock'], desc:'烈日炎炎，适合深潜探索海底与时间秘境', flavor:'海面平静得像块玻璃，底下却闹得欢。', scene:'猫狗星球_秘境美术/scene_scorch.webp', featured:['r_hainan','r_guangdong'], skin:{c1:'#dcf0f3',c2:'#bfe3ea',border:'#5ba6b8'}},
+  {id:'harvest', name:'金秋', months:[9,10], em:'🍂',
+   secrets:['mirror','corridor','prism'], desc:'秋叶金黄，棱镜与幻境之门缓缓打开', flavor:'叶子落尽之后，树干上的时间纹路终于能被看清了。', scene:'猫狗星球_秘境美术/scene_harvest.webp', featured:['r_shandong','r_shaanxi'], skin:{c1:'#fbf0dd',c2:'#f5e6cf',border:'#d0a55a'}},
+  {id:'yearend', name:'岁暮', months:[11,12], em:'🎇',
+   secrets:['bellcrypt','maze','sanctum','forge'], desc:'岁末暮深，古章秘境最易在寒夜浮现', flavor:'雾起了，时间的边沿变得毛茸茸的。', scene:'猫狗星球_秘境美术/scene_yearend.webp', featured:['r_sichuan','r_anhui'], skin:{c1:'#f4e3d5',c2:'#e6cdb6',border:'#b07f4e'}},
+];
+function seasonSkin(s){ return (s&&s.skin)||{c1:'#eef6e9',c2:'#e7f1f6',border:'var(--accent2)'}; }
+// —— 秘境时代元数据（配色 + 图标，统一视觉语言）——
+const ERA_META = {
+  '星穹':{ic:'🌌', art:'猫狗星球_秘境美术/era_cosmos.webp', c1:'#e7edff', c2:'#d3deff', bar:'#7b9fe0', txt:'#41568f'},
+  '古境':{ic:'🐾', art:'猫狗星球_秘境美术/era_ancient.webp', c1:'#f8eedd', c2:'#efdcbb', bar:'#c89b5a', txt:'#8a6526'},
+  '海底':{ic:'🌊', art:'猫狗星球_秘境美术/era_abyss.webp', c1:'#dcf0f3', c2:'#bfe3ea', bar:'#5ba6b8', txt:'#2f6b78'},
+  '时之卷':{ic:'⏳', art:'猫狗星球_秘境美术/era_chrono.webp', c1:'#efe6f7', c2:'#e0cdf0', bar:'#a07fc7', txt:'#6a4a8c'},
+  '镜之境':{ic:'🔺', art:'猫狗星球_秘境美术/era_mirror.webp', c1:'#fde9f2', c2:'#f6d3e4', bar:'#d77aa8', txt:'#a8457a'},
+  '古之章':{ic:'🏯', art:'猫狗星球_秘境美术/era_relic.webp', c1:'#f4e3d5', c2:'#e6cdb6', bar:'#b07f4e', txt:'#8a5a2e'},
+};
+// 秘境图标：专属 CG 写实图标（ImageGen 生成 + rembg 去背），落位 猫狗星球_秘境美术/
+const REALM_ART = {
+  star:'猫狗星球_秘境美术/realm_star.webp',
+  station:'猫狗星球_秘境美术/realm_station.webp',
+  isle:'猫狗星球_秘境美术/realm_isle.webp',
+  belltower:'猫狗星球_秘境美术/realm_belltower.webp',
+  deepsea:'猫狗星球_秘境美术/realm_deepsea.webp',
+  mirror:'猫狗星球_秘境美术/realm_mirror.webp',
+  corridor:'猫狗星球_秘境美术/realm_corridor.webp',
+  mirrorlake:'猫狗星球_秘境美术/realm_mirrorlake.webp',
+  bellcrypt:'猫狗星球_秘境美术/realm_bellcrypt.webp',
+  maze:'猫狗星球_秘境美术/realm_maze.webp',
+  sanctum:'猫狗星球_秘境美术/realm_sanctum.webp',
+  mao:'猫狗星球_秘境美术/realm_mao.webp',
+  worldtree:'猫狗星球_秘境美术/realm_worldtree.webp',
+  // 方向③ 新增 6 秘境 CG
+  stardream:'猫狗星球_秘境美术/realm_stardream.webp',
+  ruin:'猫狗星球_秘境美术/realm_ruin.webp',
+  trench:'猫狗星球_秘境美术/realm_trench.webp',
+  clock:'猫狗星球_秘境美术/realm_clock.webp',
+  prism:'猫狗星球_秘境美术/realm_prism.webp',
+  forge:'猫狗星球_秘境美术/realm_forge.webp',
+};
+function eraMeta(e){ return ERA_META[e]||{ic:'🧭',c1:'#f0f0f0',c2:'#e2e2e2',bar:'#bbb',txt:'#777'}; }
+function activeSeason(){
+  if(S.seasonOverride){ const o=SEASONS.find(s=>s.id===S.seasonOverride); if(o) return o; }
+  const m=today().getMonth()+1;
+  return SEASONS.find(s=>s.months.includes(m))||SEASONS[0];
+}
+function isSecretInSeason(id){
+  const s=activeSeason();
+  return s && s.secrets.includes(id);
+}
+const DEST = [
+  ...SHOWCASE,
+  ...CN_RAW.map(r=>buildDest(r,'cn')),
+  ...WORLD_RAW.map(r=>buildDest(r,'world')),
+  ...HIDDEN,
+];
+// —— 省份/国家选择层（md §2：选择层=省份/国家，落点=随机城市景点）——
+// 解析每条非秘境 spot 的归属省份/国家（依据 tag：'X·中国' / 'X·古文明' / '中国'直辖市 / '中国香港'等合规整串）
+function parseRegionName(spot){
+  const tag=spot.tag||'';
+  if(tag==='中国') return spot.name.split('·')[0];                   // 直辖市：天津/上海/重庆
+  if(tag==='中国香港'||tag==='中国澳门'||tag==='中国台湾') return tag; // 合规整串标注中国归属
+  const i=tag.indexOf('·'); if(i<0) return tag;
+  const first=tag.slice(0,i), last=tag.slice(i+1);
+  if(last==='中国'||last==='古文明') return first;
+  return tag;
+}
+const REGION_DEFS={
+  '河北':{id:'r_hebei',em:'🏞️',art:'猫狗星球_省区美术/prov_hebei.webp',domestic:true},'山西':{id:'r_shanxi',em:'🏯',art:'猫狗星球_省区美术/prov_shanxi.webp',domestic:true},
+  '辽宁':{id:'r_liaoning',em:'🐎',art:'猫狗星球_省区美术/prov_liaoning.webp',domestic:true},'吉林':{id:'r_jilin',em:'🏺',art:'猫狗星球_省区美术/prov_jilin.webp',domestic:true},
+  '黑龙江':{id:'r_heilongjiang',em:'🔔',art:'猫狗星球_省区美术/prov_heilongjiang.webp',domestic:true},'江苏':{id:'r_jiangsu',em:'🏡',art:'猫狗星球_省区美术/prov_jiangsu.webp',domestic:true},
+  '安徽':{id:'r_anhui',em:'⚖️',art:'猫狗星球_省区美术/prov_anhui.webp',domestic:true},'福建':{id:'r_fujian',em:'🧭',art:'猫狗星球_省区美术/prov_fujian.webp',domestic:true},
+  '江西':{id:'r_jiangxi',em:'📜',art:'猫狗星球_省区美术/prov_jiangxi.webp',domestic:true},'山东':{id:'r_shandong',em:'📜',art:'猫狗星球_省区美术/prov_shandong.webp',domestic:true},
+  '河南':{id:'r_henan',em:'🪨',art:'猫狗星球_省区美术/prov_henan.webp',domestic:true},'湖北':{id:'r_hubei',em:'🎵',art:'猫狗星球_省区美术/prov_hubei.webp',domestic:true},
+  '湖南':{id:'r_hunan',em:'📜', art:'猫狗星球_省区美术/prov_hunan.webp', domestic:true},'广东':{id:'r_guangdong',em:'🪨', art:'猫狗星球_省区美术/prov_guangdong.webp', domestic:true},
+  '海南':{id:'r_hainan',em:'🐚', art:'猫狗星球_省区美术/prov_hainan.webp', domestic:true},'贵州':{id:'r_guizhou',em:'🥁', art:'猫狗星球_省区美术/prov_guizhou.webp', domestic:true},
+  '云南':{id:'r_yunnan',em:'🪬', art:'猫狗星球_省区美术/prov_yunnan.webp', domestic:true},'甘肃':{id:'r_gansu',em:'🏜️', art:'猫狗星球_省区美术/prov_gansu.webp', domestic:true},
+  '青海':{id:'r_qinghai',em:'🪙',art:'猫狗星球_省区美术/prov_qinghai.webp',domestic:true},'中国台湾':{id:'r_taiwan',em:'🧱',art:'猫狗星球_省区美术/prov_taiwan.webp',domestic:true},
+  '内蒙古':{id:'r_neimenggu',em:'🪙', art:'猫狗星球_省区美术/prov_neimenggu.webp', domestic:true},'广西':{id:'r_guangxi',em:'🥁', art:'猫狗星球_省区美术/prov_guangxi.webp', domestic:true},
+  '西藏':{id:'r_xizang',em:'🪙', art:'猫狗星球_省区美术/prov_xizang.webp', domestic:true},'宁夏':{id:'r_ningxia',em:'🪨', art:'猫狗星球_省区美术/prov_ningxia.webp', domestic:true},
+  '新疆':{id:'r_xinjiang',em:'🧵', art:'猫狗星球_省区美术/prov_xinjiang.webp', domestic:true},'北京':{id:'r_beijing',em:'🏯', art:'猫狗星球_省区美术/prov_beijing.webp', domestic:true},
+  '天津':{id:'r_tianjin',em:'⚖️', art:'猫狗星球_省区美术/prov_tianjin.webp', domestic:true},'上海':{id:'r_shanghai',em:'🏺', art:'猫狗星球_省区美术/prov_shanghai.webp', domestic:true},
+  '重庆':{id:'r_chongqing',em:'🏹', art:'猫狗星球_省区美术/prov_chongqing.webp', domestic:true},'中国香港':{id:'r_hk',em:'🗼', art:'猫狗星球_省区美术/prov_hk.webp', domestic:true},
+  '中国澳门':{id:'r_macau',em:'🧱', art:'猫狗星球_省区美术/prov_macau.webp', domestic:true},'浙江':{id:'r_zhejiang',em:'🌊', art:'猫狗星球_省区美术/prov_zhejiang.webp', domestic:true},
+  '四川':{id:'r_sichuan',em:'🐼',art:'猫狗星球_省区美术/prov_sichuan.webp',domestic:true},'陕西':{id:'r_shaanxi',em:'🪔', art:'猫狗星球_省区美术/prov_shaanxi.webp', domestic:true},
+  '埃及':{id:'r_egypt',em:'🔺', art:'猫狗星球_省区美术/prov_egypt.webp', domestic:false},'希腊':{id:'r_greece',em:'🏛️', art:'猫狗星球_省区美术/prov_greece.webp', domestic:false},
+  '意大利':{id:'r_italy',em:'🏛️', art:'猫狗星球_省区美术/prov_italy.webp', domestic:false},'日本':{id:'r_japan',em:'🏯', art:'猫狗星球_省区美术/prov_japan.webp', domestic:false},
+  '柬埔寨':{id:'r_cambodia',em:'🛕', art:'猫狗星球_省区美术/prov_cambodia.webp', domestic:false},'土耳其':{id:'r_turkey',em:'📜', art:'猫狗星球_省区美术/prov_turkey.webp', domestic:false},
+  '伊拉克':{id:'r_iraq',em:'📜', art:'猫狗星球_省区美术/prov_iraq.webp', domestic:false},'伊朗':{id:'r_iran',em:'🏆', art:'猫狗星球_省区美术/prov_iran.webp', domestic:false},
+  '墨西哥':{id:'r_mexico',em:'💎', art:'猫狗星球_省区美术/prov_mexico.webp', domestic:false},'秘鲁':{id:'r_peru',em:'☀️', art:'猫狗星球_省区美术/prov_peru.webp', domestic:false},
+  '马里':{id:'r_mali',em:'📜', art:'猫狗星球_省区美术/prov_mali.webp', domestic:false},'斯里兰卡':{id:'r_srilanka',em:'🪷', art:'猫狗星球_省区美术/prov_srilanka.webp', domestic:false},
+  '法国':{id:'r_france',em:'🌈', art:'猫狗星球_省区美术/prov_france.webp', domestic:false},
+  // —— 方向② 内容扩展：新增世界国家（与 WORLD_RAW 同步）——
+  '印度':{id:'r_india',em:'🕌', art:'猫狗星球_省区美术/prov_india.webp', domestic:false},'俄罗斯':{id:'r_russia',em:'🏛️', art:'猫狗星球_省区美术/prov_russia.webp', domestic:false},
+  '英国':{id:'r_uk',em:'🪨', art:'猫狗星球_省区美术/prov_uk.webp', domestic:false},'德国':{id:'r_germany',em:'🏰', art:'猫狗星球_省区美术/prov_germany.webp', domestic:false},
+  '西班牙':{id:'r_spain',em:'🕌', art:'猫狗星球_省区美术/prov_spain.webp', domestic:false},'越南':{id:'r_vietnam',em:'🏮', art:'猫狗星球_省区美术/prov_vietnam.webp', domestic:false},
+  '泰国':{id:'r_thailand',em:'🛕', art:'猫狗星球_省区美术/prov_thailand.webp', domestic:false},'尼泊尔':{id:'r_nepal',em:'🛕', art:'猫狗星球_省区美术/prov_nepal.webp', domestic:false},
+  // —— 方向② Batch2：新增世界国家（与 WORLD_RAW 同步）——
+  '韩国':{id:'r_korea',em:'🏯', art:'猫狗星球_省区美术/prov_korea.webp', domestic:false},'蒙古':{id:'r_mongolia',em:'🐎', art:'猫狗星球_省区美术/prov_mongolia.webp', domestic:false},
+  '约旦':{id:'r_jordan',em:'🏜️', art:'猫狗星球_省区美术/prov_jordan.webp', domestic:false},'埃塞俄比亚':{id:'r_ethiopia',em:'⛪', art:'猫狗星球_省区美术/prov_ethiopia.webp', domestic:false},
+  '奥地利':{id:'r_austria',em:'🏛️', art:'猫狗星球_省区美术/prov_austria.webp', domestic:false},'捷克':{id:'r_czech',em:'🏰', art:'猫狗星球_省区美术/prov_czech.webp', domestic:false},
+  '缅甸':{id:'r_myanmar',em:'🛕', art:'猫狗星球_省区美术/prov_myanmar.webp', domestic:false},'印度尼西亚':{id:'r_indonesia',em:'🛕', art:'猫狗星球_省区美术/prov_indonesia.webp', domestic:false},
+  '乌兹别克斯坦':{id:'r_uzbek',em:'🕌', art:'猫狗星球_省区美术/prov_uzbek.webp', domestic:false},'匈牙利':{id:'r_hungary',em:'🏰', art:'猫狗星球_省区美术/prov_hungary.webp', domestic:false},
+};
+// —— 写实地貌立绘（Track B · 方向①）：4 种通用地貌映射到所有省份/国家，统一目的地视觉 ——
+const BIOME_ART = {
+  snow:'猫狗星球_场景美术/snow.webp',
+  island:'猫狗星球_场景美术/island.webp',
+  town:'猫狗星球_场景美术/town.webp',
+  city:'猫狗星球_场景美术/city.webp',
+  desert:'猫狗星球_场景美术/desert.webp',
+  loess:'猫狗星球_场景美术/loess.webp',
+  snowplain:'猫狗星球_场景美术/snowplain.webp',
+  grassland:'猫狗星球_场景美术/grassland.webp',
+};
+const REGION_BIOME = {
+  '河北':'snow','山西':'loess','辽宁':'snowplain','吉林':'snowplain','黑龙江':'snowplain','江苏':'town','安徽':'town','福建':'island','江西':'town','山东':'town','河南':'town','湖北':'town','湖南':'town','广东':'island','海南':'island','贵州':'town','云南':'town','甘肃':'loess','青海':'snow','中国台湾':'island','内蒙古':'grassland','广西':'island','西藏':'snow','宁夏':'snow','新疆':'desert','北京':'snow','天津':'snow','上海':'city','重庆':'snow','中国香港':'island','中国澳门':'island','浙江':'town','四川':'town','陕西':'loess',
+  '埃及':'city','希腊':'town','意大利':'town','日本':'town','柬埔寨':'town','土耳其':'town','伊拉克':'town','伊朗':'town','墨西哥':'town','秘鲁':'town','马里':'town','斯里兰卡':'island','法国':'city',
+  // —— 方向② 内容扩展：新增世界国家地貌（复用既有 8 类）——
+  '印度':'town','俄罗斯':'city','英国':'grassland','德国':'snowplain','西班牙':'town','越南':'town','泰国':'town','尼泊尔':'town',
+  // —— 方向② Batch2：新增世界国家地貌（复用既有 8 类）——
+  '韩国':'town','蒙古':'grassland','约旦':'desert','埃塞俄比亚':'town','奥地利':'city',
+  '捷克':'town','缅甸':'town','印度尼西亚':'town','乌兹别克斯坦':'town','匈牙利':'city'
+};
+function biomeOf(rn){ return BIOME_ART[REGION_BIOME[rn]] || ''; }
+// 渲染目的地/省份缩略图（写实地貌照片），无图回退 emoji
+function biomeThumb(rn, em, cls){
+  // 支持传入 region 对象（含 art 省区专属 CG）或纯字符串名称
+  const reg=typeof rn==='object'?rn:null;
+  const name=reg?reg.name:rn;
+  if(reg && reg.art) return `<img class="${cls||'biome-art'}" src="${reg.art}" alt="${name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">`;
+  const bm=biomeOf(name);
+  return bm ? `<img class="${cls||'biome-art'}" src="${bm}" alt="${name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">` : `<span class="em">${em}</span>`;
+}
+const JOURNAL_PLACE_ART=Object.fromEntries(['hz','cd','su','xa','dh','bj','zjj','xzp','shaolin','wudang','putuo','sjz','ty','sy','cc','hrb'].map(id=>[id,`猫狗星球_手账地点美术/${id}.webp`]));
+function journalPlaceThumb(e){
+  const regionName=parseRegionName({tag:e.destTag||'',name:e.destName||''});
+  const dest=DEST.find(d=>d.id===e.destId);
+  const art=JOURNAL_PLACE_ART[e.destId] || (dest&&dest.souvenir&&souvenirArt(dest.souvenir)) || (REGION_DEFS[regionName]&&REGION_DEFS[regionName].art) || '';
+  return art ? `<img class="biome-place" src="${art}" alt="${e.destName||regionName}" onerror="this.style.display='none'">` : biomeThumb(regionName,e.destEm,'biome-place');
+}
+const FRAGMENT_ART={
+  ceramic:'猫狗星球_图标美术/残片CG/ceramic.webp', compass:'猫狗星球_图标美术/残片CG/compass.webp', bell:'猫狗星球_图标美术/残片CG/bell.webp',
+  coin:'猫狗星球_图标美术/残片CG/coin.webp', herb:'猫狗星球_图标美术/残片CG/herb.webp', fabric:'猫狗星球_图标美术/残片CG/fabric.webp',
+  stardust:'猫狗星球_图标美术/残片CG/stardust.webp', tide:'猫狗星球_图标美术/残片CG/tide.webp', time:'猫狗星球_图标美术/残片CG/time.webp',
+  prism:'猫狗星球_图标美术/残片CG/prism.webp', primor:'猫狗星球_图标美术/残片CG/primor.webp'
+};
+function fragmentIcon(key, cls='fragment-art'){
+  const c=CLUSTERS[key]; const art=FRAGMENT_ART[key];
+  return art?`<img class="${cls}" src="${art}" alt="${c?c.name:'残片'}" onerror="this.outerHTML='${c?c.em:'🧩'}'">`:(c?c.em:'🧩');
+}
+function itemIcon(it){ return it.art?`<img class="item-art" src="${it.art}" alt="${it.name}" onerror="this.outerHTML='${it.em}'">`:it.em; }
+function solarIcon(t){ return t.art?`<img class="item-art" src="${t.art}" alt="${t.name}" onerror="this.outerHTML='${t.em}'">`:t.em; }
+const _rmap={};
+DEST.forEach(d=>{
+  if(d.secret) return;                       // 隐藏秘境独立，不归入省份/国家
+  const rn=parseRegionName(d); const def=REGION_DEFS[rn]; if(!def){ console.warn('未匹配省份/国家:',rn,d.id); return; }
+  d.region=rn; d.regionId=def.id;
+  if(!_rmap[def.id]) _rmap[def.id]={id:def.id,name:rn,em:def.em,art:def.art,kind:def.domestic?'cn':'world',domestic:def.domestic,spotIds:[]};
+  _rmap[def.id].spotIds.push(d.id);
+});
+const REGIONS=Object.values(_rmap);
+const REGION_BY_ID=Object.fromEntries(REGIONS.map(r=>[r.id,r]));
+const DOMESTIC_REGION_TOTAL=REGIONS.filter(r=>r.domestic).length;
+
+// 自定义旅行时长（小时）：时长越长 → 深度越深、消耗越高、回报越大（P4 探索深度）
+// time 为原型压缩等待秒数；mul 为回报倍率；food 为时长基础干粮消耗
+const DURATIONS = {
+  '2':  {name:'2 小时',  depthMod:0, time:4,  food:1, risk:0,    mul:0.4},
+  '4':  {name:'4 小时',  depthMod:0, time:8,  food:1, risk:0,    mul:0.6},
+  '8':  {name:'8 小时',  depthMod:0, time:14, food:2, risk:0,    mul:0.9},
+  '12': {name:'12 小时', depthMod:1, time:20, food:3, risk:0,    mul:1.3},
+  '16': {name:'16 小时', depthMod:1, time:26, food:4, risk:0.03, mul:1.7},
+};
+// 残片簇 → 合成后整件道具（md §4.2：扩至 12 簇；普通3/稀有5/史诗5/传说8；藏宝图为独立特殊簇）
+const CLUSTERS = {
+  // —— 方向② Batch2：每簇 +1~2 整件道具，扩大合成收集池与图鉴丰富度（synth 阈值不变）——
+  ceramic:{name:'陶瓷簇',em:'🏺',rarity:'legend',synth:4,items:[
+    {id:'唐三彩',art:'猫狗星球_整件美术/tangsancai.webp',em:'🐎',name:'唐三彩',story:'马鬃上还沾着长安的风，它说这匹马认得回家的路。'},
+    {id:'青铜剑',art:'猫狗星球_整件美术/bronze_sword.webp',em:'⚔️',name:'青铜剑',story:'剑身映出它出发前的影子，那时候它还不会远行。'},
+    {id:'圣甲虫',art:'猫狗星球_整件美术/scarab.webp',em:'🪲',name:'圣甲虫护符',story:'古埃及人相信它推着太阳升起，它推着你的好运来。'},
+    {id:'黑绘陶罐',art:'猫狗星球_整件美术/black_figure_vase.webp',em:'🏺',name:'黑绘陶罐',story:'罐上画着一场早已散场的宴席，酒香仿佛还在。'},
+    {id:'秦俑',art:'猫狗星球_整件美术/terracotta_warrior.webp',em:'🗿',name:'兵马俑',story:'千人千面，它说自己在队列里找到了一个和它一样爱发呆的。'},
+    {id:'影青',art:'猫狗星球_整件美术/yingqing_bowl.webp',em:'🏺',name:'影青瓷盏',story:'盏底还留着一点釉泪，像谁斟过又没喝完。'}]},
+  compass:{name:'罗盘簇',em:'🧭',rarity:'rare',synth:5,items:[
+    {id:'罗盘',art:'猫狗星球_整件美术/bronze_compass.webp',em:'🧭',name:'青铜罗盘',story:'罗盘总指向"家"，无论它在哪片海域。'},
+    {id:'指北星盘',art:'猫狗星球_整件美术/star_dial.webp',em:'⭐',name:'指北星盘',story:'星图绣在铜盘上，迷路时抬头便有方向。'},
+    {id:'航海图',art:'猫狗星球_整件美术/sea_chart.webp',em:'🗺️',name:'航海星图',story:'图上画着所有去过的港口，连起来是一条温柔的弧线。'}]},
+  bell:{name:'古钟簇',em:'🔔',rarity:'rare',synth:5,items:[
+    {id:'古钟',art:'猫狗星球_整件美术/courtyard_bell.webp',em:'🔔',name:'庭院古钟',story:'钟声不报时，只报平安——它挂在庭院里，替你守着家。'},
+    {id:'铜磬',art:'猫狗星球_整件美术/bronze_qing.webp',em:'🛎️',name:'铜磬',story:'轻敲一下，余音里全是它没说出口的惦记。'},
+    {id:'风铎',art:'猫狗星球_整件美术/wind_chime.webp',em:'🛎️',name:'檐角风铎',story:'风一过，它就在檐角替整座庙宇报平安。'}]},
+  coin:{name:'古币簇',em:'🪙',rarity:'epic',synth:5,items:[
+    {id:'古币',art:'猫狗星球_整件美术/bronze_coin.webp',em:'🪙',name:'古泉铜币',story:'币上字迹模糊，却能买通时间，让某个人多陪你一会儿。'},
+    {id:'罗马金币',art:'猫狗星球_整件美术/roman_gold.webp',em:'🥇',name:'罗马金币',story:'背面是位故去的君王，正面是你正想念的人。'},
+    {id:'丝路币',art:'猫狗星球_整件美术/silkroad_coin.webp',em:'🥇',name:'丝路金币',story:'币边磨损得厉害，却磨不掉上面的远行脚印。'}]},
+  herb:{name:'草木簇',em:'🌿',rarity:'normal',synth:3,items:[
+    {id:'野花',art:'猫狗星球_整件美术/wildflower.webp',em:'🌼',name:'路边野花',story:'它把花别在耳边，说这样回家时你一眼就能认出。'},
+    {id:'红叶',art:'猫狗星球_整件美术/red_leaf.webp',em:'🍁',name:'山间红叶',story:'叶脉里写着秋天第一个念头：该回去了。'},
+    {id:'松果',art:'猫狗星球_整件美术/pinecone.webp',em:'🌲',name:'松林松果',story:'它把松果藏在枕下，说这样梦里也有森林的味道。'}]},
+  fabric:{name:'织物簇',em:'🧵',rarity:'normal',synth:3,items:[
+    {id:'绣帕',art:'猫狗星球_整件美术/embroidered_hanky.webp',em:'👘',name:'江南绣帕',story:'帕角绣着一只猫，针脚歪歪的，像孩子缝的。'},
+    {id:'围巾',art:'猫狗星球_整件美术/silk_scarf.webp',em:'🧣',name:'丝路围巾',story:'围巾上有驼铃的纹路，风一吹像在赶路。'},
+    {id:'扎染',art:'猫狗星球_整件美术/tie_dye.webp',em:'🧣',name:'大理扎染',story:'蓝白之间，它说那是苍山雪落进洱海的样子。'}]},
+  stardust:{name:'星屑簇',em:'✨',rarity:'rare',synth:5,items:[
+    {id:'星屑结晶',art:'猫狗星球_整件美术/stardust_crystal.webp',em:'💎',name:'星屑结晶',story:'握在手里凉凉的，像把一小片夜空揣进了兜。'},
+    {id:'星轨图',art:'猫狗星球_整件美术/star_track.webp',em:'🌌',name:'星轨图',story:'纸上画着它走过的所有路，连起来竟是一颗心。'},
+    {id:'流星铁',art:'猫狗星球_整件美术/meteor_iron.webp',em:'☄️',name:'流星铁',story:'一块从天上掉下来的铁，握着它，像握住了坠落的承诺。'}]},
+  tide:{name:'潮汐簇',em:'🌊',rarity:'rare',synth:5,items:[
+    {id:'潮汐罗盘',art:'猫狗星球_整件美术/tide_compass.webp',em:'🧭',name:'潮汐罗盘',story:'指针随潮水起落，它说海也有想家的时候。'},
+    {id:'贝壳',art:'猫狗星球_整件美术/conch.webp',em:'🐚',name:'螺声贝壳',story:'贴在耳边，听见的是千里外那片海在叫它。'},
+    {id:'珊瑚',art:'猫狗星球_整件美术/coral.webp',em:'🪸',name:'深海珊瑚',story:'珊瑚枝桠里卡着一只小蟹，它说那是海里寄来的信使。'}]},
+  time:{name:'时之簇',em:'⏳',rarity:'epic',synth:5,items:[
+    {id:'时之沙漏',art:'猫狗星球_整件美术/hourglass.webp',em:'⏳',name:'时之沙漏',story:'沙漏倒转一次，它就多陪你一个春天。'},
+    {id:'古旧怀表',art:'猫狗星球_整件美术/pocket_watch.webp',em:'🕰️',name:'古旧怀表',story:'表针停在三点，那是它出发的时刻。'},
+    {id:'日晷',art:'猫狗星球_整件美术/sundial.webp',em:'☀️',name:'青铜日晷',story:'它对着日晷站了一会儿，影子慢慢挪，像时间在自己走。'}]},
+  prism:{name:'棱镜簇',em:'🔺',rarity:'rare',synth:5,items:[
+    {id:'棱镜碎片',art:'猫狗星球_整件美术/prism_shard.webp',em:'🔺',name:'棱镜碎片',story:'光穿过它，散成七种想你的方式。'},
+    {id:'虹石',art:'猫狗星球_整件美术/rainbow_stone.webp',em:'🌈',name:'虹石',story:'石头里封着一道小彩虹，雨天才会显现。'},
+    {id:'琉璃',art:'猫狗星球_整件美术/liuli.webp',em:'🔷',name:'古法琉璃',story:'琉璃里封着一小片天青色，是它从某个晴天偷来的。'}]},
+  primor:{name:'先民簇',em:'🪬',rarity:'epic',synth:5,items:[
+    {id:'先民信物',art:'猫狗星球_整件美术/primor_relic.webp',em:'🪬',name:'先民信物',story:'谁也看不懂上面的符号，只有它说：这是问候。'},
+    {id:'古境信物',art:'猫狗星球_整件美术/ancient_relic.webp',em:'🪬',name:'古境信物',story:'来自喵汪古境的馈赠，带着原生文明的体温。'},
+    {id:'图腾',art:'猫狗星球_整件美术/totem.webp',em:'🪬',name:'部落图腾',story:'图腾上的纹路谁也读不懂，只有它说：这是"我们记得你"。'}]},
+  // —— 节庆图鉴（Phase A 长线留存）：节日窗口限定碎片，仅该节庆期间可获取，跨年轮转抬高天花板 ——
+  f_spring:{name:'春节限定',em:'🧧',rarity:'fest',festival:true,synth:4,items:[
+    {id:'spring_door',art:'猫狗星球_称号美术/spring.webp',em:'🧧',name:'新春门笺',festival:true,story:'门上那张红笺写着"平安"，它说这是替你贴的。'},
+    {id:'spring_beast',art:'猫狗星球_称号美术/spring.webp',em:'🐯',name:'年兽玩偶',festival:true,story:'据说年兽怕红怕响，它却把年兽哄成了枕头边的玩偶。'}]},
+  f_duanwu:{name:'端午限定',em:'🐉',rarity:'fest',festival:true,synth:4,items:[
+    {id:'duanwu_badge',art:'猫狗星球_称号美术/duanwu_dragon.webp',em:'🐉',name:'龙舟徽章',festival:true,story:'它混进龙舟队划了半程，回来时胳膊酸得像挂了两面旗。'},
+    {id:'duanwu_sachet',art:'猫狗星球_称号美术/duanwu_dragon.webp',em:'🌿',name:'艾草香囊',festival:true,story:'香囊里塞满艾草，说这样夏天就不怕蚊虫来串门。'}]},
+  f_zhongqiu:{name:'中秋限定',em:'🥮',rarity:'fest',festival:true,synth:4,items:[
+    {id:'zhongqiu_lantern',art:'猫狗星球_称号美术/zhongqiu_mooncake.webp',em:'🌕',name:'兔儿灯',festival:true,story:'兔子灯举在手里，它说月亮看见灯，就像看见家里亮着的窗。'},
+    {id:'zhongqiu_mold',art:'猫狗星球_称号美术/zhongqiu_mooncake.webp',em:'🥮',name:'月饼模',festival:true,story:'它从老作坊带回一只月饼模，说下次中秋要自己烤给你吃。'}]},
+  // —— 铺满年度日历：其余 7 节庆限定簇（与 FESTIVAL_CLUSTERS 映射对应）——
+  f_yuanxiao:{name:'元宵限定',em:'🏮',rarity:'fest',festival:true,synth:4,items:[
+    {id:'yuanxiao_lantern',art:'猫狗星球_称号美术/yuanxiao_lantern.webp',em:'🏮',name:'花灯',festival:true,story:'它提着花灯挤进人群，说这一盏要留给你猜谜。'},
+    {id:'yuanxiao_tangyuan',art:'猫狗星球_称号美术/yuanxiao_lantern.webp',em:'🥣',name:'汤圆',festival:true,story:'一碗汤圆分你一半，它说这样元宵就不冷了。'}]},
+  f_qingming:{name:'清明限定',em:'🌿',rarity:'fest',festival:true,synth:4,items:[
+    {id:'qingming_qingtuan',art:'猫狗星球_称号美术/qingming_willow.webp',em:'🌿',name:'青团',festival:true,story:'它把第一口青团留给你，说这是春天的味道。'},
+    {id:'qingming_kite',art:'猫狗星球_称号美术/qingming_willow.webp',em:'🪁',name:'纸鸢',festival:true,story:'风筝线那头系着它写的思念，风一吹就飞到你窗前。'}]},
+  f_qixi:{name:'七夕限定',em:'🎋',rarity:'fest',festival:true,synth:4,items:[
+    {id:'qixi_knot',art:'猫狗星球_称号美术/qixi_bamboo.webp',em:'💞',name:'同心结',festival:true,story:'它编了只同心结塞给你，说这样不管多远都连着。'},
+    {id:'qixi_bridge',art:'猫狗星球_称号美术/qixi_bamboo.webp',em:'🕊️',name:'鹊桥信',festival:true,story:'它托喜鹊递来一封信，落款是"想你"。'}]},
+  f_chongyang:{name:'重阳限定',em:'🏔️',rarity:'fest',festival:true,synth:4,items:[
+    {id:'chongyang_wine',art:'猫狗星球_称号美术/chongyang_mountain.webp',em:'🍶',name:'菊花酒',festival:true,story:'它酿了菊花酒登高时与你碰杯，说敬老也敬远行。'},
+    {id:'chongyang_cert',art:'猫狗星球_称号美术/chongyang_mountain.webp',em:'🏔️',name:'登高凭证',festival:true,story:'它在最高处插了面小旗，写着"到此一游，与你同登"。'}]},
+  f_dongzhi:{name:'冬至限定',em:'❄️',rarity:'fest',festival:true,synth:4,items:[
+    {id:'dongzhi_heater',art:'猫狗星球_称号美术/dongzhi_snowflake.webp',em:'🔥',name:'暖炉',festival:true,story:'它把暖炉推到你脚边，说冬至再冷也有这一方暖。'},
+    {id:'dongzhi_wine',art:'猫狗星球_称号美术/dongzhi_snowflake.webp',em:'❄️',name:'冬酿',festival:true,story:'一壶冬酿温着，它说这是给长夜留的甜。'}]},
+  f_laba:{name:'腊八限定',em:'🥣',rarity:'fest',festival:true,synth:4,items:[
+    {id:'laba_congee',art:'猫狗星球_称号美术/laba_porridge.webp',em:'🥣',name:'腊八粥',festival:true,story:'一碗腊八粥熬了整夜，它说这是把一年收成都煮进去了。'},
+    {id:'laba_lamp',art:'猫狗星球_称号美术/laba_porridge.webp',em:'🪔',name:'暖灯',festival:true,story:'它在门口挂了盏暖灯，说腊八夜回家的路要亮着。'}]},
+  f_crossyear:{name:'跨年限定',em:'🎆',rarity:'fest',festival:true,synth:4,items:[
+    {id:'crossyear_firework',art:'猫狗星球_称号美术/crossyear_fireworks.webp',em:'🎆',name:'岁末烟火',festival:true,story:'它拉着你跑到屋顶看烟火，说旧年就这样笑着送走了。'},
+    {id:'crossyear_wish',art:'猫狗星球_称号美术/crossyear_fireworks.webp',em:'✨',name:'新年愿望',festival:true,story:'它把愿望写在小纸条上塞进你口袋：今年也要一起旅行。'}]},
+};
+// —— v1.2 故事书数据：精选整件/纪念品多章故事（storyOf 自动降级为单章）——
+const STORY_FULL = {
+  '唐三彩':{full:['马鬃上还沾着长安的风，它说这匹马认得回家的路。','它记得那天的长安。驼铃从西市响到东市，骆驼商队驮着丝绸和香料走过朱雀大街。它站在明德门外看了很久，直到城门守卫换了班。回来时马鬃里还夹着一粒沙，是戈壁的风替它装进行囊的。']},
+  '青铜剑':{full:['剑身映出它出发前的影子，那时候它还不会远行。','剑身上有一道细纹，是铸剑师留下的印记。它问剑能不能也给自己一个印记——好让出发前的那个自己和回来的自己，隔着剑身互相认一认。']},
+  '圣甲虫护符':{full:['古埃及人相信它推着太阳升起，它推着你的好运来。','它说甲虫滚粪球的样子像个认真推着日出的笨蛋。但它相信，每个笨蛋心里都住着一颗小小的太阳。它把护符放在你手心，说这样你出门时，也有自己的太阳了。']},
+  '兵马俑':{full:['千人千面，它说自己在队列里找到了一个和它一样爱发呆的。','它在那排陶俑前站了很久，久到有个俑忍不住眨了眨眼——虽然理论上兵马俑不会眨眼。它没有声张，只是在心里替那个俑保守了这个秘密。']},
+  '庭院古钟':{full:['钟声不报时，只报平安——它挂在庭院里，替你守着家。','钟是老铜的，敲一下余音能走很久。它说如果有一天迷路了，就站在高处听——哪里的钟声最沉，哪里就是家。']},
+  '路边野花':{full:['它把花别在耳边，说这样回家时你一眼就能认出。','花是路边采的，根上还带着泥。它一路捧着，生怕风把花瓣吹散。到家时花已经蔫了一角，但它说没关系——蔫了的花也是花，就像走累了的路也是路。']},
+  '星屑结晶':{full:['握在手里凉凉的，像把一小片夜空揣进了兜。','结晶是在一个没有月亮的晚上捡到的。它说那天星星格外低，低到一伸手就能摘下来。它摘了最小的一颗，放进兜里——太重的话，怕把梦压碎了。']},
+  '潮汐罗盘':{full:['指针随潮水起落，它说海也有想家的时候。','罗盘上的指针不是指向北，而是指向最近的海。它试过在三个不同海岸看指针——每次都指向浪最急的方向。它说海也想家，只是它的家太远了，远到只能靠涨潮来想念。']},
+  '时之沙漏':{full:['沙漏倒转一次，它就多陪你一个春天。','沙漏里的沙不是普通的沙，是从某个被时间遗忘的沙滩上带回来的。它说那里的沙子落得特别慢——因为时间也不想走。它悄悄把沙漏调慢了半格，这样春天就能长一点，哪怕只长一小粒沙的功夫。']},
+  '先民信物':{full:['谁也看不懂上面的符号，只有它说：这是问候。','信物上的符号像脚印，又像心跳的波纹。它把信物举到灯下，影子投在墙上，成了一幅画——画里有山、有路、有一只很小的爪印。它说先民们把所有想说的话，都藏进了这只爪印里。']},
+};
+const SOUV_STORY_FULL = {
+  '西湖团扇':{full:['扇面画着断桥，风一摇，桥就活了。','它说扇面上的断桥其实没断——桥栏只是藏进了雾里。它撑着扇子在西湖边转了一圈，回来时袖口沾着柳絮，口袋里多了半片莲叶。它把莲叶夹进手账，说这样夏天就不会那么快走了。']},
+  '南海潮音贝':{full:['贝壳里锁着一段潮声，心烦时一听就平。','贝是退潮时它在礁石缝里找到的。它把贝壳贴在耳边听了很久，说里面不仅有潮声，还有一条鱼路过时哼的歌。它不知道那条鱼叫什么名字，但歌的调子它记住了。']},
+  '树心琥珀':{full:['封着一只远古小虫的琥珀，是时间舍不得丢下的信。','琥珀里的虫很小，翅膀还保持着飞行的姿势。它说这只虫在几千万年前飞过一片松林，被一滴松脂接住了——从此停在了那个夏天。它把琥珀对着太阳看，说阳光穿过琥珀的样子，和几千万年前一模一样。']},
+  '星屑瓶':{full:['瓶里装的是从裂隙带回来的一小捧星尘，夜里会微微发亮。','星尘是从秘境最深处的裂隙里找到的。它说那里的星星不是挂在天上，而是散落在地上，像碎掉的月亮。它蹲在地上捡了很久，挑最亮的那颗装进瓶子。它说这颗星尘来自一颗已经熄灭的星星，但熄灭不等于消失——光还在瓶子里。']},
+};
+function storyOf(it){ return (STORY_FULL[it.name] && STORY_FULL[it.name].full) || [it.story]; }
+function souvenirStoryOf(s){ return (SOUV_STORY_FULL[s.name] && SOUV_STORY_FULL[s.name].full) || [s.story]; }
+const CLUSTER_KEYS = Object.keys(CLUSTERS);
+const FESTIVAL_CLUSTERS = { spring:'f_spring', yuanxiao:'f_yuanxiao', qingming:'f_qingming', duanwu:'f_duanwu', qixi:'f_qixi', zhongqiu:'f_zhongqiu', chongyang:'f_chongyang', dongzhi:'f_dongzhi', laba:'f_laba', crossyear:'f_crossyear' };  // 节庆→限定簇映射（年度日历 10 节庆全覆盖）
+// 开放簇（普通旅途按深度 tier 掉落的簇；隐藏专属簇 stardust/tide/time/prism/primor 仅秘境产出，见各隐藏地点 drop）
+const OPEN_TIERS = { normal:['herb','fabric'], rare:['compass','bell'], epic:['coin'], legend:['ceramic'] };
+// 感人故事池（md §3：14 则普世温情，finishTrip 随机选用为回程叙事）
+const STORIES = [
+  {id:'S1',theme:'归乡',text:'它偶遇一只走失的老友，陪它走了很久，直到把对方送回熟悉的门口，自己悄悄离开。'},
+  {id:'S2',theme:'守护',text:'它在古寺檐下守着一只受伤的鸟，直到翅膀痊愈、振翅飞走，它仰头看了很久。'},
+  {id:'S3',theme:'跨物种友谊',text:'野外它遇见一只狐狸，两个互赠了身上最珍视的小东西，约好下次还来。'},
+  {id:'S4',theme:'重逢',text:'多年后它回到故地，竟遇见旧识，两只都没说话，只是挨着坐到了天黑。'},
+  {id:'S5',theme:'信使',text:'它替一位出不了门的小家伙，把想说的话一路带到了远方亲人的窗台。'},
+  {id:'S6',theme:'灯塔',text:'夜行的迷途者慌张无措，它点亮一盏微光放在路口，第二天收到了笨拙的回礼。'},
+  {id:'S7',theme:'守诺',text:'它替一位古人，把一封始终没送达的信，轻轻放在了该去的地方。'},
+  {id:'S8',theme:'团圆饭',text:'异乡遇见同乡，两只在路灯下分食一碗简单的饭，孤独被驱散了大半。'},
+  {id:'S9',theme:'引路',text:'它对初来乍到的小家伙一路引路，善意在转角处悄悄完成了循环。'},
+  {id:'S10',theme:'旧物',text:'它在旧货摊修补好一只玩具，记忆像被唤醒的灯，温柔地亮了起来。'},
+  {id:'S11',theme:'守园',text:'它走进一座荒废的园子，日日添一点绿意，直到荒园重新有了呼吸。'},
+  {id:'S12',theme:'灯塔猫',text:'它代班守了一夜灯塔，被需要的感觉，比想象中更暖。'},
+  {id:'S13',theme:'信鸽',text:'在虚构建的边境，它做了一回和平的信使，把安宁悄悄递过界线。'},
+  {id:'S14',theme:'归帆',text:'它在渔港等了很久，终于看见那艘船归航的帆，所有的等待都有了着落。'},
+  // —— 方向② 内容扩展：增 6 则温情故事，降低回程叙事重复 ——
+  {id:'S15',theme:'旧友',text:'它在一座小站的长椅上遇见多年前的自己，两个都笑了，谁也没说破。'},
+  {id:'S16',theme:'引路灯',text:'雪夜里它把仅有的光让给迷路的孩子，自己摸黑走回了家，却觉得暖。'},
+  {id:'S17',theme:'远方信',text:'它替一座孤岛捎去一封信，回信比信还厚，里面全是没说够的话。'},
+  {id:'S18',theme:'共伞',text:'雨里它和一只陌生人共撑一片叶子，走到分岔口，叶子上还留着两个人的温度。'},
+  {id:'S19',theme:'守灯人',text:'它替生病的守灯人值了一班，灯塔亮着，远方的船便不会偏航。'},
+  {id:'S20',theme:'归途',text:'它把一路捡来的小石子排成箭头，指给后来的人：家的方向，是这样走的。'},
+  // —— 方向② Batch2：温情故事 20 → 36，匹配目的地数量、降低回程叙事重复 ——
+  {id:'S21',theme:'旧信',text:'它把一路写的明信片叠成一只纸船，放进河里，说会漂到某个想念它的人窗前。'},
+  {id:'S22',theme:'灯塔守',text:'它替出海的人守了一夜灯，天亮时，第一艘船的汽笛像是专门来谢它。'},
+  {id:'S23',theme:'归途灯火',text:'城市的灯一盏盏亮起来，它数着数着，就数到了自己家的那扇。'},
+  {id:'S24',theme:'雪夜',text:'雪夜里它把尾巴圈成一个暖圈，给冻僵的小鸟当了一夜的窝。'},
+  {id:'S25',theme:'共渡',text:'河水涨了，它背上一只不会游水的松鼠过了岸，两个都湿透了，却都笑了。'},
+  {id:'S26',theme:'信使鸽',text:'它替一只受伤的鸽子，把最后那封信送到了，收信人哭着摸了摸它的头。'},
+  {id:'S27',theme:'旧友重逢',text:'它在老树下遇见当年的玩伴，两只头挨着头，把没说完的话补了整整一下午。'},
+  {id:'S28',theme:'旅伴',text:'路上它捡到一只迷路的小家伙，干脆带着它走完了剩下的全部旅程。'},
+  {id:'S29',theme:'守候',text:'它答应等一棵小苗长高，便真的一天天守着，直到绿荫能遮住半条巷子。'},
+  {id:'S30',theme:'远行',text:'它把家门的钥匙挂在脖子上，说这样无论走多远，都还带着"回去"的力气。'},
+  {id:'S31',theme:'暖炉',text:'寒夜它挤进路边一只流浪狗的窝，两个用体温焐热了一小方天地。'},
+  {id:'S32',theme:'桥',text:'它在一座断桥边站了很久，最后用身体当成了那截缺失的桥板，让对岸的人走了过来。'},
+  {id:'S33',theme:'星夜',text:'它躺在草地上数星星，数着数着，觉得自己也成了某个人梦里的一颗。'},
+  {id:'S34',theme:'礼物',text:'它把自己最爱的那片叶子，送给了今天刚认识的陌生人，说"留个念想"。'},
+  {id:'S35',theme:'重逢的雨',text:'它和旧友在车站重逢，雨正好落下，像老天爷也忍不住要泼一点温柔。'},
+  {id:'S36',theme:'归航',text:'它把一路捡来的贝壳串成风铃挂在窗前，风一吹，满屋子都是去过的远方。'},
+];
+
+// 称号成就配置（合成集齐某簇全部整件 → 解锁称号，可在图鉴页装备佩戴）
+const TITLES = {
+  ceramic:{name:'陶瓷收藏家', em:'🏺', desc:'集齐陶瓷簇所有整件', cl:'ceramic'},
+  fabric:{name:'织造大师', em:'🧵', desc:'集齐织物簇所有整件', cl:'fabric'},
+  compass:{name:'罗盘收藏家', em:'🧭', desc:'集齐罗盘簇所有整件', cl:'compass'},
+  bell:{name:'古钟收藏家', em:'🔔', desc:'集齐古钟簇所有整件', cl:'bell'},
+  coin:{name:'古币收藏家', em:'🪙', desc:'集齐古币簇所有整件', cl:'coin'},
+  stardust:{name:'星屑收藏家', em:'✨', desc:'集齐星屑簇所有整件', cl:'stardust'},
+  time:{name:'时之收藏家', em:'⏳', desc:'集齐时之簇所有整件', cl:'time'},
+  primor:{name:'先民收藏家', em:'🪬', desc:'集齐先民簇所有整件', cl:'primor'},
+  herb:{name:'草木收藏家', em:'🌿', desc:'集齐草木簇所有整件', cl:'herb'},
+  tide:{name:'潮汐收藏家', em:'🌊', desc:'集齐潮汐簇所有整件', cl:'tide'},
+  prism:{name:'棱镜收藏家', em:'🔺', desc:'集齐棱镜簇所有整件', cl:'prism'},
+  secret:{name:'秘境探秘者', em:'🌌', desc:'解锁任意隐藏秘境'},
+  all:{name:'猫狗旅行家', em:'🌟', desc:'集齐所有收藏家称号并解锁秘境'},
+  // —— Phase 1 探索类称号（按省份/国家计数，finishTrip 累计 regionCount）——
+  hz:{name:'浙江行者', em:'🌊', desc:'浙江出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_zhejiang||0)>=10},
+  cd:{name:'四川行者', em:'🐼', desc:'四川出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_sichuan||0)>=10},
+  su:{name:'江苏园林客', em:'🏡', desc:'江苏出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_jiangsu||0)>=10},
+  xa:{name:'陕西考古员', em:'🪔', desc:'陕西出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_shaanxi||0)>=10},
+  dh:{name:'甘肃守护者', em:'🏜️', desc:'甘肃出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_gansu||0)>=10},
+  bj:{name:'北京文物员', em:'🏯', desc:'北京出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_beijing||0)>=10},
+  shanhe:{name:'山河客', em:'🗺️', desc:'踏遍全部省级行政区', type:'explore', fn:()=>REGIONS.filter(r=>r.domestic).filter(r=>(S.regionCount[r.id]||0)>=1).length>=DOMESTIC_REGION_TOTAL},
+  wan:{name:'全境行者', em:'🧭', desc:'踏遍 6 大代表省份（浙江/四川/江苏/陕西/甘肃/北京）', type:'explore', fn:()=>['r_zhejiang','r_sichuan','r_jiangsu','r_shaanxi','r_gansu','r_beijing'].every(r=>(S.regionCount[r]||0)>=1)},
+  deep:{name:'深度探索者', em:'⚡', desc:'有效深度≥4 出游 20 次', type:'explore', fn:()=>(S.deepTrips||0)>=20},
+  abyss:{name:'深渊勇者', em:'🔥', desc:'秘境(有效深度6)出游 5 次', type:'explore', fn:()=>(S.secretTrips||0)>=5},
+  // —— Phase 2 社交类称号（S.helped/helpedBy/fission）——
+  helper:{name:'热心旅友', em:'🤝', desc:'累计赠出 30 次残片', fn:()=>(S.helped||0)>=30},
+  blessed:{name:'被祝福的人', em:'🙏', desc:'累计收到 20 次友人回赠', fn:()=>(S.helpedBy||0)>=20},
+  socialite:{name:'社交达人', em:'🌐', desc:'互送网络 已帮+被帮≥50', fn:()=>(S.helped||0)+(S.helpedBy||0)>=50},
+  kfactor:{name:'桃李满天下', em:'🌸', desc:'分享带来 ≥5 位新旅友', fn:()=>(S.fission||0)>=5},
+  // —— Phase 2 成就类称号（里程碑/资源累积）——
+  synthMaster:{name:'合成大师', em:'⚗️', desc:'累计合成 20 件整件', fn:()=>(S.synthCount||0)>=20},
+  rich:{name:'星屑富豪', em:'💰', desc:'累计获得 5000 星屑', fn:()=>(S.starTotal||0)>=5000},
+  backpacker:{name:'背包拓荒者', em:'📦', desc:'背包扩容 ≥5 次', fn:()=>(S.expandCount||0)>=5},
+  thousand:{name:'千张残片', em:'🧩', desc:'累计产出 1000 张残片', fn:()=>(S.fragTotal||0)>=1000},
+  loyal:{name:'忠诚旅伴', em:'💎', desc:'累计登录 30 天', fn:()=>(S.loginDays||0)>=30},
+  lucky:{name:'大气运者', em:'🍀', desc:'单次旅行掉出传说残片', fn:()=>!!S.gotLegend},
+  diced:{name:'极速出发', em:'🎲', desc:'使用随机目的地 20 次', fn:()=>(S.randomTrips||0)>=20},
+  allround:{name:'门门通', em:'⏰', desc:'四种时长各用过 5 次', fn:()=>['2','4','8','12'].every(k=>(S.durCount[k]||0)>=5)},
+  // —— Phase 3 节气类称号（24 节气信物收集）——
+  suishi:{name:'岁时行者', em:'🌱', desc:'收集 8 个节气信物', fn:()=>(S.solarTerms||[]).length>=8},
+  sishi:{name:'四时通晓者', em:'🌿', desc:'收集 16 个节气信物', fn:()=>(S.solarTerms||[]).length>=16},
+  jieqiMaster:{name:'节气大师', em:'☀️', desc:'收集全部 24 个节气信物', fn:()=>(S.solarTerms||[]).length>=24},
+  shidai:{name:'时序守护者', em:'🗓️', desc:'集齐节气 + 至少一个节日', fn:()=>(S.solarTerms||[]).length>=24 && (S.festivals||[]).length>0},
+  // —— Phase 5 七十二候称号：每节气选 1 代表候给微称号 + 候进阶 + 候大师（全收集特殊称号）——
+  hou_lichun:{name:'东风解冻·初遇', em:'🌬️', desc:'初候：东风解冻', fn:()=>(S.houTerms||[]).indexOf('lichun_1')>=0},
+  hou_yushui:{name:'獭祭鱼·初遇', em:'🦦', desc:'初候：獭祭鱼', fn:()=>(S.houTerms||[]).indexOf('yushui_1')>=0},
+  hou_jingzhe:{name:'桃始华·初遇', em:'🌸', desc:'初候：桃始华', fn:()=>(S.houTerms||[]).indexOf('jingzhe_1')>=0},
+  hou_chunfen:{name:'玄鸟至·初遇', em:'🐦', desc:'初候：玄鸟至', fn:()=>(S.houTerms||[]).indexOf('chunfen_1')>=0},
+  hou_qingming:{name:'桐始华·初遇', em:'🌳', desc:'初候：桐始华', fn:()=>(S.houTerms||[]).indexOf('qingming_1')>=0},
+  hou_guyu:{name:'萍始生·初遇', em:'🍃', desc:'初候：萍始生', fn:()=>(S.houTerms||[]).indexOf('guyu_1')>=0},
+  hou_lixia:{name:'蝼蝈鸣·初遇', em:'🦗', desc:'初候：蝼蝈鸣', fn:()=>(S.houTerms||[]).indexOf('lixia_1')>=0},
+  hou_xiaoman:{name:'苦菜秀·初遇', em:'🌿', desc:'初候：苦菜秀', fn:()=>(S.houTerms||[]).indexOf('xiaoman_1')>=0},
+  hou_mangzhong:{name:'螳螂生·初遇', em:'🦗', desc:'初候：螳螂生', fn:()=>(S.houTerms||[]).indexOf('mangzhong_1')>=0},
+  hou_xiazhi:{name:'鹿角解·初遇', em:'🦌', desc:'初候：鹿角解', fn:()=>(S.houTerms||[]).indexOf('xiazhi_1')>=0},
+  hou_xiaoshu:{name:'温风至·初遇', em:'🍃', desc:'初候：温风至', fn:()=>(S.houTerms||[]).indexOf('xiaoshu_1')>=0},
+  hou_dashu:{name:'腐草为萤·初遇', em:'🪰', desc:'初候：腐草为萤', fn:()=>(S.houTerms||[]).indexOf('dashu_1')>=0},
+  hou_liqiu:{name:'凉风至·初遇', em:'🍂', desc:'初候：凉风至', fn:()=>(S.houTerms||[]).indexOf('liqiu_1')>=0},
+  hou_chushu:{name:'鹰乃祭鸟·初遇', em:'🦅', desc:'初候：鹰乃祭鸟', fn:()=>(S.houTerms||[]).indexOf('chushu_1')>=0},
+  hou_bailu:{name:'鸿雁来·初遇', em:'🪿', desc:'初候：鸿雁来', fn:()=>(S.houTerms||[]).indexOf('bailu_1')>=0},
+  hou_qiufen:{name:'雷始收声·初遇', em:'🔇', desc:'初候：雷始收声', fn:()=>(S.houTerms||[]).indexOf('qiufen_1')>=0},
+  hou_hanlu:{name:'鸿雁来宾·初遇', em:'🪿', desc:'初候：鸿雁来宾', fn:()=>(S.houTerms||[]).indexOf('hanlu_1')>=0},
+  hou_shuangjiang:{name:'豺乃祭兽·初遇', em:'🐺', desc:'初候：豺乃祭兽', fn:()=>(S.houTerms||[]).indexOf('shuangjiang_1')>=0},
+  hou_lidong:{name:'水始冰·初遇', em:'🧊', desc:'初候：水始冰', fn:()=>(S.houTerms||[]).indexOf('lidong_1')>=0},
+  hou_xiaoxue:{name:'虹藏不见·初遇', em:'🌫️', desc:'初候：虹藏不见', fn:()=>(S.houTerms||[]).indexOf('xiaoxue_1')>=0},
+  hou_daxue:{name:'鹖鴠不鸣·初遇', em:'🐦', desc:'初候：鹖鴠不鸣', fn:()=>(S.houTerms||[]).indexOf('daxue_1')>=0},
+  hou_dongzhi:{name:'蚯蚓结·初遇', em:'🪱', desc:'初候：蚯蚓结', fn:()=>(S.houTerms||[]).indexOf('dongzhi_1')>=0},
+  hou_xiaohan:{name:'雁北乡·初遇', em:'🪿', desc:'初候：雁北乡', fn:()=>(S.houTerms||[]).indexOf('xiaohan_1')>=0},
+  hou_dahan:{name:'鸡始乳·初遇', em:'🐔', desc:'初候：鸡始乳', fn:()=>(S.houTerms||[]).indexOf('dahan_1')>=0},
+  houApprentice:{name:'候初心者', em:'🌱', desc:'集齐 24 个候信物', fn:()=>(S.houTerms||[]).length>=24},
+  houScholar:{name:'候通晓者', em:'🌿', desc:'集齐 48 个候信物', fn:()=>(S.houTerms||[]).length>=48},
+  houMaster:{name:'候大师', em:'🌾', desc:'集齐 24 节气 + 72 候信物', fn:()=>(S.solarTerms||[]).length>=24 && (S.houTerms||[]).length>=72},
+  // —— Phase 4 节日类称号（7 节日各 1）——
+  shou:{name:'守岁人', em:'🧧', desc:'完成春节活动', fn:()=>(S.festivals||[]).indexOf('spring')>=0},
+  deng:{name:'灯谜大师', em:'🏮', desc:'完成元宵活动', fn:()=>(S.festivals||[]).indexOf('yuanxiao')>=0},
+  long:{name:'龙舟勇士', em:'🐉', desc:'完成端午活动', fn:()=>(S.festivals||[]).indexOf('duanwu')>=0},
+  yue:{name:'月饼诗人', em:'🥮', desc:'完成中秋活动', fn:()=>(S.festivals||[]).indexOf('zhongqiu')>=0},
+  deng3:{name:'登高者', em:'🏔️', desc:'完成重阳活动', fn:()=>(S.festivals||[]).indexOf('chongyang')>=0},
+  qixi2:{name:'巧手织女', em:'🎋', desc:'完成七夕活动', fn:()=>(S.festivals||[]).indexOf('qixi')>=0},
+  laba:{name:'腊八粥客', em:'🥣', desc:'完成腊八活动', fn:()=>(S.festivals||[]).indexOf('laba')>=0},
+  // —— Phase A 节庆图鉴（限定整件收藏家 + 岁时全集，独立于原"全收集"）——
+  f_spring:{name:'新春收藏家', em:'🧧', desc:'集齐春节限定整件', type:'festival', fn:()=>CLUSTERS.f_spring.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/spring.webp'},
+  f_duanwu:{name:'端午收藏家', em:'🐉', desc:'集齐端午限定整件', type:'festival', fn:()=>CLUSTERS.f_duanwu.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/duanwu_dragon.webp'},
+  f_zhongqiu:{name:'中秋收藏家', em:'🥮', desc:'集齐中秋限定整件', type:'festival', fn:()=>CLUSTERS.f_zhongqiu.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/zhongqiu_mooncake.webp'},
+  f_yuanxiao:{name:'元宵收藏家', em:'🏮', desc:'集齐元宵限定整件', type:'festival', fn:()=>CLUSTERS.f_yuanxiao.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/yuanxiao_lantern.webp'},
+  f_qingming:{name:'清明收藏家', em:'🌿', desc:'集齐清明限定整件', type:'festival', fn:()=>CLUSTERS.f_qingming.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/qingming_willow.webp'},
+  f_qixi:{name:'七夕收藏家', em:'🎋', desc:'集齐七夕限定整件', type:'festival', fn:()=>CLUSTERS.f_qixi.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/qixi_bamboo.webp'},
+  f_chongyang:{name:'重阳收藏家', em:'🏔️', desc:'集齐重阳限定整件', type:'festival', fn:()=>CLUSTERS.f_chongyang.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/chongyang_mountain.webp'},
+  f_dongzhi:{name:'冬至收藏家', em:'❄️', desc:'集齐冬至限定整件', type:'festival', fn:()=>CLUSTERS.f_dongzhi.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/dongzhi_snowflake.webp'},
+  f_laba:{name:'腊八收藏家', em:'🥣', desc:'集齐腊八限定整件', type:'festival', fn:()=>CLUSTERS.f_laba.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/laba_porridge.webp'},
+  f_crossyear:{name:'跨年收藏家', em:'🎆', desc:'集齐跨年限定整件', type:'festival', fn:()=>CLUSTERS.f_crossyear.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/crossyear_fireworks.webp'},
+  year_fest:{name:'岁时全集', em:'📅', desc:'集齐全部 10 节庆限定整件（跨一整年）', type:'festival', fn:()=>['f_spring','f_yuanxiao','f_qingming','f_duanwu','f_qixi','f_zhongqiu','f_chongyang','f_dongzhi','f_laba','f_crossyear'].every(k=>S.titles.indexOf(k)>=0), art:'猫狗星球_称号美术/year_fest_calendar.webp'},
+  // —— P1a 收藏品变异/完美度（普通/闪光/羁绊；主 11 簇天花板 ×3）——
+  perfect_shiny:{name:'流光图鉴', em:'🌟', desc:'所有收藏整件均集齐「闪光」变体', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id && i.variant==='闪光'))), art:'猫狗星球_称号美术/perfect_shiny_star.webp'},
+  perfect_bond:{name:'羁绊图鉴', em:'💞', desc:'所有收藏整件均集齐「羁绊」变体', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id && i.variant==='羁绊'))), art:'猫狗星球_称号美术/perfect_bond_hearts.webp'},
+  perfect_all:{name:'万象图鉴', em:'💎', desc:'所有非节庆整件集齐 普通/闪光/羁绊 三态', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>['普通','闪光','羁绊'].every(v=>S.items.some(i=>i.id===it.id && i.variant===v)))), art:'猫狗星球_称号美术/perfect_all_gem.webp'},
+  // —— L8 单宠装扮 / L9 世界观 称号 ——
+  dress_up:{name:'时尚旅伴', em:'👗', desc:'集齐所有装扮', type:'collect', fn:()=>COSMETICS.every(c=>S.cosmetics.indexOf(c.id)>=0), art:'猫狗星球_称号美术/dress_up_gown.webp'},
+  loremaster:{name:'通晓者', em:'📖', desc:'解锁全部世界观剧情', type:'collect', fn:()=>LORE.every(l=>l.cond()), art:'猫狗星球_称号美术/loremaster_book.webp'},
+  // —— L10 遇友 称号 ——
+  meeter:{name:'旅途知音', em:'🤝', desc:'结识 5 位陌生旅友', type:'social', fn:()=>(S.metCount||0)>=5},
+  photographer:{name:'合影收藏家', em:'📸', desc:'收藏 10 张偶遇合影', type:'social', fn:()=>(S.photos||[]).length>=10},
+  // —— P1b 社交羁绊深化（连续赠礼 / 羁绊等级 / 促成羁绊）——
+  gift_streak:{name:'赠礼连击', em:'🔥', desc:'连续赠礼 7 天不间断', type:'social', fn:()=>(S.giftStreak||0)>=7},
+  bond_master:{name:'羁绊达人', em:'💞', desc:'羁绊等级达到 3 级（累计赠出 60 次）', type:'social', fn:()=>(S.bondLevel||0)>=3},
+  bond_heart:{name:'心有灵犀', em:'💗', desc:'累计收到 50 次友人回赠', type:'social', fn:()=>(S.helpedBy||0)>=50},
+  // —— 等级称号（Phase 5：等级里程碑）——
+  lv1:{name:'初心旅伴', em:'🌱', desc:'等级达到 1 级', fn:()=>S.level>=1},
+  lv3:{name:'见习向导', em:'🧭', desc:'等级达到 3 级', fn:()=>S.level>=3},
+  lv5:{name:'资深旅人', em:'🧳', desc:'等级达到 5 级', fn:()=>S.level>=5},
+  lv10:{name:'漫游大师', em:'🗺️', desc:'等级达到 10 级', fn:()=>S.level>=10},
+  lv20:{name:'传奇旅者', em:'🏅', desc:'等级达到 20 级', fn:()=>S.level>=20},
+  lv30:{name:'猫狗传奇', em:'👑', desc:'等级达到 30 级', fn:()=>S.level>=30},
+  // —— 方向② Batch2：新增探索/世界/秘境联动称号（与新增目的地、国家、秘境挂钩）——
+  zjj:{name:'武陵行者', em:'🏞️', desc:'湖南出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_hunan||0)>=10},
+  xzp:{name:'雪域行者', em:'🏯', desc:'西藏出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_xizang||0)>=10},
+  shaolin:{name:'中原行者', em:'🛕', desc:'河南出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_henan||0)>=10},
+  wudang:{name:'荆楚行者', em:'⚡', desc:'湖北出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_hubei||0)>=10},
+  putuo:{name:'东海行者', em:'🏝️', desc:'浙江出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_zhejiang||0)>=10},
+  india:{name:'天竺行者', em:'🕌', desc:'印度出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_india||0)>=10},
+  uk:{name:'巨石旅人', em:'🪨', desc:'英国出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_uk||0)>=10},
+  worldTraveler:{name:'万国旅人', em:'🌍', desc:'踏遍全部世界国家', type:'explore', fn:()=>REGIONS.filter(r=>!r.domestic).every(r=>(S.regionCount[r.id]||0)>=1)},
+  secretMaster:{name:'秘境全通', em:'🔮', desc:'解锁全部隐藏秘境', type:'explore', fn:()=>DEST.filter(d=>d.secret).every(d=>S.hiddenUnlocked[d.id])},
+  // ④ 赛季完成称号（内容可持续 · 零美术）
+  season_starfall:{name:'星霜旅人', em:'❄️', desc:'完成霜序全部秘境', type:'explore', fn:()=>SEASONS.find(s=>s.id==='frost').secrets.every(id=>S.hiddenUnlocked[id])},
+  season_awake:{name:'融春旅者', em:'🌸', desc:'完成融春全部秘境', type:'explore', fn:()=>SEASONS.find(s=>s.id==='thaw').secrets.every(id=>S.hiddenUnlocked[id])},
+  season_depth:{name:'炎夏探险家', em:'☀️', desc:'完成炎夏全部秘境', type:'explore', fn:()=>SEASONS.find(s=>s.id==='scorch').secrets.every(id=>S.hiddenUnlocked[id])},
+  season_veil:{name:'岁暮引导者', em:'🎇', desc:'完成岁暮全部秘境', type:'explore', fn:()=>SEASONS.find(s=>s.id==='yearend').secrets.every(id=>S.hiddenUnlocked[id])},
+  season_bloom:{name:'花月收藏家', em:'🌺', desc:'完成花月全部秘境', type:'explore', fn:()=>SEASONS.find(s=>s.id==='bloom').secrets.every(id=>S.hiddenUnlocked[id])},
+  season_harvest:{name:'金秋行者', em:'🍂', desc:'完成金秋全部秘境', type:'explore', fn:()=>SEASONS.find(s=>s.id==='harvest').secrets.every(id=>S.hiddenUnlocked[id])},
+};
+// —— P5g 称号 art 复用（零成本）：70 个有对应 CG 资产的称号补 art；23 个抽象社交/成就/等级类保留 emoji 徽章 ——
+(function(){
+  const HOU='猫狗星球_候美术/', WHOLE='猫狗星球_整件美术/', SOLAR='猫狗星球_节气美术/', SCENE='猫狗星球_场景美术/', SECRET='猫狗星球_秘境美术/', TITLE='猫狗星球_称号美术/';
+  const MAP = {
+    // ① 七十二候微称号 → 候美术/{term}_1（24 张全已生成）
+    hou_lichun:HOU+'lichun_1.webp', hou_yushui:HOU+'yushui_1.webp', hou_jingzhe:HOU+'jingzhe_1.webp', hou_chunfen:HOU+'chunfen_1.webp',
+    hou_qingming:HOU+'qingming_1.webp', hou_guyu:HOU+'guyu_1.webp', hou_lixia:HOU+'lixia_1.webp', hou_xiaoman:HOU+'xiaoman_1.webp',
+    hou_mangzhong:HOU+'mangzhong_1.webp', hou_xiazhi:HOU+'xiazhi_1.webp', hou_xiaoshu:HOU+'xiaoshu_1.webp', hou_dashu:HOU+'dashu_1.webp',
+    hou_liqiu:HOU+'liqiu_1.webp', hou_chushu:HOU+'chushu_1.webp', hou_bailu:HOU+'bailu_1.webp', hou_qiufen:HOU+'qiufen_1.webp',
+    hou_hanlu:HOU+'hanlu_1.webp', hou_shuangjiang:HOU+'shuangjiang_1.webp', hou_lidong:HOU+'lidong_1.webp', hou_xiaoxue:HOU+'xiaoxue_1.webp',
+    hou_daxue:HOU+'daxue_1.webp', hou_dongzhi:HOU+'dongzhi_1.webp', hou_xiaohan:HOU+'xiaohan_1.webp', hou_dahan:HOU+'dahan_1.webp',
+    // ② 收藏家类 → 整件美术代表（每簇取 1 件）
+    ceramic:WHOLE+'tangsancai.webp', fabric:WHOLE+'embroidered_hanky.webp', compass:WHOLE+'bronze_compass.webp', bell:WHOLE+'courtyard_bell.webp',
+    coin:WHOLE+'bronze_coin.webp', stardust:WHOLE+'stardust_crystal.webp', time:WHOLE+'hourglass.webp', primor:WHOLE+'primor_relic.webp',
+    herb:WHOLE+'wildflower.webp', tide:WHOLE+'tide_compass.webp', prism:WHOLE+'prism_shard.webp',
+    secret:SECRET+'realm_worldtree.webp', all:TITLE+'perfect_all_gem.webp',
+    // ③ 节气类 → 节气美术代表
+    suishi:SOLAR+'lichun.webp', sishi:SOLAR+'qiufen.webp', jieqiMaster:SOLAR+'dongzhi.webp', shidai:SOLAR+'chunfen.webp',
+    // ④ 探索类 → 场景/秘境美术（按地貌/主题）
+    hz:SCENE+'town.webp', cd:SCENE+'town.webp', su:SCENE+'town.webp', xa:SCENE+'loess.webp', dh:SCENE+'loess.webp', bj:SCENE+'snow.webp',
+    zjj:SCENE+'town.webp', xzp:SCENE+'snow.webp', shaolin:SCENE+'town.webp', wudang:SCENE+'town.webp', putuo:SCENE+'town.webp',
+    india:SCENE+'town.webp', uk:SCENE+'grassland.webp', worldTraveler:SCENE+'city.webp', shanhe:SCENE+'snowplain.webp', wan:SCENE+'city.webp',
+    deep:SECRET+'realm_deepsea.webp', abyss:SECRET+'era_abyss.webp',
+    // ⑤ 候进阶/大师 + 节日变体 → 候/节气/称号美术
+    houApprentice:HOU+'lichun_1.webp', houScholar:HOU+'qiufen_1.webp', houMaster:SOLAR+'xiazhi.webp',
+    shou:TITLE+'spring.webp', deng:TITLE+'yuanxiao_lantern.webp', long:TITLE+'duanwu_dragon.webp', yue:TITLE+'zhongqiu_mooncake.webp',
+    deng3:TITLE+'chongyang_mountain.webp', qixi2:TITLE+'qixi_bamboo.webp', laba:TITLE+'laba_porridge.webp', secretMaster:SECRET+'realm_worldtree.webp',
+    season_starfall:SECRET+'era_cosmos.webp', season_awake:SECRET+'era_ancient.webp', season_depth:SECRET+'era_abyss.webp', season_veil:SECRET+'era_chrono.webp',
+    season_bloom:SECRET+'realm_mirrorlake.webp', season_harvest:SECRET+'realm_corridor.webp'
+  };
+  Object.keys(MAP).forEach(k=>{ if(TITLES[k] && !TITLES[k].art) TITLES[k].art = MAP[k]; });
+})();
+const EXPLORE_KEYS=['hz','cd','su','xa','dh','bj','shanhe','wan','deep','abyss','zjj','xzp','shaolin','wudang','putuo','india','uk','worldTraveler','secretMaster'];
+
+const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1, destCount:{}, regionCount:{}, deepTrips:0, secretTrips:0,
+  frags:{ceramic:0,compass:0,bell:0,coin:0,herb:0,fabric:0,stardust:0,tide:0,time:0,prism:0,primor:0,f_spring:0,f_duanwu:0,f_zhongqiu:0,f_yuanxiao:0,f_qingming:0,f_qixi:0,f_chongyang:0,f_dongzhi:0,f_laba:0,f_crossyear:0}, items:[], tmapFrag:0, tmap:0, secret:false, hiddenUnlocked:{},
+  friendGift:0, missedTreasure:0, onboard:0, seenSecret:false, helped:0, helpedBy:0,
+  synthCount:0, starTotal:0, expandCount:0, fragTotal:0, loginDays:1, gotLegend:false,
+  randomTrips:0, fission:0, durCount:{2:0,4:0,8:0,12:0}, solarTerms:[], festivals:[],
+  houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
+  chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
+  travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], framedJournal:[], homeThemes:['seasonal'], activeHomeTheme:'seasonal', equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(), homeShowcaseExcluded:[],
+  friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false,
+  audioPrefs:{bgmOn:true,sfxOn:true,bgmVol:0.2,sfxVol:0.4} };
+
+// 存档消毒：强制所有字段按 STARTER 类型对齐（防旧版/残缺 localStorage 数据崩溃）
+function sanitize(s){
+  const t=JSON.parse(JSON.stringify(STARTER));
+  for(const k in t){ if(!(k in s)) s[k]=t[k]; }
+  if(typeof s.frags!=='object'||Array.isArray(s.frags)) s.frags={...t.frags};
+  for(const k in t.frags){ if(typeof s.frags[k]!=='number') s.frags[k]=t.frags[k]; }
+  if(!Array.isArray(s.items)) s.items=[];
+  if(!Array.isArray(s.journal)) s.journal=[];
+  s.journal.forEach((j,i)=>{ if(!j||typeof j!=='object') return; if(typeof j.id!=='string'||!j.id) j.id=`legacy_${j.day||0}_${j.destId||'entry'}_${i}`; });
+  if(!Array.isArray(s.framedJournal)) s.framedJournal=[];
+  s.framedJournal=[...new Set(s.framedJournal)].filter(id=>typeof id==='string'&&s.journal.some(j=>j&&j.id===id));
+  if(!Array.isArray(s.homeThemes)) s.homeThemes=[];
+  s.homeThemes=[...new Set(['seasonal',...s.homeThemes])].filter(id=>HOME_THEME_BY_ID[id]);
+  if(typeof s.activeHomeTheme!=='string'||s.homeThemes.indexOf(s.activeHomeTheme)<0) s.activeHomeTheme='seasonal';
+  if(!Array.isArray(s.log)) s.log=[];
+  if(typeof s.giftToday!=='object'||Array.isArray(s.giftToday)) s.giftToday={};
+  if(typeof s.friendSince!=='object'||Array.isArray(s.friendSince)) s.friendSince={};
+  if(typeof s.destCount!=='object'||Array.isArray(s.destCount)) s.destCount={};
+  if(typeof s.regionCount!=='object'||Array.isArray(s.regionCount)) s.regionCount={};
+  for(const n of ['day','star','food','trips','tmapFrag','tmap','friendGift','missedTreasure','onboard','helped','helpedBy','travelAdToday','supplyAdToday','shareToday','bonusAdToday','deepTrips','secretTrips','synthCount','starTotal','expandCount','fragTotal','loginDays','randomTrips','fission','xp','level','backpack','dayOfFirstTrip']){
+    if(typeof s[n]!=='number') s[n]=t[n];
+  }
+  for(const n of ['secret','seenSecret','gotLegend','chosen','firstAdSlots','gotRare','gotDay2Legend']){ if(typeof s[n]!=='boolean') s[n]=t[n]; }
+  for(const n of ['companion','name','petId','lastAdDate','lastLoginDate']){ if(typeof s[n]!=='string') s[n]=t[n]; }
+  s.name=normalizePetName(s.name, t.name);
+  // 旧版存档中的内置图片路径平滑迁移到新版 WebP；用户上传的 data URL 不会被改动。
+  migrateArtworkInSave(s);
+  if(!Array.isArray(s.titles)) s.titles=[];
+  if(!Array.isArray(s.souvenirs)) s.souvenirs=[];
+  if(!Array.isArray(s.homeShowcase)) s.homeShowcase=[];
+  s.homeShowcase=[...new Set(s.homeShowcase)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0).slice(0,HOME_SHOWCASE_LIMIT);
+  if(!Array.isArray(s.homeShowcaseExcluded)) s.homeShowcaseExcluded=[];
+  s.homeShowcaseExcluded=[...new Set(s.homeShowcaseExcluded)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0&&s.homeShowcase.indexOf(n)<0);
+  if(!Array.isArray(s.cosmetics)) s.cosmetics=[];
+  if(!Array.isArray(s.equipped)) s.equipped=[];
+  s.equipped=[...new Set(s.equipped)].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR);
+  if(typeof s.decorPositions!=='object'||s.decorPositions===null||Array.isArray(s.decorPositions)) s.decorPositions={};
+  if(typeof s.friends!=='object'||Array.isArray(s.friends)) s.friends={dou:{name:'豆豆',companion:'🐶',since:1,met:false},hua:{name:'花花',companion:'🐰',since:1,met:false}};
+  if(typeof s.metCount!=='number') s.metCount=0;
+  if(!Array.isArray(s.photos)) s.photos=[];
+  if(typeof s.hiddenUnlocked!=='object'||Array.isArray(s.hiddenUnlocked)) s.hiddenUnlocked={};
+  if(typeof s.seasonOverride!=='string' && s.seasonOverride!==null) s.seasonOverride=null;
+  if(s.seasonOverride && !SEASONS.some(x=>x.id===s.seasonOverride)) s.seasonOverride=null;
+  if(typeof s.durCount!=='object'||Array.isArray(s.durCount)) s.durCount={2:0,4:0,8:0,12:0};
+  if(!Array.isArray(s.solarTerms)) s.solarTerms=[];
+  if(!Array.isArray(s.festivals)) s.festivals=[];
+  if(!Array.isArray(s.houTerms)) s.houTerms=[];
+  if(typeof s.houDup!=='object'||Array.isArray(s.houDup)) s.houDup={};
+  if(typeof s.houCycle!=='object'||Array.isArray(s.houCycle)) s.houCycle={};
+  if(typeof s.titleLv!=='object'||Array.isArray(s.titleLv)) s.titleLv={};
+  if(typeof s.titleCycle!=='object'||Array.isArray(s.titleCycle)) s.titleCycle={};
+  if(!Array.isArray(s.storybook)) s.storybook=[];
+  if(typeof s.meetArcs!=='object'||Array.isArray(s.meetArcs)) s.meetArcs={};
+  if(typeof s.visitorReplied!=='boolean') s.visitorReplied=false;
+  if(!Array.isArray(s.visitorLog)) s.visitorLog=[];
+  if(typeof s.lastSeason!=='string') s.lastSeason='';
+  if(typeof s.seenSplash!=='boolean') s.seenSplash=false;
+  if(typeof s.audioPrefs!=='object'||s.audioPrefs===null||Array.isArray(s.audioPrefs)) s.audioPrefs={};
+  s.audioPrefs.bgmOn=typeof s.audioPrefs.bgmOn==='boolean'?s.audioPrefs.bgmOn:true;
+  s.audioPrefs.sfxOn=typeof s.audioPrefs.sfxOn==='boolean'?s.audioPrefs.sfxOn:true;
+  s.audioPrefs.bgmVol=Number.isFinite(+s.audioPrefs.bgmVol)?Math.max(0,Math.min(1,+s.audioPrefs.bgmVol)):0.2;
+  s.audioPrefs.sfxVol=Number.isFinite(+s.audioPrefs.sfxVol)?Math.max(0,Math.min(1,+s.audioPrefs.sfxVol)):0.4;
+  return s;
+}
+// 专用满级测试账号：仅 ?demo=full 临时启用，不写入、不覆盖玩家正常本地存档。
+function buildFullDemoAccount(){
+  const d=JSON.parse(JSON.stringify(STARTER));
+  d.__fullDemo=true; d.petId='demo_full'; d.companion='猫狗星球_宠物美术/d_shiba.webp'; d.name='满级测试旅伴'; d.chosen=true; d.seenSplash=true;
+  d.level=30; d.xp=xpNeed(30); d.star=999999; d.starTotal=999999; d.food=9999; d.trips=999; d.day=365;
+  d.deepTrips=999; d.secretTrips=999; d.synthCount=999; d.expandCount=5; d.fragTotal=9999; d.loginDays=365;
+  d.gotLegend=true; d.gotRare=true; d.gotDay2Legend=true; d.randomTrips=20; d.fission=5;
+  d.frags=Object.fromEntries(Object.keys(d.frags).map(k=>[k,999]));
+  d.items=Object.values(CLUSTERS).flatMap(cl=>cl.items.flatMap(it=>['普通','闪光','羁绊'].map(variant=>({...it,variant}))));
+  d.destCount=Object.fromEntries(DEST.map(x=>[x.id,1])); d.regionCount=Object.fromEntries(REGIONS.map(x=>[x.id,1]));
+  d.hiddenUnlocked=Object.fromEntries(HIDDEN.map(x=>[x.id,true])); d.secret=true; d.tmap=99; d.tmapFrag=99;
+  d.solarTerms=SOLAR_TERMS.map(x=>x.id); d.houTerms=SOLAR_TERMS.flatMap(x=>(x.hou||[]).map(h=>h.id));
+  d.houDup=Object.fromEntries(d.houTerms.map(id=>[id,2])); d.festivals=FESTIVALS.map(x=>x.id);
+  d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['flower']; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
+  d.titleLv=Object.fromEntries(Object.keys(TITLES).map(id=>[id,3])); d.titleCycle=Object.fromEntries(Object.keys(TITLES).map(id=>[id,1]));
+  d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
+  d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
+  d.homeShowcaseExcluded=[];
+  d.homeThemes=HOME_THEMES.map(t=>t.id); d.activeHomeTheme='stardeck';
+  d.journal=REGIONS.map((r,i)=>{
+    const x=DEST.find(dest=>dest.regionId===r.id&&dest.stories&&dest.stories.length);
+    if(!x) return null;
+    return {
+    day:365-i*3, destId:x.id, destName:x.name, destTag:x.tag||'', destEm:x.em,
+    story:x.stories[i%x.stories.length], season:['春','夏','秋','冬'][i%4],
+    items:x.souvenir?[{type:'souvenir',em:x.souvenir.em,name:x.souvenir.name,art:souvenirArt(x.souvenir)}]:[],
+    festival:i<FESTIVALS.length?FESTIVALS[i].id:null, solarTerm:SOLAR_TERMS[i%SOLAR_TERMS.length].id, lost:false
+    };
+  }).filter(Boolean);
+  d.storybook=[...new Set([...d.items.filter(x=>!x.festival).map(x=>x.id),...d.souvenirs.map(x=>x.name)])];
+  d.helped=30; d.helpedBy=20; d.friendGift=30; d.metCount=20; d.giftStreak=30; d.bondLevel=3; d.bondFill=999;
+  d.durCount={2:10,4:10,8:10,12:10}; d.onboard=1; d.lastSeason='frost';
+  return sanitize(d);
+}
+const IS_FULL_DEMO=new URLSearchParams(window.location.search).get('demo')==='full';
+let S = IS_FULL_DEMO ? buildFullDemoAccount() : load();
+if(!S.log) S.log = [];   // 单局行为日志（试玩回灌用）
+
+function load(){ return loadActivePet(); }
+function save(){ if(S.__fullDemo) return; savePet(S.petId||getMeta().activeId, S); }
+function clearGameSaves(){
+  const m=getMeta();
+  (m.roster||[]).forEach(id=>_L.removeItem('mdjh_proto_'+id));
+  _L.removeItem(PET_META_KEY);
+}
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1800); }
+// 每日结算：自然日切换时重置两类广告计数，并发放登录干粮补给
+function dayKey(){ return new Date().toDateString(); }
+function rollover(){
+  const d=dayKey();
+  if(S.lastAdDate!==d){ S.lastAdDate=d; S.travelAdToday=0; S.supplyAdToday=0; S.shareToday=0; S.bonusAdToday=0; S.giftToday={}; S.day=(S.day||1)+1; }
+  if(S.lastLoginDate!==d){ const _prevLogin=S.lastLoginDate; S.lastLoginDate=d; S.food+=LOGIN_FOOD; S.loginDays=(S.loginDays||1)+1; audio.emit('game:login');
+    if(isFestival('laba')){ S.food+=LABA_FOOD; if((S.festivals||[]).indexOf('laba')<0) S.festivals.push('laba'); }
+    // P2 繁荣度奖励（轻奖励，随收集增长，不动收集曲线）：登录星屑加成 + 偶发稀客
+    const pbonus=Math.min(30, Math.floor(homeProsperity()/10));
+    if(pbonus>0){ S.star+=pbonus; logEvent('pros_login', `繁荣度登录+${pbonus}星`); }
+    S.visitorToday=null; S.visitorReplied=false;
+    if(Math.random() < Math.min(0.35, 0.05 + homeProsperity()/1500)){
+      const v=pick(RARE_VISITORS); S.visitorToday={em:v.em,name:v.name,gift:v.gift,art:v.art,word:v.word}; S.star+=v.gift; audio.emit('game:visitor'); logEvent('visitor', `${v.name}来访+${v.gift}星`);
+      S.visitorLog=((S.visitorLog||[]).concat({name:v.name,art:v.art,em:v.em,gift:v.gift,day:S.day})).slice(-12);
+    }
+    save();
+    const _gap=_prevLogin?Math.max(0,Math.round((new Date(d)-new Date(_prevLogin))/86400000)):null;
+    track('day_active', {loginDays:S.loginDays, return_type:_prevLogin?(_gap>45?'return_45d':'active'):'new', gap_days:_gap});
+    // 七十二候 Phase 5：自然年轮回检测（跨年登录触发 cycle_return，用于 O7 验证）
+    const prevCycle=S._lastCycle||0, nowCycle=curCycle();
+    if(prevCycle && nowCycle>prevCycle){ track('cycle_return',{prev_cycle:prevCycle, now_cycle:nowCycle}); }
+    S._lastCycle=nowCycle; }
+}
+
+/* ---------- 登录载入 ---------- */
+function splashHTML(){
+  const gn=S.chosen?`<div class="sgreeting"><span class="sg-em">${S.name||'旅伴'}</span>，等你很久了</div>`:'';
+  return `<div class="splash">
+    <div class="shead">
+      <div class="sicon">✦ ─ ✦</div>
+      <img class="brand-title-art" src="猫狗星球_登录气泡标题.webp" alt="猫狗星球">
+      <div class="ssub">— 和旅伴一起环游世界 —</div>
+    </div>
+    <div class="sbody">
+      ${gn}
+      <div class="sbar"><i></i></div>
+      <div class="sbtn-wrap"><button class="sbtn" id="splashStartBtn">开始冒险</button></div>
+    </div>
+    <div class="sfooter">
+      <div class="sver">v1.2 · 治愈放置</div>
+      <div class="sslogan">每一段旅程，都从第一步开始</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  // URL 参数 ?reset=1 → 仅首次清空缓存、强制显示载入画面。
+  // 重置后立即移除参数，避免“开始冒险”触发 render 时再次被重置而循环停在载入页。
+  const _p=new URLSearchParams(window.location.search);
+  if(_p.get('reset')==='1'&&!window.__resetHandled){
+    clearGameSaves(); S=loadActivePet(); window.__resetHandled=true;
+    try{ history.replaceState(null,'',window.location.pathname+window.location.hash); }catch(e){}
+  }
+  if(typeof _ptLastView==='undefined') _ptLastView=view;
+  else if(view!==_ptLastView){ _ptLastView=view; if(typeof track==='function') track('view',{v:view}); } // 试玩采集：视图切换埋点
+  if(!S.seenSplash){ document.getElementById('main').innerHTML=splashHTML(); bind(); return; }
+  rollover();
+  if(!S.chosen){ view='onboard'; }   // 未选宠 → 强制进入选宠/起名页
+  document.getElementById('hAvatar').innerHTML=companionHTML();
+  document.getElementById('hName').textContent=(S.name||'旅伴')+(S.chosen?'':'（未选择）');
+  document.getElementById('rStar').textContent=S.star;
+  document.getElementById('rFood').textContent=S.food;
+  document.getElementById('rFrag').textContent=Object.values(S.frags).reduce((a,b)=>a+b,0);
+  document.getElementById('rMap').textContent=S.tmap;
+  document.getElementById('rBackpack').textContent=backpackUsed()+'/'+S.backpack;
+  // 等级 + 已装备称号：显示在名字后面
+  const lvEl=document.getElementById('hLvTitle');
+  if(lvEl){
+    const lv='Lv'+S.level;
+    const ttl=S.currentTitle&&TITLES[S.currentTitle]?TITLES[S.currentTitle].em+' '+TITLES[S.currentTitle].name:'';
+    const ttlLv=ttl&&(S.titleLv||{})[S.currentTitle]&&(S.titleLv||{})[S.currentTitle]>1?` Lv.${S.titleLv[S.currentTitle]}`:'';
+    lvEl.innerHTML='<b style="color:var(--accent2)">'+lv+'</b>'+(ttl?' <span style="color:var(--accent)">'+ttl+ttlLv+'</span>':'');
+  }
+  const main=document.getElementById('main');
+  if(view==='onboard') main.innerHTML=onboardHTML();
+  else if(view==='home') main.innerHTML=homeHTML();
+  else if(view==='codex') main.innerHTML=codexHTML();
+  else if(view==='journal') main.innerHTML=journalHTML();
+  else if(view==='wardrobe') main.innerHTML=wardrobeHTML();
+  else if(view==='social') main.innerHTML=socialHTML();
+  else if(view==='shop') main.innerHTML=shopHTML();
+  else if(view==='tune') main.innerHTML=tuneHTML();
+  else if(view==='roster') main.innerHTML=rosterHTML();
+  bind();
+}
+
+let view='home';
+let journalAtlasSelected=null;
+let journalAtlasOpen=false;
+let _ptLastView=null;   // 试玩采集：记录上次渲染视图，用于 view 切换埋点
+let codexTab='codex';   // codex 子标签：codex / storybook
+let SB_OPEN={};          // 故事书：条目展开状态（会话级，避免首读后塌缩）
+let SB_CH={};            // 故事书：多章故事当前所在章（会话级）
+let draft={region:null, dest:null, dur:'8', food:1, randomDest:false};
+let destCollapsed={};   // 目的地分组折叠状态（key=cat）
+
+function homeHTML(){
+  let h='';
+  // 赛季场景装饰（季节性背景呼吸感）
+  const seas4=activeSeason();
+  if(seas4.scene) h+=`<div class="season-scene"><img src="${seas4.scene}" alt="" onerror="this.style.display='none'"></div>`;
+  if(!S.seenSecret && S.secret){
+    S.seenSecret=true; save();
+    const n=DEST.filter(d=>d.secret && S.hiddenUnlocked[d.id]).length;
+    h+=`<div class="secret-banner">${ic("star")} 你已解锁 <b>${n}</b> 处隐藏秘境！它们出现在「策划旅行」的「隐藏秘境」分组，藏着最稀有的传说。</div>`;
+  }
+  // 当前节气 / 进行中节日横幅（Phase 3/4 时间线呼吸感）
+  const term=getCurrentTerm(); const fests=FESTIVALS.filter(f=>isFestival(f.id));
+  if(term){ h+=`<div class="season-banner">${ic("leaf")} 当前节气：<b>${term.name}</b> · ${term.flavor}</div>`; }
+  if(fests.length){ h+=`<div class="season-banner fest">${ic('gift')} 进行中：${fests.map(f=>f.em+' '+f.name).join('、')}（出游/登录有专属内容）</div>`; }
+  h+=festivalCountdownHTML();
+  // P2 繁荣度·稀客横幅（登录偶发，星屑已在 rollover 计入，此处仅致谢展示）
+  if(S.visitorToday){
+    const v=S.visitorToday;
+    h+=`<div class="visitor-banner">
+      <div class="v-top">
+        ${v.art?`<img class="v-ava" src="${v.art}" alt="">`:`<span style="font-size:22px">${v.em}</span>`}
+        <div class="v-meta"><b>${v.name}</b> 今日来访<span class="vstar"> +${v.gift} 星屑</span></div>
+      </div>
+      <div class="v-bubble">${v.word||'留下了一点心意'}</div>
+      <div class="v-actions">
+        <button class="vbtn vbtn-primary" data-visitor>收下心意</button>
+        ${!S.visitorReplied?'<button class="vbtn" data-visitor-reply>回礼 2🍞→+3⭐</button>':''}
+      </div>
+    </div>`;
+  }
+  // ②访客历史：最近来访面板（累计稀客到访记录，契合 P2 社交支柱）
+  if((S.visitorLog||[]).length){
+    const lg=S.visitorLog.slice(-5).reverse();
+    h+=`<div class="card" style="margin-top:10px"><h4>📜 最近来访 <span class="story-count">（累计 ${S.visitorLog.length} 位稀客）</span></h4>
+      <div class="visitor-log">${lg.map(x=>`<div class="vl-row"><span class="vl-ava">${x.art?`<img src="${x.art}" alt="">`:x.em}</span><span class="vl-name">${x.name}</span><span class="vl-gift">+${x.gift}⭐</span><span class="vl-day">第${x.day}天</span></div>`).join('')}</div></div>`;
+  }
+  // v1.2 月度季节：常驻赛季条（④ 赛季轮换体验）
+  const curSeas=activeSeason();
+  const sk=seasonSkin(curSeas);
+  const si=SEASONS.findIndex(s=>s.id===curSeas.id);
+  const nextSeas=SEASONS[(si+1)%SEASONS.length];
+  const inSeasonTotal=curSeas.secrets.length;
+  const inSeasonGot=curSeas.secrets.filter(id=>S.hiddenUnlocked[id]).length;
+  const isPreview=!!S.seasonOverride;
+  h+=`<div class="season-rail" style="background:linear-gradient(120deg,${sk.c1},${sk.c2});border-color:${sk.border}">
+    <div class="sr-main"><span class="sr-em">${curSeas.em}</span>
+      <div class="sr-txt"><div class="sr-name" title="${curSeas.desc}">${curSeas.name}${isPreview?' <span class="sr-tag">预览</span>':''} <span class="sr-count">本季秘境 ${inSeasonGot}/${inSeasonTotal}</span></div>
+      <div class="sr-desc">${curSeas.flavor||curSeas.desc}</div>
+      <div class="sr-bonus">当季解锁秘境额外 +3⭐</div>
+      <div class="sr-featured">时令目的地：${curSeas.featured?curSeas.featured.length+' 处':''}</div></div></div>
+    <div class="sr-next">下个赛季：<b>${nextSeas.em} ${nextSeas.name}</b>（${nextSeas.months.join('/')}月）→ ${nextSeas.secrets.length} 秘境</div>
+    <div class="sr-switch">${SEASONS.map(s=>`<button class="sr-btn ${s.id===curSeas.id?'on':''}" data-season="${s.id}" title="${s.name}">${s.em}</button>`).join('')}${isPreview?'<button class="sr-btn sr-reset" data-season-reset title="跟随真实时间">⟳</button>':''}</div>
+  </div>`;
+  // 真实季节更替提示（仅真实月份变化触发，用于 analytics 与首访欢迎；不受预览 override 影响）
+  const realSeas=SEASONS.find(s=>s.months.includes(today().getMonth()+1))||SEASONS[0];
+  if(realSeas && S.lastSeason!==realSeas.id){
+    const rsk=seasonSkin(realSeas);
+    const _from=S.lastSeason;
+    const msg=S.lastSeason?`季节更替 · 进入 <b>${realSeas.name}</b>`:`当前季节：<b>${realSeas.name}</b>`;
+    h+=`<div class="season-banner season-on-banner" style="background:linear-gradient(120deg,${rsk.c1},${rsk.c2});border-color:${rsk.border}"><span class="season-em">${realSeas.em}</span> ${msg} · ${realSeas.desc}</div>`;
+    audio.emit('game:seasonChange'); track('season_enter',{season:realSeas.id});
+    if(_from) track('season_switch_seen',{from:_from,to:realSeas.id});
+    S.lastSeason=realSeas.id; save();
+  }
+  const _season=seasonOf((getCurrentTerm()||{m:today().getMonth()+1}).m);
+  const _skin={'春':'linear-gradient(160deg,#eaf6e7,#f4faf0)','夏':'linear-gradient(160deg,#e6f1f8,#eef6fb)','秋':'linear-gradient(160deg,#fbf0dd,#fdf6ec)','冬':'linear-gradient(160deg,#eef2f7,#f5f8fb)'}[_season];
+  const _homeTheme=HOME_THEME_BY_ID[S.activeHomeTheme]||HOME_THEME_BY_ID.seasonal;
+  const _homeSkin=_homeTheme.bg||_skin;
+  h+=`<div class="card"><div class="scene companion-showcase" style="background:${_homeSkin}">
+      <div class="window-light"></div>
+      <div class="floor-shadow"></div>
+      <div class="pet">${companionHTML(false)}</div>
+      <div class="showcase-decoration-layer">${showcaseDecorHTML()}</div>
+    </div>
+    <p class="muted" style="margin:12px 0 4px">${S.trips>=DAILY_TRIPS?'今天它已经出游 '+S.trips+' 次，累了。明天再出发吧 🌙':'它在家等你为它策划下一场旅行。'}</p>
+    <button class="btn" id="goBtn" ${S.trips>=DAILY_TRIPS?'disabled':''}>${ic('compass')} 为它策划一场旅行</button>
+    <button class="btn ghost" id="changePetBtn" style="margin-top:8px">${ic('paw')} 更换旅伴</button>
+  </div>`;
+  // P1 家园装饰：繁荣度 + 季节皮肤 + 陈列架（展示不管理）
+  const _pros=homeProsperity();
+  h+=`<div class="card"><h3>${ic("home")} 小窝（繁荣度 ${_pros}）</h3>
+    <p class="muted">当前主题：<b>${_homeTheme.em} ${_homeTheme.name}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝陈列 14 件，每件都有对应的旅行实物。可在图鉴自由调整。</p>
+    <div class="home-theme-row">${HOME_THEMES.map(t=>{const owned=(S.homeThemes||[]).indexOf(t.id)>=0, active=S.activeHomeTheme===t.id; return `<button class="home-theme-btn ${active?'on':''}" type="button" data-home-theme="${t.id}" ${active?'aria-pressed="true"':''}>${t.em} ${t.name}${owned?(active?' · 使用中':' · 使用'):` · ${t.cost}⭐`}</button>`;}).join('')}</div>
+    <p class="muted" style="font-size:11px;margin-top:8px">主题只改变小窝视觉，不购买残片、藏宝图或传说物；已拥有的主题可随时切换。</p>
+    <div class="home-souvenir-grid">${homeShowcaseHTML()}</div>
+  </div>`;
+  if(S.onboard===0){
+    h+=`<div class="card"><h3>${ic('play')} 第一次？30 秒上手</h3>
+      <p class="muted">你不是"挂机"，你是它的<b>旅行策划师</b>：选目的地、选时长、带点干粮，剩下的交给时间。回来总有惊喜。</p></div>`;
+  }
+  h+=`<div class="card"><h3>${ic('pin')} 今日进度</h3>
+    <p class="muted">等级 <b>Lv${S.level}</b> · ${S.xp} XP · 出游 ${S.trips}/${DAILY_TRIPS} 次 · 已合成整件 ${S.items.length} 件 · 图鉴残片 ${Object.values(S.frags).reduce((a,b)=>a+b,0)} 片${S.tmap>0?' · 藏宝图 '+S.tmap+' 张':''}</p>
+    <p class="muted">广告：加速 ${S.travelAdToday}/${AD_CAP_TRAVEL} · 补给 ${S.supplyAdToday}/${AD_CAP_SUPPLY+S.bonusAdToday}（两类互不共享）· 分享 ${S.shareToday}/${SHARE_DAILY_CAP}</p>
+    ${S.secret?`<p class="muted">${ic("star")} 已解锁秘境 — 深度探索的钥匙在你手里。</p>`:''}
+  </div>`;
+  return h;
+}
+
+function onboardHTML(){
+  let h=`<div class="card"><h3>${ic("paw")} 选择你的旅伴</h3>
+    <p class="muted">它将是陪你走遍四季的伙伴。也可以上传你家毛孩子的照片，做专属旅伴。</p>`;
+  const grid=(kind,label)=>{
+    let g=`<div style="font-weight:700;font-size:13px;margin:10px 0 6px;color:var(--soft)">${label}</div><div class="pet-grid">`;
+    PETS.filter(p=>p.kind===kind).forEach(p=>{
+      g+=`<div class="pet-opt" data-pet="${p.id}">${p.art?`<img class="art" src="${p.art}" alt="${p.name}" onerror="this.outerHTML='<div class=&quot;em&quot;>${p.em}</div>'">`:`<div class="em">${p.em}</div>`}<div class="pn">${p.name}</div><div class="pd">${p.desc}</div></div>`;
+    });
+    return g+`</div>`;
+  };
+  h+=grid('cat','🐱 猫咪（9 种）');
+  h+=grid('dog','🐶 狗狗（9 种）');
+  h+=`<div class="card" style="margin-top:10px"><h3>${ic("camera")} 用我家毛孩子</h3>
+    <p class="muted">上传一张宠物照片，它就成了你的专属旅伴（仅保存在当前浏览器，会自动压缩到 512px，不上传服务器）。</p>
+    <input type="file" id="petUpload" accept="image/jpeg,image/png,image/webp" style="font-size:13px;width:100%">
+    <div id="petPreview" style="margin-top:8px"></div>
+  </div>`;
+  h+=`<div class="card"><h3>✏️ 给它起个名字（必填）</h3>
+    <input id="petNameInput" maxlength="8" placeholder="例如：团子 / 旺财 / Mochi（不填无法出发）" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px">
+  </div>`;
+  h+=`<button class="btn" id="confirmPetBtn">✅ 出发吧！</button>`;
+  return h;
+}
+function updateConfirmState(){
+  const cf=document.getElementById('confirmPetBtn');
+  const nm=document.getElementById('petNameInput');
+  const named = !!(nm && (nm.value||'').trim());
+  if(cf) cf.disabled = !(pendingPet || pendingImg) || !named; // 未选 18 种/未传照片、或名字为空 时禁用
+}
+function selectPet(id){
+  audio.playSFX('petPick');
+  pendingPet=id; pendingImg=null;
+  document.querySelectorAll('[data-pet]').forEach(e=>e.classList.toggle('on', e.dataset.pet===id));
+  const prev=document.getElementById('petPreview'); if(prev) prev.innerHTML='';
+  updateConfirmState();
+}
+function handleUpload(ev){
+  const f=ev&&ev.target&&ev.target.files&&ev.target.files[0]; if(!f) return;
+  if(!/^image\/(jpeg|png|webp)$/i.test(f.type)){ toast('请上传 JPG、PNG 或 WebP 图片'); return; }
+  if(f.size>MAX_PET_AVATAR_BYTES){ toast('图片请控制在 5MB 以内'); return; }
+  const src=URL.createObjectURL(f), img=new Image();
+  img.onload=()=>{
+    const scale=Math.min(1,PET_AVATAR_EDGE/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round((img.naturalWidth||1)*scale)); canvas.height=Math.max(1,Math.round((img.naturalHeight||1)*scale));
+    const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    pendingImg=canvas.toDataURL('image/webp',0.82); URL.revokeObjectURL(src); pendingPet=null;
+    document.querySelectorAll('[data-pet]').forEach(e=>e.classList.remove('on'));
+    const prev=document.getElementById('petPreview'); if(prev) prev.innerHTML=`<img src="${pendingImg}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:2px solid var(--accent2)">`;
+    updateConfirmState();
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(src); toast('这张图片无法读取，请换一张试试'); };
+  img.src=src;
+}
+function confirmPet(){
+  if(!(pendingPet || pendingImg)){ toast('请先选择一只旅伴，或上传你家毛孩子的照片'); return; }
+  const nm=normalizePetName(document.getElementById('petNameInput').value, '');
+  if(!nm){ toast('请给旅伴起个名字再出发 🐾'); return; }
+  audio.playSFX('petConfirm');
+  applyCompanion({petId:pendingPet, img:pendingImg, name:nm});
+}
+function changePet(){ audio.playSFX('click'); S.chosen=false; pendingPet=null; pendingImg=null; render(); }
+
+function decideHTML(){
+  let d='<div class="card"><h3>① 选目的地（省份 / 国家）</h3>';
+  if(draft.randomDest){
+    d+=`<div style="background:var(--accent2);color:#fff;border-radius:12px;padding:8px 12px;margin-bottom:10px;font-weight:700;font-size:14px;text-align:center">${ic('dice')} 目的地已随机选定，出发便知！</div>`;
+  }
+  d+=`<p class="muted">先选一个省份或国家，出游后宠物会随机落脚该地的某座城市 / 景点，回程揭晓 ${ic('dice')}</p>`;
+  const groups=[{k:'cn',label:`🏞️ 国内省份 (${REGIONS.filter(r=>r.kind==='cn').length})`}, {k:'world',label:`🌍 国家 (${REGIONS.filter(r=>r.kind==='world').length})`}, {k:'secret',label:'🌌 隐藏秘境'}];
+  groups.forEach(g=>{
+    if(g.k==='secret'){
+      const list=DEST.filter(x=>x.secret && S.hiddenUnlocked[x.id]);
+      if(!list.length) return;
+      const col = destCollapsed[g.k] ? 'collapsed' : '';
+      d+=`<div class="dest-group-h ${col}" data-grouptoggle="${g.k}">${g.label}<span class="tg">▾</span></div>`;
+      d+=`<div class="dest-group-body ${col}" id="destGroup_${g.k}">`;
+      list.forEach(x=>{
+        const dt = x.depth>=6?'d6':x.depth>=5?'d5':x.depth>=4?'d4':'';
+        const sel = draft.dest===x.id ? 'on' : '';
+        d+=`<div class="dest ${sel}" data-dest="${x.id}">
+          ${biomeThumb(parseRegionName(x), x.em)}
+          <div class="info"><div class="t">${x.name} <span class="depth-tag ${dt}">深度${x.depth}</span></div>
+          <div class="d">${x.tag}</div></div></div>`;
+      });
+      d+='</div>';
+      return;
+    }
+    const regs=REGIONS.filter(r=>r.kind===g.k);
+    if(!regs.length) return;
+    const col = destCollapsed[g.k] ? 'collapsed' : '';
+    d+=`<div class="dest-group-h ${col}" data-grouptoggle="${g.k}">${g.label}<span class="tg">▾</span></div>`;
+    d+=`<div class="dest-group-body ${col}" id="destGroup_${g.k}">`;
+    regs.forEach(r=>{
+      const ds=r.spotIds.map(id=>(DEST.find(x=>x.id===id)||{}).depth||0);
+      const dmin=Math.min(...ds), dmax=Math.max(...ds);
+      const dtxt=dmin===dmax?`深度${dmin}`:`深度${dmin}–${dmax}`;
+      const sel = (!draft.randomDest && draft.region===r.id) ? 'on' : '';
+      d+=`<div class="dest ${sel}" data-region="${r.id}">
+        ${biomeThumb(r, r.em)}
+        <div class="info"><div class="t">${r.name}${(activeSeason().featured||[]).indexOf(r.id)>=0?' <span class="chip season-on" style="font-size:9px;padding:1px 5px">时令</span>':''}</div>
+        <div class="d">${r.spotIds.length} 个目的地 · ${dtxt}</div></div></div>`;
+    });
+    d+='</div>';
+  });
+  d+='</div>';
+  d+=`<button class="btn ghost ${draft.randomDest?'on':''}" id="randomDestBtn" style="margin-bottom:12px">${ic('dice')} ${draft.randomDest?'已随机选好（点击取消）':'不知道去哪？随机目的地'}</button>`;
+  d+='<div class="card"><h3>② 选旅行时长（越长越深、回报越大）</h3><div class="seg" id="durSeg">';
+  Object.entries(DURATIONS).forEach(([k,v])=>{
+    d+=`<button data-dur="${k}" class="${draft.dur===k?'on':''}">${v.name}<br><small>深度${v.depthMod>=0?'+':''}${v.depthMod} · 回报×${v.mul} · 食${v.food}</small></button>`;
+  });
+  d+='</div></div>';
+  d+='<div class="card"><h3>③ 带多少干粮（提升稀有掉率，也计入消耗）</h3>';
+  d+=`<div class="stepper"><button id="fMinus">${ic('minus')}</button><div class="v" id="fVal">${draft.food}</div><button id="fPlus">${ic('plus')}</button></div>`;
+  d+=`<p class="muted">干粮加成 = 1 + ${K_FOOD} × 携带量。当前稀有权重 ×${(1+K_FOOD*draft.food).toFixed(2)}。本次出发消耗 <b>${DURATIONS[draft.dur].food + draft.food}</b> 干粮（时长${DURATIONS[draft.dur].food} + 携带${draft.food}）。</p></div>`;
+  d+=`<button class="btn" id="departBtn">${ic('plane')} 确认出发</button>
+      <button class="btn ghost" id="backHome" style="margin-top:8px">返回</button>`;
+  return d;
+}
+
+function travelHTML(){
+  const dest=DEST.find(d=>d.id===draft.dest);
+  const reg=draft.region?REGION_BY_ID[draft.region]:null;
+  const regionName=reg?reg.name:(dest.tag||'').split('·')[0];
+  const rn=reg?reg.name:parseRegionName(dest);
+  return `<div id="travel" class="card">
+    <div class="travel-photo">${biomeThumb(rn, reg?reg.em:dest.em, 'biome-big')}</div>
+    <h3 style="margin:8px 0">${companionHTML()} 正在前往 ${regionName}</h3>
+    <p class="preview">此行会随机落脚该地的某座城市 / 景点，回程揭晓 ${ic('dice')}</p>
+    <p class="preview">时长：${DURATIONS[draft.dur].name} · 预计深度 ${effDepth(dest.depth)} · 回报×${DURATIONS[draft.dur].mul}</p>
+    <div class="prog"><i id="bar"></i></div>
+    <p class="preview" id="tStatus">它在路上……（半放置，你可以先去别处）</p>
+    <button class="btn sec" id="adBtn">${ic('play')} 看广告加速 30%（剩余 ${travelAdLeft()}/${AD_CAP_TRAVEL}）</button>
+    <p class="muted" style="margin-top:8px">出行加速广告：每出行 1 次可看 1 次，硬顶 ${AD_CAP_TRAVEL} 次/日，省时但不强制（P1）。与商店补给广告（${AD_CAP_SUPPLY} 次/日）互不共享。</p>
+  </div>`;
+}
+
+/* ---------- 逻辑 ---------- */
+function effDepth(base){ return Math.max(0, Math.min(6, base + DURATIONS[draft.dur].depthMod)); }
+
+function bind(){
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ const nextView=b.dataset.view, changed=view!==nextView; view=nextView;
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b)); if(changed) audio.playFileSFX('sfx_swipe.ogg',.28); render(); });
+  const psb=document.getElementById('petSwitchBtn'); if(psb) psb.onclick=()=>{ audio.playSFX('click'); view='roster';render(); };
+  document.querySelectorAll('[data-switch]').forEach(e=>e.onclick=()=>switchPet(e.dataset.switch));
+  document.querySelectorAll('[data-rename]').forEach(e=>e.onclick=()=>renamePet(e.dataset.rename));
+  document.querySelectorAll('[data-del]').forEach(e=>e.onclick=()=>deletePet(e.dataset.del));
+  const npb=document.getElementById('newPetBtn'); if(npb) npb.onclick=newPet;
+  const go=document.getElementById('goBtn'); if(go) go.onclick=()=>{ audio.emit('game:select'); if(S.onboard===0){draft={region:'r_zhejiang',dest:null,dur:'8',food:1,randomDest:false};} draft.randomDest=false; view='__decide'; renderDecide(); };
+  const cpb=document.getElementById('changePetBtn'); if(cpb) cpb.onclick=changePet;
+  document.querySelectorAll('[data-pet]').forEach(e=>e.onclick=()=>selectPet(e.dataset.pet));
+  const up=document.getElementById('petUpload'); if(up) up.onchange=handleUpload;
+  const cf=document.getElementById('confirmPetBtn'); if(cf) cf.onclick=confirmPet;
+  const ni=document.getElementById('petNameInput'); if(ni) ni.oninput=updateConfirmState;
+  updateConfirmState(); // 进入选宠页默认禁用，待选 18 种/传照片 且 起了名字后启用
+  // 登录载入：进度条动画 + 开始按钮
+  const sbar=document.querySelector('.splash .sbar i');
+  if(sbar){
+    let p=0; const iv=setInterval(()=>{ p+=Math.random()*8+2; if(p>=100){ p=100; clearInterval(iv); }
+      sbar.style.width=p+'%'; },150);
+    document.getElementById('splashStartBtn').onclick=()=>{
+      audio.playSFX('splashComplete'); audio.playBGM('roster');
+      sbar.style.width='100%';
+      setTimeout(()=>{ S.seenSplash=true; save(); render(); },400);
+    };
+  }
+  const bh=document.getElementById('backHome'); if(bh) bh.onclick=()=>{audio.emit('game:back'); view='home'; render();};
+  const db=document.getElementById('departBtn'); if(db) db.onclick=depart;
+  const rdb=document.getElementById('randomDestBtn'); if(rdb) rdb.onclick=()=>{ audio.emit('game:select'); if(draft.randomDest){ draft.randomDest=false; renderDecide(); } else randomDepart(true); };
+  document.querySelectorAll('[data-region]').forEach(e=>e.onclick=()=>{audio.emit('game:select'); draft.region=e.dataset.region; draft.dest=null; draft.randomDest=false; renderDecide();});
+  document.querySelectorAll('[data-grouptoggle]').forEach(e=>e.onclick=()=>{
+    audio.emit('game:paper');
+    const g=e.dataset.grouptoggle; destCollapsed[g]=!destCollapsed[g];
+    const body=document.getElementById('destGroup_'+g);
+    e.classList.toggle('collapsed', destCollapsed[g]);
+    if(body) body.classList.toggle('collapsed', destCollapsed[g]);
+  });
+  document.querySelectorAll('[data-dur]').forEach(e=>e.onclick=()=>{audio.emit('game:select'); draft.dur=e.dataset.dur; renderDecide();});
+  const fp=document.getElementById('fPlus'), fm=document.getElementById('fMinus');
+  if(fp) fp.onclick=()=>{audio.emit('ui:stepper'); draft.food=Math.min(3,draft.food+1); renderDecide();};
+  if(fm) fm.onclick=()=>{audio.emit('ui:stepper'); draft.food=Math.max(0,draft.food-1); renderDecide();};
+  const ad=document.getElementById('adBtn'); if(ad) ad.onclick=accelerate;
+  const useMap=document.getElementById('useMapBtn'); if(useMap) useMap.onclick=useTreasureMap;
+  document.querySelectorAll('[data-unlock]').forEach(e=>e.onclick=()=>unlockHidden(e.dataset.unlock));
+  const gf=document.getElementById('giftBtn'); if(gf) gf.onclick=()=>{audio.emit('game:gift'); giftFriend();};
+  document.querySelectorAll('[data-gift]').forEach(e=>e.onclick=()=>{audio.emit('game:gift'); giftFriend(e.dataset.gift);});
+  document.querySelectorAll('[data-giftreq]').forEach(e=>e.onclick=()=>{audio.emit('game:click'); requestGift(e.dataset.giftreq);});
+  const shb=document.getElementById('shareBtn'); if(shb) shb.onclick=shareFriend;
+  const bf=document.getElementById('buyFood'); if(bf) bf.onclick=()=>{audio.emit('game:click'); buyFood();};
+  const eb=document.getElementById('expandBackpackBtn'); if(eb) eb.onclick=expandBackpack;
+  const asb=document.getElementById('adStarBtn'); if(asb) asb.onclick=adStar;
+  const afb=document.getElementById('adFoodBtn'); if(afb) afb.onclick=adFood;
+  const afs=document.getElementById('adFirstSlotsBtn'); if(afs) afs.onclick=function(){ audio.emit('game:adReward'); adFirstSlots(); };
+  const rs=document.getElementById('resetBtn'); if(rs) rs.onclick=function(){ audio.emit('game:click'); resetAll(); };
+  const cl=document.querySelectorAll('.closeX'); cl.forEach(c=>c.onclick=closeModals);
+  document.querySelectorAll('[data-journal-region]').forEach(e=>e.onclick=()=>{
+    audio.emit('game:click');
+    journalAtlasSelected=e.dataset.journalRegion;
+    journalAtlasOpen=true;
+    render();
+  });
+  const jac=document.querySelector('[data-journal-atlas-close]'); if(jac) jac.onclick=()=>{
+    audio.emit('game:click');
+    journalAtlasSelected=null;
+    journalAtlasOpen=true;
+    render();
+  };
+  document.querySelectorAll('[data-showcase]').forEach(e=>e.onclick=()=>{ audio.emit('game:click'); showShowcaseDetail(e.dataset.showcase,e.dataset.showcaseId,e.dataset.showcaseVariant); });
+  document.querySelectorAll('[data-home-theme]').forEach(e=>e.onclick=()=>selectHomeTheme(e.dataset.homeTheme));
+  document.querySelectorAll('[data-frame-journal]').forEach(e=>e.onclick=()=>frameJournal(e.dataset.frameJournal));
+  document.querySelectorAll('[data-home-showcase]').forEach(e=>e.onclick=()=>{
+    audio.emit('game:click');
+    const name=e.dataset.homeShowcase;
+    const picked=[...(S.homeShowcase||[])];
+    const index=picked.indexOf(name);
+    if(index>=0){
+      picked.splice(index,1);
+      S.homeShowcase=picked;
+      S.homeShowcaseExcluded=[...new Set([...(S.homeShowcaseExcluded||[]),name])];
+      save(); render(); toast(`已将「${name}」移出手动陈列，小窝会自动补齐空位`);
+      return;
+    }
+    if(picked.length>=HOME_SHOWCASE_LIMIT){ toast(`小窝最多手动陈列 ${HOME_SHOWCASE_LIMIT} 件，请先移出一件`); return; }
+    picked.push(name);
+    S.homeShowcase=picked;
+    S.homeShowcaseExcluded=(S.homeShowcaseExcluded||[]).filter(n=>n!==name);
+    save(); render(); toast(`已将「${name}」加入小窝陈列`);
+  });
+  const hsr=document.querySelector('[data-home-showcase-reset]'); if(hsr) hsr.onclick=()=>{
+    audio.emit('game:click');
+    S.homeShowcase=HOME_SHOWCASE_DEFAULT.filter(n=>(S.souvenirs||[]).some(s=>s.name===n)).slice(0,HOME_SHOWCASE_LIMIT);
+    S.homeShowcaseExcluded=[];
+    save(); render(); toast('已恢复推荐陈列');
+  };
+  document.querySelectorAll('[data-tune-game]').forEach(i=>i.onchange=()=>{
+    const k=i.dataset.tuneGame, v=parseFloat(i.value); if(isNaN(v)) return;
+    O[k]=v; saveOverrides(); applyOverrides(); render(); logEvent('tune', `${k}=${v}`);
+  });
+  document.querySelectorAll('[data-title]').forEach(b=>b.onclick=()=>{
+    audio.emit('game:click');
+    const k=b.dataset.title;
+    S.currentTitle=S.currentTitle===k?null:k;
+    save(); render(); toast(S.currentTitle?`已装备称号「${TITLES[k].em} ${TITLES[k].name}」`:'已卸下称号');
+  });
+  // v1.2 故事书：标签切换
+  document.querySelectorAll('[data-codemapl]').forEach(e=>e.onclick=()=>{
+    audio.emit('game:swipe'); codexTab=e.dataset.codemapl; track('codex_open', {tab:codexTab}); render();
+  });
+  // codex 区块折叠：点击标题收起/展开（零状态，纯 class 切换）；"展开/折叠全部"批量切换
+  document.querySelectorAll('.codex-card > h3').forEach(e=>e.onclick=()=>{ e.parentElement.classList.toggle('collapsed'); });
+  const ca=document.querySelector('[data-codexall]'); if(ca) ca.onclick=()=>{
+    const cards=[...document.querySelectorAll('.codex-card')];
+    const anyCollapsed=cards.some(c=>c.classList.contains('collapsed'));
+    cards.forEach(c=>c.classList.toggle('collapsed', !anyCollapsed));
+  };
+  // v1.2 故事书：点开展开/收起（状态驱动，避免首读后塌缩）
+  document.querySelectorAll('[data-story]').forEach(e=>e.onclick=()=>{
+    const id=e.dataset.story;
+    const _first=(S.storybook||[]).indexOf(id)<0;
+    SB_OPEN[id]=!SB_OPEN[id];
+    if(_first){ S.storybook.push(id); save(); }
+    track('story_open', {story_id:id, first_read:_first});
+    if(_first) track('story_chapter_done', {story_id:id});
+    render();
+  });
+  // v1.2 故事书：章节导航（上/下章翻页，不触发折叠）
+  document.querySelectorAll('[data-sbprev],[data-sbnext]').forEach(e=>e.onclick=ev=>{
+    ev.stopPropagation();
+    const id=e.dataset.sbprev||e.dataset.sbnext; const step=e.dataset.sbnext?1:-1;
+    const view=document.getElementById('sbv-'+id); if(!view) return;
+    const it=(S.items||[]).find(x=>x.id===id); const so=(S.souvenirs||[]).find(x=>x.name===id);
+    const story=it?storyOf(it):so?souvenirStoryOf(so):[view.textContent];
+    const n=story.length; const cur=Math.max(0,Math.min(n-1,(SB_CH[id]||0)+step)); SB_CH[id]=cur;
+    view.innerHTML=sbChapterHTML(story[cur],cur,n); audio.emit('game:paper');
+    const lbl=document.getElementById('sbl-'+id); if(lbl) lbl.textContent='第 '+(cur+1)+'/'+n+' 章';
+    const entry=e.closest('.story-entry');
+    entry.querySelectorAll('.sb-dots i').forEach((d,i)=>d.classList.toggle('on',i===cur));
+    entry.querySelectorAll('.sb-nav button').forEach(b=>{ const isNext=!!b.dataset.sbnext; b.disabled=isNext?(cur>=n-1):(cur<=0); });
+    const body=document.getElementById('sb-'+id); if(body) body.style.maxHeight=(body.scrollHeight+24)+'px';
+  });
+  // v1.2 故事书：根据 SB_OPEN 恢复展开高度（带过渡）
+  Object.keys(SB_OPEN).forEach(id=>{ if(SB_OPEN[id]){ const b=document.getElementById('sb-'+id); if(b) b.style.maxHeight=(b.scrollHeight+24)+'px'; } });
+  // L8 单宠装扮：穿戴/脱下（纯表达，非任务）
+  document.querySelectorAll('[data-cosmetic]').forEach(e=>e.onclick=()=>{
+    audio.emit('game:click'); const id=e.dataset.cosmetic; const eq=equippedCosmetics(); const i=eq.indexOf(id);
+    if(i>=0){ eq.splice(i,1); toast('已脱下'+COSMETICS.find(c=>c.id===id).name); }
+    else if(eq.length>=MAX_HOME_DECOR){ toast('小窝展示位已满（最多 '+MAX_HOME_DECOR+' 件），请先脱下一件。'); return; }
+    else { eq.push(id); toast('穿上了'+COSMETICS.find(c=>c.id===id).name+' ✨'); }
+    S.equipped=eq; save(); render();
+  });
+  document.querySelectorAll('[data-decor-id]').forEach(el=>{
+    const startDecorDrag=(down)=>{
+      if(el.dataset.dragging==='1') return;
+      const scene=el.closest('.wardrobe-scene'); if(!scene) return;
+      const id=el.dataset.decorId, rect=scene.getBoundingClientRect();
+      const moveEvent=down.type==='mousedown'?'mousemove':'pointermove';
+      const endEvent=down.type==='mousedown'?'mouseup':'pointerup';
+      el.dataset.dragging='1';
+      if(down.pointerId!==undefined && el.setPointerCapture) el.setPointerCapture(down.pointerId);
+      el.classList.add('dragging');
+      const move=(ev)=>{
+        const x=Math.max(10,Math.min(90,((ev.clientX-rect.left)/rect.width)*100));
+        const y=Math.max(12,Math.min(88,((ev.clientY-rect.top)/rect.height)*100));
+        el.style.left=x+'%'; el.style.top=y+'%';
+      };
+      const end=(up)=>{
+        move(up); el.classList.remove('dragging');
+        const p={x:parseFloat(el.style.left),y:parseFloat(el.style.top)};
+        S.decorPositions=Object.assign({},S.decorPositions,{[id]:p}); save();
+        el.dataset.dragging='';
+        document.removeEventListener(moveEvent,move); document.removeEventListener(endEvent,end); document.removeEventListener('pointercancel',end);
+      };
+      document.addEventListener(moveEvent,move); document.addEventListener(endEvent,end,{once:true});
+      if(moveEvent==='pointermove') document.addEventListener('pointercancel',end,{once:true});
+    };
+    el.onpointerdown=startDecorDrag;
+    el.onmousedown=startDecorDrag;
+  });
+  // P2 繁荣度·稀客：收下致谢
+  const vb=document.querySelector('[data-visitor]'); if(vb) vb.onclick=()=>{ S.visitorToday=null; save(); render(); audio.emit('game:gift'); toast('已收下来访的心意 💌'); };
+  // v1.2 稀客回礼（成本 2 干粮，回 3 星屑）
+  const vr=document.querySelector('[data-visitor-reply]'); if(vr) vr.onclick=()=>{
+    if(S.food<2){ toast('干粮不够，下次再回礼吧 🍞'); return; }
+    S.food-=2; S.star+=3; S.visitorReplied=true; save(); render();
+    audio.emit('game:gift');
+    toast('你回赠了 2 份干粮，'+(S.visitorToday?S.visitorToday.name:'对方')+'很感激 🎁');
+  };
+  // v1.2 拜访好友小窝
+  document.querySelectorAll('[data-visit-friend]').forEach(e=>e.onclick=()=>visitFriend(e.dataset.visitFriend));
+  // ④ 赛季轮换体验：赛季预览切换
+  document.querySelectorAll('[data-season]').forEach(e=>e.onclick=()=>{
+    S.seasonOverride=e.dataset.season; save(); render();
+    const s=SEASONS.find(x=>x.id===S.seasonOverride);
+    toast('已切换到 '+(s?s.name:'')+'（预览）🔄');
+  });
+  const srReset=document.querySelector('[data-season-reset]'); if(srReset) srReset.onclick=()=>{ S.seasonOverride=null; save(); render(); toast('已跟随真实时间 ⏱️'); };
+  document.querySelectorAll('[data-tune-rev]').forEach(i=>i.onchange=()=>{
+    const k=i.dataset.tuneRev, v=parseFloat(i.value); if(isNaN(v)) return;
+    REV[k]=v; saveRev(); render();
+  });
+  const rt2=document.getElementById('resetTune'); if(rt2) rt2.onclick=()=>{ O={}; saveOverrides(); applyOverrides(); render(); toast('已恢复基线常量'); };
+  const cp=document.getElementById('copyLog'); if(cp) cp.onclick=copyLog;
+  const clr=document.getElementById('clearLog'); if(clr) clr.onclick=()=>{ S.log=[]; save(); render(); toast('日志已清空'); };
+  // P2 数据分析看板：刷新（flush 后重渲染 tune 视图，重新聚合本地缓冲）
+  document.querySelectorAll('[data-analytics-refresh]').forEach(b=>b.onclick=()=>{
+    if(window.__analytics && window.__analytics.flush) window.__analytics.flush();
+    render(); toast('已刷新分析数据');
+  });
+  // 试玩采集：导出会话 JSON 按钮
+  const peb=document.getElementById('ptExportBtn'); if(peb) peb.onclick=()=>{ if(typeof PT!=='undefined') PT.exportSession(); };
+}
+function renderDecide(){ const m=document.getElementById('main'); m.innerHTML=decideHTML(); bind(); }
+
+function depart(){
+  draft.randomDest=false;
+  // 省份/国家 → 随机落点该地某座城市/景点（隐藏秘境直设 draft.dest，无 region）
+  if(draft.region && !draft.dest){
+    const reg=REGION_BY_ID[draft.region];
+    if(reg && reg.spotIds.length) draft.dest=pick(reg.spotIds);
+  }
+  if(!draft.dest){ toast('请先选一个省份 / 国家，或随机一个 🎲'); view='__decide'; renderDecide(); return; }
+  const r=DURATIONS[draft.dur];
+  const cost = r.food + draft.food;   // 时长基础消耗 + 携带干粮（携带越多稀有加成越高，消耗也越多 → 消耗与选择匹配）
+  if(S.food < cost){ toast('干粮不够，去商店补点或看广告 🍞'); view='shop'; render(); return; }
+  S.food -= cost; S.trips += 1;
+  const _dn=(DEST.find(d=>d.id===draft.dest)||{}).name||draft.dest;
+  const _rg=draft.region?('（'+REGION_BY_ID[draft.region].name+'）'):'';
+  logEvent('depart', `${_rg}${_dn}·${DURATIONS[draft.dur].name}·携粮${draft.food}·耗${cost}干粮`);
+  view='__travel'; document.getElementById('main').innerHTML=travelHTML(); bind();
+  document.getElementById('hStatus').textContent='出游中…';
+  travelStartVal=Date.now(); adUsed=false;
+  const total=r.time*1000, bar=document.getElementById('bar');
+  const tick=()=>{ const p=Math.min(1,(Date.now()-travelStartVal)/total); bar.style.width=(p*100)+'%';
+    if(p>=1){ finishTrip(); } else travelTimer=setTimeout(tick,80); };
+  travelTimer=setTimeout(tick,80);
+}
+// 随机目的地（帮助选择困难症玩家：随机选一个省份/国家，落点城市景点由系统定，时长/干粮由玩家定）
+function randomDepart(fromDecide){
+  const reg=pick(REGIONS);
+  draft.region=reg.id; draft.dest=null; draft.randomDest=true;
+  if(!fromDecide){ draft.dur='8'; draft.food=1; } // 首页一键出发用默认值
+  toast('🎲 已随机选好省份/国家，出发便知落脚哪座城市！');
+  if(fromDecide) renderDecide(); else depart();
+}
+let travelTimer=null, adUsed=false, travelStartVal=0;
+function accelerate(){ if(adUsed) return; audio.emit('game:adBoost');
+  if(travelAdLeft()<=0){ track('ad_cap_hit',{type:'travel',cap:AD_CAP_TRAVEL}); toast('今日出行加速广告已用完（护 P1）'); return; }
+  adUsed=true; S.travelAdToday++;
+  track('ad_trigger',{type:'travel',mandatory:false});
+  track('ad_complete',{type:'travel'});   // 原型同步模拟广告完成；正式接入 wx.createRewardedVideoAd 后改在 onClose 成功回调触发
+  if(S.travelAdToday>=AD_CAP_TRAVEL) track('ad_cap_hit',{type:'travel',cap:AD_CAP_TRAVEL});
+  save(); logEvent('ad_travel', '出行加速广告（省时30%）');
+  const r=DURATIONS[draft.dur]; const total=r.time*1000;
+  toast('广告播放中…（省时30%）');
+  const bar=document.getElementById('bar'); const cur=parseFloat(bar.style.width)||0;
+  const np=Math.min(100,cur+30);
+  bar.style.width=np+'%';
+  // 把计时起点回拨，使剩余进度匹配加速后的位置
+  travelStartVal = Date.now() - np/100*total;
+}
+// 两类广告配额（按自然日重置，互不共享）
+function travelAdLeft(){ rollover(); return Math.max(0, AD_CAP_TRAVEL - S.travelAdToday); }
+function supplyAdLeft(){ rollover(); return Math.max(0, AD_CAP_SUPPLY + S.bonusAdToday - S.supplyAdToday); }
+function firstAdSlotBonus(){ if(S.firstAdSlots) return false; S.firstAdSlots=true; S.backpack+=10; logEvent('ad_first','首次看广告，背包+10格'); return true; }
+// 首次 +10 背包扩容：独立广告触点，不占补给/加速广告次数（用户要求单独计数）
+function adFirstSlots(){
+  if(S.firstAdSlots){ toast('背包扩容广告已领取过啦 📦'); return; }
+  track('ad_trigger',{type:'firstslots',mandatory:false}); track('ad_complete',{type:'firstslots'});   // 独立广告触点（背包扩容），计入 O4 广告频次分析
+  firstAdSlotBonus(); save(); render(); toast('看广告 · 背包 +10 格 📦（独立于补给/加速广告，不占次数）');
+}
+function adStar(){ if(supplyAdLeft()<=0){track('ad_cap_hit',{type:'supply',cap:AD_CAP_SUPPLY+S.bonusAdToday});toast('今日补给广告已用完（护 P1）');return;} S.supplyAdToday++; S.star+=AD_STAR_REWARD; audio.emit('game:adReward');
+  track('ad_trigger',{type:'supply',mandatory:false}); track('ad_complete',{type:'supply'});
+  if(S.supplyAdToday>=(AD_CAP_SUPPLY+S.bonusAdToday)) track('ad_cap_hit',{type:'supply',cap:AD_CAP_SUPPLY+S.bonusAdToday});
+  save(); logEvent('ad_supply', `星屑+${AD_STAR_REWARD}`); render(); toast(`看广告 +${AD_STAR_REWARD} 星屑 ⭐`); }
+function adFood(){ if(supplyAdLeft()<=0){track('ad_cap_hit',{type:'supply',cap:AD_CAP_SUPPLY+S.bonusAdToday});toast('今日补给广告已用完（护 P1）');return;} S.supplyAdToday++; S.food+=AD_FOOD_REWARD; audio.emit('game:adReward');
+  track('ad_trigger',{type:'supply',mandatory:false}); track('ad_complete',{type:'supply'});
+  if(S.supplyAdToday>=(AD_CAP_SUPPLY+S.bonusAdToday)) track('ad_cap_hit',{type:'supply',cap:AD_CAP_SUPPLY+S.bonusAdToday});
+  save(); logEvent('ad_supply', `干粮+${AD_FOOD_REWARD}`); render(); toast(`看广告 +${AD_FOOD_REWARD} 干粮 🍞`); }
+
+function finishTrip(){
+  clearTimeout(travelTimer); adUsed=false; travelStartVal=0;
+  audio.emit('game:return'); audio.emit('game:cat');
+  const dest=DEST.find(d=>d.id===draft.dest);
+  const dr=DURATIONS[draft.dur];
+  const ed=effDepth(dest.depth);
+  // 探索计数（每次完成出游累计，含迷路；用于 Phase 1 探索类称号）
+  S.destCount[dest.id]=(S.destCount[dest.id]||0)+1;
+  if(dest.regionId && !dest.secret) S.regionCount[dest.regionId]=(S.regionCount[dest.regionId]||0)+1; // 按省份/国家计数（山河客/全境行者）
+  if(ed>=4) S.deepTrips=(S.deepTrips||0)+1;
+  if(ed>=6) S.secretTrips=(S.secretTrips||0)+1;
+  const dweight=DW[ed];
+  const foodMul=1+K_FOOD*draft.food;
+  // 被动加成：持有 罗盘 → 稀有权重 +；持有 古钟 → 星屑 +2/次
+  const hasCompass = S.items.some(i=>i.id==='罗盘');
+  const hasBell = S.items.some(i=>i.id==='古钟');
+  // 节日效果（Phase 4：仅改本次出游的软参数，不改变核心循环）
+  const af = activeFestivals();
+  const festRare = af.indexOf('yuanxiao')>=0 ? 0.08 : 0;   // 元宵：稀有权重+
+  const festDouble = af.indexOf('qixi')>=0 ? 2 : 1;         // 七夕：双宠出游→产出翻倍
+  // 期望总片数（时长倍率 mul 提升整体产出）
+  const mean=foodMul*dweight*2.2*dr.mul;
+  let total=poisson(mean);
+  // 迷路
+  const lost = Math.random()<dr.risk;
+  const gained=[]; const fragAdd={}; CLUSTER_KEYS.forEach(k=>fragAdd[k]=0);
+  let dropMap=false;
+  let room=0, bagFull=false;
+  if(!lost){
+    room = Math.max(0, S.backpack - backpackUsed());
+    if(dest.secret){
+      // 秘境（深度6）：固定签名簇 + 稀有起底 → 史诗/传说（md §2.4 / §5）
+      const dk=dest.drop.cl; const minR=dest.drop.min;
+      const wN=0.10, wR=minR==='rare'?0.52:0.32, wE=minR==='epic'?0.38:0.14, wL=0.06;
+      const ws=wN+wR+wE+wL;
+      for(let i=0;i<total;i++){
+        if(room<=0) break;
+        const r=Math.random()*ws; let tier='normal';
+        if(r<wN) tier='normal'; else if(r<wN+wR) tier='rare'; else if(r<wN+wR+wE) tier='epic'; else tier='legend';
+        const t=tier==='legend'?'legend':tier==='epic'?'epic':tier==='rare'?'rare':'';
+        fragAdd[dk]++; room--; gained.push({type:'frag',cl:dk,rarity:t});
+      }
+      // 特殊传说产出（镇魂钟 / 先民信物）
+      if(dest.special && Math.random()<dest.special.p){ const it=dest.special.item; if(!S.items.find(i=>i.id===it.id)) S.items.push(it); gained.push({type:'whole',cl:dest.special.cl,item:it}); }
+    } else {
+      // 普通 / 世界：深度驱动 tier → 开放簇（md §5 稀有度曲线）
+      const bias=termBias();   // 当前节气掉率倾向
+      const wNormal=Math.max(0.2, 1 - ed*0.08) + (bias.tier==='normal'?W_TERM:0);
+      const wRare=0.18+ed*0.05+(hasCompass?0.05:0)+festRare + (bias.tier==='rare'?W_TERM:0);
+      const wEpic=(ed>=4?(0.05+(ed-4)*0.04):0) + (bias.tier==='epic'?W_TERM:0);
+      const wLegend=(ed>=3?0.14:0) + (bias.tier==='legend'?W_TERM:0);   // [可调] 传说权重 0.04→0.08→0.10→0.12→0.14 且 ed≥5→ed≥4→ed≥3，拓宽陶瓷(唯一传说簇)掉落窗口
+      const wSum=wNormal+wRare+wEpic+wLegend;
+      for(let i=0;i<Math.round(total*festDouble);i++){
+        if(room<=0){ bagFull=true; break; }
+        const roll=Math.random()*wSum; let tier='normal';
+        if(roll<wNormal) tier='normal';
+        else if(roll<wNormal+wRare) tier='rare';
+        else if(roll<wNormal+wRare+wEpic) tier='epic';
+        else tier='legend';
+        const pool=OPEN_TIERS[tier]; const cl=weightedPick(pool, bias.cluster);
+        fragAdd[cl]++; room--; const t=tier==='legend'?'legend':tier==='epic'?'epic':tier==='rare'?'rare':'';
+        gained.push({type:'frag',cl,rarity:t});
+      }
+      // [可调] 兜底：深度普通程小概率掉 1 枚"尚未集齐"的秘境簇残片（5 簇中随机选缺口簇）。
+      // 目的：让棱镜(仅 1 个签名秘境)等稀缺秘境簇也能靠普通程缓慢补齐，解除"陶瓷(普) vs 棱镜(秘)"对秘境访问率的争夺。
+      if(ed>=4 && room>0 && Math.random()<FALLBACK_SECRET_P){
+        const inc=SECRET_CLUSTERS.filter(c=>{
+          const need=CLUSTERS[c].items.length*CLUSTERS[c].synth;
+          const prog=(S.frags[c]||0)+CLUSTERS[c].items.filter(it=>S.items.some(i=>i.id===it.id)).length*CLUSTERS[c].synth;
+          return prog<need;
+        });
+        const pool2=inc.length?inc:SECRET_CLUSTERS;
+        const c=pick(pool2);
+        fragAdd[c]++; room--; gained.push({type:'frag',cl:c,rarity:''});
+      }
+    }
+    // 地点专属纪念品（仅该目的地、未拥有时掉落，独立于各簇合成）
+    if(dest.souvenir && !S.souvenirs.find(i=>i.name===dest.souvenir.name) && Math.random()<LOC_SOUV_P){
+      S.souvenirs.push(dest.souvenir); gained.push({type:'souvenir', name:dest.souvenir.name, em:dest.souvenir.em});
+    }
+    // 节日活动机械效果（轻量、不改变核心循环）
+    if(af.indexOf('duanwu')>=0 && room>0){ fragAdd['primor']++; room--; gained.push({type:'frag',cl:'primor',rarity:''}); } // 端午：龙舟信物红利
+    if(af.indexOf('zhongqiu')>=0){ S.food+=ZHONGQIU_FOOD; }   // 中秋：赏月加餐
+    if(af.indexOf('chongyang')>=0){ S.star+=CHONGYANG_STAR; }  // 重阳：登高临时加成（星屑代理）
+    if(af.indexOf('spring')>=0 && Math.random()<0.5){          // 春节：随机新春红包
+      if(Math.random()<0.5){ S.star+=SPRING_STAR; } else { S.food+=SPRING_FOOD; }
+      gained.push({type:'redpack'});
+    }
+    // 节庆图鉴（Phase A：春节/端午/中秋）：节日窗口内掉落对应"节庆碎片"，仅该节庆期间可获取
+    for(const fid of af){
+      const festivalCosmeticId=FESTIVAL_COSMETICS[fid];
+      if(festivalCosmeticId && (S.cosmetics||[]).indexOf(festivalCosmeticId)<0){
+        const c=COSMETICS.find(x=>x.id===festivalCosmeticId); S.cosmetics.push(festivalCosmeticId);
+        gained.push({type:'encounter', em:c.em, name:FESTIVALS.find(x=>x.id===fid).name+'夜游', text:c.story, cosmetic:c});
+      }
+      const fk=FESTIVAL_CLUSTERS[fid]; if(!fk) continue;
+      if(room<=0) break;
+      const first=(S.festivals||[]).indexOf(fid)<0;   // 本行程前尚未参与过该节庆 → 首参与保底 1 片
+      if(first || Math.random()<FEST_FRAG_P){ fragAdd[fk]++; room--; gained.push({type:'frag',cl:fk,rarity:'fest'}); }
+    }
+    // 节气限定信物：该节气期间首次出游 100% 掉落 1 张（归入图鉴「节气」簇，Phase 3）
+    const term=getCurrentTerm();
+    if(term && (S.solarTerms||[]).indexOf(term.id)<0){ S.solarTerms.push(term.id); gained.push({type:'solar', id:term.id}); }
+    // 七十二候信物：当前候期间出游 100% 掉落；同轮回(自然年)首次记新收集，跨轮回复得记 *N（Phase 5）
+    const hou=currentHou(term);
+    if(hou){
+      const cyc=curCycle();
+      const firstEver=(S.houTerms||[]).indexOf(hou.id)<0;
+      if(firstEver){ S.houTerms.push(hou.id); S.houDup[hou.id]=1; }
+      else if((S.houCycle[hou.id]||0)!==cyc){ S.houDup[hou.id]=(S.houDup[hou.id]||1)+1; }
+      S.houCycle[hou.id]=cyc;
+      gained.push({type:'hou', id:hou.id, name:hou.name, em:hou.em, is_dup:!firstEver});
+      track('hou_collect',{hou_id:hou.id, term_id:term.id, is_dup:!firstEver});
+    }
+    // 标记进行中的节日为「已参与」（用于节日称号；腊八亦在登录时触发）
+    af.forEach(id=>{ if((S.festivals||[]).indexOf(id)<0) S.festivals.push(id); });
+    // L6 偶遇事件（被动·惊喜，不增肝度）：概率触发，奖励=装扮 or 小额星屑
+    if(Math.random() < ENCOUNTER_P){
+      const e=pick(ENCOUNTERS);
+      if(e.reward==='cos'){
+        const owned=(S.cosmetics||[]); const avail=availableEncounterCosmetics(owned);
+        if(avail.length){ const c=pick(avail); S.cosmetics.push(c.id); gained.push({type:'encounter', em:e.em, name:e.name, text:c.story||e.text, cosmetic:c, art:e.art}); logEvent('encounter', `${e.name}→装扮「${c.name}」`); }
+        else { const sv=6+Math.floor(Math.random()*8); S.star+=sv; S.starTotal+=sv; gained.push({type:'encounter', em:e.em, name:e.name, text:e.text, star:sv, art:e.art}); logEvent('encounter', `${e.name}→+${sv}星`); }
+      } else {
+        const sv=6+Math.floor(Math.random()*8); S.star+=sv; S.starTotal+=sv; gained.push({type:'encounter', em:e.em, name:e.name, text:e.text, star:sv, art:e.art}); logEvent('encounter', `${e.name}→+${sv}星`);
+      }
+    }
+    // L10 遇友（途中遇陌生旅友→加游戏内宠物ID好友）：精确同目的地 + MEET_P 稀有触发
+    // 原型无服务端：模拟"服务器按[窗口∩同D]匹配"，无真人时 synthetic 填充保底（等价后端 synthetic 快照，保证每次都有共游者）
+    if(!lost && Math.random() < MEET_P){
+      const m={ id:'m'+Date.now()+''+Math.floor(Math.random()*9999),
+        name:pick(MEET_NAMES), companion:pick(MEET_COMPANIONS),
+        destId:dest.id, destName:dest.name, destTag:(dest.tag||parseRegionName(dest)), destEm:dest.em };
+      const story=pick(MEET_STORIES)(m);
+      S.photos.push({ withName:m.name, withCompanion:m.companion, destId:dest.id, destName:dest.name, story, day:S.day });
+      gained.push({type:'meet', stranger:m, story});
+      logEvent('meet', `遇友·${m.name}@${dest.name}`);
+    }
+    // 藏宝图残片：独立掉率 + 保底（占用背包格，需有空位才拾取）
+    S.missedTreasure++;
+    dropMap=false;
+    if(S.missedTreasure>=M_TREASURE){ dropMap=true; S.missedTreasure=0; }
+    else if(Math.random()<TREASURE_P){ dropMap=true; S.missedTreasure=0; }
+    if(dropMap){ if(room>0){ S.tmapFrag++; room--; gained.push({type:'tmap'}); } else { bagFull=true; } }
+    // 新手保底：首次出游必得 1 张稀有；次日（新的一天）首次出游必得 1 张传说（均需有空位）
+    if(room>0 && !S.gotRare){
+      const cl=pick(OPEN_TIERS['rare']); fragAdd[cl]++; room--; S.gotRare=true; S.dayOfFirstTrip=S.day;
+      gained.push({type:'frag',cl,rarity:'rare',gift:true});
+    }
+    if(room>0 && !S.gotDay2Legend && S.dayOfFirstTrip && S.day!==S.dayOfFirstTrip){
+      const cl=pick(OPEN_TIERS['legend']); fragAdd[cl]++; room--; S.gotDay2Legend=true;
+      gained.push({type:'frag',cl,rarity:'legend',gift:true});
+    }
+  } else {
+    gained.push({type:'lost'});
+  }
+  // 应用：所有碎片（含节庆 f_*）直接并入账号共享残片池 S.frags，由单宠合成消费（单宠设计）
+  CLUSTER_KEYS.forEach(k=>{ S.frags[k]+=fragAdd[k]; });
+  // 背包容量保护（方案 A：满则停止拾取，绝不销毁残片）—— 见 md §5
+  if(bagFull){ toast('🎒 背包快满啦，部分残片留待下次旅程～去商店用星屑扩充'); }
+  S.star += Math.round((STAR_PER_TRIP + ed*2) * dr.mul) + (hasBell?2:0);
+  const _fragSum = CLUSTER_KEYS.reduce((a,k)=>a+fragAdd[k],0);
+  const _starDelta = Math.round((STAR_PER_TRIP + ed*2) * dr.mul) + (hasBell?2:0);
+  logEvent('return', `${dest.name} 深${ed} 星+${_starDelta}${lost?' 迷路空手':` 残片${_fragSum}${dropMap?' 藏宝图残片+1':''}`}`);
+  // 成就计数（Phase 2 成就类称号数据源）
+  S.fragTotal += _fragSum;
+  S.starTotal += _starDelta;
+  if(gained.some(g=>g.type==='frag'&&g.rarity==='legend')){ S.gotLegend=true; track('legend_obtain', {channel: dest.secret?'secret':(ed>=3?'deep':'shallow'), realm:dest.id, depth:ed}); }
+  if(draft.randomDest) S.randomTrips=(S.randomTrips||0)+1;
+  S.durCount[draft.dur]=(S.durCount[draft.dur]||0)+1;
+  // 等级经验（Phase 5：深度 + 产出越多，经验越高）
+  if(!lost){
+    const xpGain = 8 + ed*4 + Math.round((_fragSum||0)*0.5);
+    const beforeL = S.level;
+    S.xp += xpGain; S.level = levelFromXp(S.xp);
+    if(S.level>beforeL){ logEvent('level', `升级至 Lv${S.level}`); toast(`🎉 升级！现在是 Lv${S.level}`); }
+  }
+  // 合成检查
+  const synthMsg=trySynthesize(); checkTitles();
+  // 藏宝图合成
+  let mapMsg='';
+  if(S.tmapFrag>=SYNTH.treasure){ S.tmapFrag-=SYNTH.treasure; S.tmap++; mapMsg='🗺️ 集齐藏宝图！可在「互送」页使用解锁隐藏秘境。'; }
+  // 故事：优先本地故事，偶发全局感人故事池（md §3）
+  const story = (dest.stories && dest.stories.length && Math.random()<0.5) ? pick(dest.stories) : pick(STORIES).text;
+  S.onboard = S.onboard===0 ? 1 : S.onboard;
+  save();
+  document.getElementById('hStatus').textContent='在家休息中';
+  recordJournal(dest, story, gained, lost);
+  showReturn(dest, story, gained, synthMsg, mapMsg, lost);
+  render();
+}
+
+function rollVariant(){ const r=Math.random(); return r<0.65?'普通':r<0.90?'闪光':'羁绊'; }  // 变异权重：普通 65% / 闪光 25% / 羁绊 10%
+function varEm(v){ return v==='闪光'?'🌟':v==='羁绊'?'💞':''; }
+// 羁绊等级（P1b）：累计赠出次数决定，与好友关系深度挂钩
+function bondLevelCalc(){ const h=S.helped||0; return h>=120?4:h>=60?3:h>=30?2:h>=10?1:0; }
+// 合成（单宠设计）：消耗账号共享残片池 S.frags，按各簇 synth 阈值合成整件；
+// 整件带 普通/闪光/羁绊 变异标（P1a 变体图鉴），写入账号博物馆 S.items，账号级共享。
+function trySynthesize(){
+  let msgs=[];
+  CLUSTER_KEYS.forEach(key=>{
+    while((S.frags[key]||0) >= CLUSTERS[key].synth){
+      S.frags[key]-=CLUSTERS[key].synth;
+      const base=pick(CLUSTERS[key].items);
+      const variant=rollVariant();
+      const vtag=varEm(variant);
+      if(!S.items.find(i=>i.id===base.id && i.variant===variant)){
+        S.items.push({...base, variant});   // 克隆并打变异标（不污染全局 CLUSTERS 定义）
+        msgs.push(`✨ 合成「${base.name}」${vtag}：${base.story}`);
+      } else {
+        msgs.push(`✨ 合成「${base.name}」${vtag}（已有同款，化作星屑余温）`);
+      }
+      S.synthCount=(S.synthCount||0)+1;
+    }
+  });
+  return msgs;
+}
+// 称号检查：合成后 / 解锁秘境后触发
+function checkTitles(){
+  S.bondLevel=bondLevelCalc();   // P1b：保证羁绊称号基于最新赠礼数据
+  const news=[];
+  // 簇整件集齐称号（md §4.2 各簇）
+  const COLLECTOR_KEYS=['ceramic','fabric','compass','bell','coin','herb','stardust','tide','time','prism','primor'];
+  for(const k of COLLECTOR_KEYS){
+    if(S.titles.indexOf(k)>=0) continue;
+    const allItems=CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id));
+    if(allItems){ S.titles.push(k); news.push(TITLES[k]); audio.emit('game:fanfare'); }
+  }
+  // 秘境称号
+  if(S.secret && S.titles.indexOf('secret')<0){ S.titles.push('secret'); news.push(TITLES.secret); }
+  // 全收集称号
+  const hasAll=['ceramic','fabric','compass','bell','coin','herb','stardust','tide','time','prism','primor','secret'].every(t=>S.titles.indexOf(t)>=0);
+  if(hasAll && S.titles.indexOf('all')<0){ S.titles.push('all'); news.push(TITLES.all); }
+  // 统一 fn 驱动称号（探索/社交/成就/节气/节日，收集/秘境/全收集已在上方处理）
+  // 七十二候 Phase 5：称号等级——首次授予 Lv1；已拥有且跨轮回(自然年) fn 仍满足 → 升级 +1
+  const cyc=curCycle();
+  for(const k in TITLES){
+    const t=TITLES[k];
+    if(!t || !t.fn) continue;
+    if(!t.fn()) continue;
+    if(S.titles.indexOf(k)<0){            // 首次授予
+      S.titles.push(k); S.titleLv[k]=1; S.titleCycle[k]=cyc;
+      news.push(t); track('title_equip',{title_id:k, lv:1});
+    } else if(S.titleCycle[k]!==cyc){     // 轮回归来 → 升级
+      S.titleLv[k]=(S.titleLv[k]||1)+1; S.titleCycle[k]=cyc;
+      news.push(t); track('title_levelup',{title_id:k, to_lv:S.titleLv[k]});
+    }
+  }
+  // 通知新称号
+  news.forEach(t=>{ setTimeout(()=>toast(`⭐ 获得称号「${t.em} ${t.name}」`), 0); });
+  // L8 成就装扮：达成「万象图鉴」赠草编皇冠（纯表达奖励）
+  if(news.some(t=>t.name==='万象图鉴') && (S.cosmetics||[]).indexOf('crown')<0){ S.cosmetics.push('crown'); }
+  if(news.length) save();
+  return news;
+}
+
+let pendingMeet=null;   // 当前返回弹窗中的遇友对象（供 加友/不打扰 按钮读取）
+function meetAddFriend(){ audio.emit('game:gift');
+  const m=pendingMeet; pendingMeet=null;
+  if(!m) return;
+  if(isOwnPet(m.id)){ toast('不能加自己的其他角色为好友'); closeModals(); render(); return; }
+  S.friends=S.friends||{}; S.friendSince=S.friendSince||{};
+  if(S.friends[m.id]){ toast('已经是旅友啦 🐾'); closeModals(); render(); return; }
+  S.friends[m.id]={ name:m.name, companion:m.companion, since:S.day, met:true };
+  S.friendSince[m.id]=S.day;
+  S.metCount=(S.metCount||0)+1;
+  // v1.2 偶遇故事线：按 NPC 名追踪，再次偶遇时推进
+  S.meetArcs=m.name;
+  const arcCount=S.meetArcs[m.name]||0;
+  if(arcCount>0 && arcCount%3===0) toast('再次遇见 '+m.name+'：「你又来啦？上次的路还没走完呢……」');
+  else if(arcCount>0) toast('又见到 '+m.name+' 了！旅途中缘分真是奇妙 🐾');
+  S.meetArcs[m.name] = arcCount+1;
+  S.fission=(S.fission||0)+1;        // 发现式带新节点（K≥1 的有机来源）
+  logEvent('meet_friend', `加为好友·${m.name}`);
+  track('friend_add', {name:m.name, companion:m.companion});
+  checkTitles(); save();
+  toast(`已和 ${m.name} 成为旅友！去互送页互赠残片吧 🎁`);
+  closeModals(); render();
+}
+function meetSkip(){ audio.emit('game:back');
+  const m=pendingMeet; pendingMeet=null;
+  if(m) logEvent('meet_skip', `未加好友·${m.name}（合影已私藏手账）`);
+  closeModals(); render();
+}
+function showReturn(dest, story, gained, synthMsg, mapMsg, lost){
+  const m=document.getElementById('returnSheet');
+  let chips='';
+  gained.forEach(g=>{
+    if(g.type==='lost'){ audio.emit('game:toast'); chips+=`<span class="chip">${ic('lost')} 迷路了，这趟空手而归（下次换短途更稳）</span>`; }
+    else if(g.type==='tmap'){ audio.emit('game:frag'); chips+='<span class="chip tmap">🗺️ 藏宝图残片</span>'; }
+    else if(g.type==='whole'){ audio.emit('game:chime'); const nm=g.item?g.item.name:CLUSTERS[g.cl].name; const em=g.item?g.item.em:CLUSTERS[g.cl].em; chips+=`<span class="chip ${g.cl}">${em} 整件·${nm}</span>`; }
+    else if(g.type==='souvenir'){ audio.emit('game:souvenir'); const sa=souvenirArt({name:g.name}); chips+=`<span class="chip souv">${sa?`<img class="chip-art" src="${sa}" alt="">`:`${ic('pin')} ${g.em}`} ${g.name}（地点纪念品）</span>`; }
+    else if(g.type==='solar'){ audio.emit('game:chime'); const t=SOLAR_TERMS.find(x=>x.id===g.id); chips+=`<span class="chip solar">🌿 ${t?t.name:'节气'}·节气信物</span>`; }
+    else if(g.type==='hou'){ audio.emit('game:chime'); const term=SOLAR_TERMS.find(x=>x.id===g.id.split('_')[0]); const h=(term&&term.hou.find(x=>x.id===g.id))||{}; const hart=h.art||null; const hem=h.em||g.em||'🍃'; const hname=h.name||g.name||'七十二候'; chips+=`<span class="chip hou">${hart?`<img class="chip-art" src="${hart}" alt="">`:hem} 七十二候·${hname}</span>`; }
+    else if(g.type==='redpack'){ audio.emit('game:star'); chips+='<span class="chip redpack">🧧 新春红包</span>'; }
+    else if(g.type==='encounter'){ audio.emit('game:star'); const c=g.cosmetic?` · 获得装扮「${g.cosmetic.em}${g.cosmetic.name}」`:(g.star?` · +${g.star}星屑`:''); chips+=`<span class="chip enc">${g.art?`<img class="chip-art" src="${g.art}" alt="">`:g.em} 偶遇·${g.name}${c}</span>`; }
+    else if(g.type==='meet'){ /* 遇友以独立卡片呈现，不出 chip */ }
+    else { audio.emit('game:frag'); const rn=g.rarity==='legend'?'legend':g.rarity==='epic'?'epic':g.rarity==='rare'?'rare':'';
+      chips+=`<span class="chip ${rn}">${fragmentIcon(g.cl,'fragment-chip-art')} ${CLUSTERS[g.cl].name.replace('簇','')}残片${g.rarity?('·'+rarName(g.rarity)):''}</span>`; }
+  });
+  if(!gained.length) chips='<span class="chip">这次只带了照片回来</span>';
+  const rn=parseRegionName(dest);
+  let body=`<button type="button" class="closeX" aria-label="关闭旅行结算">${ic('x')}</button>
+    <div class="postcard">
+      <div class="pc-stamp">${postcardStamp()}</div>
+      <div class="pc-mark">已寄出</div>
+      <div class="pc-head">
+        ${biomeThumb(rn, dest.em, 'biome-place')}
+        <div class="loc">${dest.tag} · ${dest.name}</div>
+      </div>
+      <div class="pic">${companionHTML()}</div>
+      <div class="txt">${story}</div>
+    </div>
+    <div class="gain">${chips}</div>`;
+  // L10 遇友：双人合影 + 加友/不打扰（仅游戏内宠物ID好友，不涉微信）
+  const meet=gained.find(g=>g.type==='meet');
+  if(meet){
+    pendingMeet=meet.stranger;
+    body+=`<div class="card meet-card">
+      <div style="font-weight:700;margin-bottom:6px">🤝 途中遇见陌生旅友</div>
+      <div class="pic meet-pets">${companionHTML()}<span class="meet-amp">×</span><span class="meet-amp">${meet.stranger.companion.art?`<img style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle" src="${meet.stranger.companion.art}" alt="">`:meet.stranger.companion.em}</span></div>
+      <p class="muted" style="margin:6px 0">${meet.stranger.name} 的旅伴也在 ${meet.stranger.destName}。你们合了一张影，留在这趟旅程里。</p>
+      <button class="btn" onclick="meetAddFriend()">➕ 加为游戏内好友（可互送残片）</button>
+      <button class="btn ghost" onclick="meetSkip()">不打扰，合影留作回忆</button>
+    </div>`;
+  }
+  if(synthMsg.length) body+='<div class="card" style="background:#fff8ee">'+synthMsg.map(x=>`<p class="muted" style="margin:4px 0">${x}</p>`).join('')+'</div>';
+  if(mapMsg) body+=`<p class="muted" style="color:var(--accent2);font-weight:700">${mapMsg}</p>`;
+  body+=`<button class="btn" onclick="closeModals()">${ic('home')} 收下，回家整理</button>`;
+  m.innerHTML=body;
+  document.getElementById('returnMask').classList.add('on');
+}
+function rarName(r){return r==='legend'?'传说':r==='epic'?'史诗':r==='rare'?'稀有':r==='fest'?'节庆':'普通';}
+let modalReturnFocus=null;
+function closeModals(){
+  audio.emit('game:back');
+  document.getElementById('returnMask').classList.remove('on');
+  document.getElementById('genMask').classList.remove('on');
+  if(modalReturnFocus && document.contains(modalReturnFocus)) modalReturnFocus.focus();
+  modalReturnFocus=null;
+}
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape' && document.querySelector('.mask.on')){ ev.preventDefault(); closeModals(); }
+});
+document.querySelectorAll('.mask').forEach(function(mask){
+  new MutationObserver(function(){
+    if(mask.classList.contains('on')){
+      modalReturnFocus=document.activeElement;
+      const close=mask.querySelector('.closeX');
+      if(close) setTimeout(function(){ close.focus(); },0);
+    }
+  }).observe(mask,{attributes:true,attributeFilter:['class']});
+});
+
+/* ---------- 图鉴 ---------- */
+// 探索类称号当前进度文案（图鉴页展示用）
+function exploreProg(k){
+  switch(k){
+    case 'hz': return '浙江 '+(S.regionCount.r_zhejiang||0)+'/10';
+    case 'cd': return '四川 '+(S.regionCount.r_sichuan||0)+'/10';
+    case 'su': return '江苏 '+(S.regionCount.r_jiangsu||0)+'/10';
+    case 'xa': return '陕西 '+(S.regionCount.r_shaanxi||0)+'/10';
+    case 'dh': return '甘肃 '+(S.regionCount.r_gansu||0)+'/10';
+    case 'bj': return '北京 '+(S.regionCount.r_beijing||0)+'/10';
+    case 'shanhe': return '已踏遍 '+(REGIONS.filter(r=>r.domestic).filter(r=>(S.regionCount[r.id]||0)>=1).length)+'/'+DOMESTIC_REGION_TOTAL+' 省';
+    case 'wan': return '已踏遍 '+['r_zhejiang','r_sichuan','r_jiangsu','r_shaanxi','r_gansu','r_beijing'].filter(r=>(S.regionCount[r]||0)>=1).length+'/6 代表省';
+    case 'deep': return '深≥4 '+(S.deepTrips||0)+'/20';
+    case 'abyss': return '秘境 '+(S.secretTrips||0)+'/5';
+  }
+  return '';
+}
+// 所有 fn 驱动称号的分组展示（探索/社交/成就/节气/节日）
+// P5h 补全：原仅覆盖 78/109，漏 31 个（收藏家13/节日收藏家11/图鉴收集5/社交2）。现按语义归组，全部称号进度可见。
+const TITLE_GROUPS=[
+  {label:'探索', keys:EXPLORE_KEYS},
+  {label:'社交', keys:['helper','blessed','socialite','kfactor','gift_streak','bond_master','bond_heart','meeter','photographer']},
+  {label:'成就', keys:['synthMaster','rich','backpacker','thousand','loyal','lucky','diced','allround']},
+  {label:'赛季', keys:['season_starfall','season_awake','season_depth','season_veil','season_bloom','season_harvest']},
+  {label:'收藏家', keys:['ceramic','fabric','compass','bell','coin','stardust','time','primor','herb','tide','prism','secret','all']},
+  {label:'节气', keys:['suishi','sishi','jieqiMaster','shidai']},
+  {label:'七十二候', keys:['hou_lichun','hou_yushui','hou_jingzhe','hou_chunfen','hou_qingming','hou_guyu','hou_lixia','hou_xiaoman','hou_mangzhong','hou_xiazhi','hou_xiaoshu','hou_dashu','hou_liqiu','hou_chushu','hou_bailu','hou_qiufen','hou_hanlu','hou_shuangjiang','hou_lidong','hou_xiaoxue','hou_daxue','hou_dongzhi','hou_xiaohan','hou_dahan','houApprentice','houScholar','houMaster']},
+  {label:'节日', keys:['shou','deng','long','yue','deng3','qixi2','laba']},
+  {label:'节日收藏家', keys:['f_spring','f_duanwu','f_zhongqiu','f_yuanxiao','f_qingming','f_qixi','f_chongyang','f_dongzhi','f_laba','f_crossyear','year_fest']},
+  {label:'图鉴收集', keys:['perfect_shiny','perfect_bond','perfect_all','dress_up','loremaster']},
+  {label:'等级', keys:['lv1','lv3','lv5','lv10','lv20','lv30']},
+];
+function festProg(id){ const done=(S.festivals||[]).indexOf(id)>=0; const a=isFestival(id); return done?'已完成 ✅':(a?'进行中…':'未开始'); }
+function prog(k){
+  const t=TITLES[k]; if(!t||!t.fn) return '';
+  switch(k){
+    case 'hz': return '浙江 '+(S.regionCount.r_zhejiang||0)+'/10';
+    case 'cd': return '四川 '+(S.regionCount.r_sichuan||0)+'/10';
+    case 'su': return '江苏 '+(S.regionCount.r_jiangsu||0)+'/10';
+    case 'xa': return '陕西 '+(S.regionCount.r_shaanxi||0)+'/10';
+    case 'dh': return '甘肃 '+(S.regionCount.r_gansu||0)+'/10';
+    case 'bj': return '北京 '+(S.regionCount.r_beijing||0)+'/10';
+    case 'shanhe': return '已踏遍 '+(REGIONS.filter(r=>r.domestic).filter(r=>(S.regionCount[r.id]||0)>=1).length)+'/'+DOMESTIC_REGION_TOTAL+' 省';
+    case 'wan': return '已踏遍 '+['r_zhejiang','r_sichuan','r_jiangsu','r_shaanxi','r_gansu','r_beijing'].filter(r=>(S.regionCount[r]||0)>=1).length+'/6 代表省';
+    case 'deep': return '深≥4 '+(S.deepTrips||0)+'/20';
+    case 'abyss': return '秘境 '+(S.secretTrips||0)+'/5';
+    case 'helper': return S.helped+'/30';
+    case 'blessed': return S.helpedBy+'/20';
+    case 'socialite': return ((S.helped||0)+(S.helpedBy||0))+'/50';
+    case 'kfactor': return (S.fission||0)+'/5';
+    case 'synthMaster': return (S.synthCount||0)+'/20';
+    case 'rich': return (S.starTotal||0)+'/5000';
+    case 'backpacker': return (S.expandCount||0)+'/5';
+    case 'thousand': return (S.fragTotal||0)+'/1000';
+    case 'loyal': return (S.loginDays||0)+'/30';
+    case 'lucky': return S.gotLegend?'已达成 ✅':'未触发';
+    case 'diced': return (S.randomTrips||0)+'/20';
+    case 'allround': return ['2','4','8','12'].filter(x=>(S.durCount[x]||0)>=5).length+'/4 时长';
+    case 'suishi': return (S.solarTerms||[]).length+'/8';
+    case 'sishi': return (S.solarTerms||[]).length+'/16';
+    case 'jieqiMaster': return (S.solarTerms||[]).length+'/24';
+    case 'houApprentice': return (S.houTerms||[]).length+'/24';
+    case 'houScholar': return (S.houTerms||[]).length+'/48';
+    case 'houMaster': return ((S.solarTerms||[]).length>=24 && (S.houTerms||[]).length>=72)?'已达成 ✅':((S.solarTerms||[]).length+'/24 · 候'+(S.houTerms||[]).length+'/72');
+    case 'shidai': return ((S.solarTerms||[]).length>=24?'节气✅':'节气'+(S.solarTerms||[]).length+'/24')+' · '+((S.festivals||[]).length>0?'节日✅':'节日0');
+    case 'shou': return festProg('spring');
+    case 'deng': return festProg('yuanxiao');
+    case 'long': return festProg('duanwu');
+    case 'yue': return festProg('zhongqiu');
+    case 'deng3': return festProg('chongyang');
+    case 'qixi2': return festProg('qixi');
+    case 'laba': return festProg('laba');
+    case 'lv1': return 'Lv'+S.level+'（'+(S.xp||0)+' XP）';
+    case 'lv3': return 'Lv'+(S.level||0)+'/3 · '+(S.xp||0)+' XP';
+    case 'lv5': return 'Lv'+(S.level||0)+'/5';
+    case 'lv10': return 'Lv'+(S.level||0)+'/10';
+    case 'lv20': return 'Lv'+(S.level||0)+'/20';
+    case 'lv30': return 'Lv'+(S.level||0)+'/30';
+    case 'season_starfall': return '霜序秘境 '+(SEASONS.find(s=>s.id==='frost').secrets.filter(id=>S.hiddenUnlocked[id]).length)+'/3';
+    case 'season_awake': return '融春秘境 '+(SEASONS.find(s=>s.id==='thaw').secrets.filter(id=>S.hiddenUnlocked[id]).length)+'/4';
+    case 'season_depth': return '炎夏秘境 '+(SEASONS.find(s=>s.id==='scorch').secrets.filter(id=>S.hiddenUnlocked[id]).length)+'/3';
+    case 'season_veil': return '岁暮秘境 '+(SEASONS.find(s=>s.id==='yearend').secrets.filter(id=>S.hiddenUnlocked[id]).length)+'/4';
+    case 'season_bloom': return '花月秘境 '+(SEASONS.find(s=>s.id==='bloom').secrets.filter(id=>S.hiddenUnlocked[id]).length)+'/2';
+    case 'season_harvest': return '金秋秘境 '+(SEASONS.find(s=>s.id==='harvest').secrets.filter(id=>S.hiddenUnlocked[id]).length)+'/3';
+  }
+  return '';
+}
+
+// —— P0 呈现强化：完美度 / 变体缺口可视化 / 节庆倒计时（零成本把已有深度亮出来）——
+function perfectionStats(){
+  let total=0, got=0, normal=0, shiny=0, bond=0;
+  CLUSTER_KEYS.filter(k=>!CLUSTERS[k].festival).forEach(k=>{
+    CLUSTERS[k].items.forEach(it=>{
+      total+=3;
+      if(S.items.some(i=>i.id===it.id && i.variant==='普通')){ got++; normal++; }
+      if(S.items.some(i=>i.id===it.id && i.variant==='闪光')){ got++; shiny++; }
+      if(S.items.some(i=>i.id===it.id && i.variant==='羁绊')){ got++; bond++; }
+    });
+  });
+  return {total, got, normal, shiny, bond, pct: total? Math.round(got/total*100):0};
+}
+function variantMatrixHTML(){
+  const engaged=CLUSTER_KEYS.filter(k=>!CLUSTERS[k].festival && (S.frags[k]>0 || CLUSTERS[k].items.some(it=>S.items.some(i=>i.id===it.id))));
+  if(!engaged.length) return '';
+  let h='<div class="card codex-card collapsed" data-codexsec="variant"><h3>🌈 变体图鉴（普通 / 闪光🌟 / 羁绊💞）</h3>';
+  h+='<p class="muted">每种整件可有三种形态。集齐「闪光」「羁绊」是长线追求——灰色格即你还缺的变体。</p>';
+  engaged.forEach(k=>{
+    const c=CLUSTERS[k]; const items=c.items;
+    const cnt=items.filter(it=>S.items.some(i=>i.id===it.id)).length;
+    const sh=items.filter(it=>S.items.some(i=>i.id===it.id && i.variant==='闪光')).length;
+    const bo=items.filter(it=>S.items.some(i=>i.id===it.id && i.variant==='羁绊')).length;
+    h+=`<div style="margin:10px 0;padding:8px;border:1px solid var(--line);border-radius:10px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">${fragmentIcon(k,'fragment-label-art')} ${c.name} · 整件 ${cnt}/${items.length} · 闪光 ${sh}/${items.length} · 羁绊 ${bo}/${items.length}</div>`;
+    items.forEach(it=>{
+      const hasN=S.items.some(i=>i.id===it.id && i.variant==='普通');
+      const hasS=S.items.some(i=>i.id===it.id && i.variant==='闪光');
+      const hasB=S.items.some(i=>i.id===it.id && i.variant==='羁绊');
+      const cell=(ok,vtag)=>`<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:22px;margin-left:4px;border-radius:6px;font-size:13px;${ok?'background:var(--bg);border:1px solid var(--accent)':'background:transparent;border:1px dashed var(--line);opacity:.4'}">${ok?(it.em+vtag):'·'}</span>`;
+      h+=`<div style="display:flex;align-items:center;font-size:12px;margin:3px 0"><span style="width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.em} ${it.name}</span>${cell(hasN,'')}${cell(hasS,'🌟')}${cell(hasB,'💞')}</div>`;
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+function daysUntil(mo,da){
+  const t=today(); const y=t.getFullYear();
+  let tg=new Date(y,mo-1,da);
+  if(tg<t) tg=new Date(y+1,mo-1,da);
+  return Math.max(0,Math.round((tg-t)/86400000));
+}
+function nextFestivalInfo(){
+  let best=null;
+  FESTIVALS.forEach(f=>{
+    const active=isFestival(f.id);
+    const days=active? daysUntil(f.e,f.d2) : daysUntil(f.m,f.d);
+    const score=active? -1 : days;
+    if(!best || score<best.score) best={id:f.id,name:f.name,em:f.em,active,days,score};
+  });
+  return best;
+}
+function festivalCountdownHTML(){
+  const nf=nextFestivalInfo(); if(!nf) return '';
+  return nf.active
+    ? `<div class="reminder">${ic("lantern")} <b>${nf.name}</b> 正在进行 · 还剩约 <b>${nf.days}</b> 天！抓紧出游集齐限定整件，错过要等明年 🐉</div>`
+    : `<div class="reminder">⏳ 下一个节庆：<b>${nf.em} ${nf.name}</b> 还有约 <b>${nf.days}</b> 天 — 节庆限定整件过期等一年，到时候记得出游 🧧</div>`;
+}
+
+// —— P1 手账明信片 + 家园装饰（单宠 · 零/轻操作留存）——
+function seasonOf(m){ if(m>=3&&m<=5) return '春'; if(m>=6&&m<=8) return '夏'; if(m>=9&&m<=11) return '秋'; return '冬'; }
+function recordJournal(dest, story, gained, lost){
+  const rn=parseRegionName(dest);
+  const term=getCurrentTerm();
+  const season=seasonOf(term? term.m : (today().getMonth()+1));
+  const items=(gained||[]).filter(g=>g.type==='whole'||g.type==='souvenir'||g.type==='solar').map(g=>{
+    if(g.type==='whole') return {type:'whole',em:g.item?g.item.em:CLUSTERS[g.cl].em, name:g.item?g.item.name:CLUSTERS[g.cl].name, art:g.item&&g.item.art};
+    if(g.type==='souvenir') return {type:'souvenir',em:g.em, name:g.name, art:souvenirArt({name:g.name})};
+    if(g.type==='solar'){ const t=SOLAR_TERMS.find(x=>x.id===g.id); return {type:'solar',em:'🌿', name:(t?t.name:'节气')+'信物', art:t&&t.art}; }
+    return null;
+  }).filter(Boolean);
+  const af=activeFestivals();
+  S.journal=S.journal||[];
+  S.journal.push({ id:`j_${Date.now().toString(36)}_${S.journal.length}`, day:S.day, destId:dest.id, destName:dest.name, destTag:dest.tag||rn, destEm:dest.em,
+    story, season, items, festival: af.length?af[0]:null, solarTerm: term?term.id:null, lost:!!lost });
+  // 遇友合影（私藏手账，双人 postcard；即便未加友也留存）
+  const meet=(gained||[]).find(g=>g.type==='meet');
+  if(meet){
+    S.journal.push({ id:`j_${Date.now().toString(36)}_${S.journal.length}`, day:S.day, destId:dest.id, destName:dest.name, destTag:dest.tag||rn, destEm:dest.em,
+      story: meet.story, season, items:[], festival: af.length?af[0]:null, solarTerm: term?term.id:null, lost:false, meet: meet.stranger });
+  }
+  if(S.journal.length>200) S.journal=S.journal.slice(-200);
+}
+function journalItemArt(it){
+  if(it.art) return it.art;
+  if(COMPLETE_SOUVENIR_NAMES.indexOf(it.name)>=0) return souvenirArt({name:it.name});
+  const whole=Object.values(CLUSTERS).flatMap(c=>c.items).find(x=>x.name===it.name||x.id===it.name);
+  if(whole&&whole.art) return whole.art;
+  const termName=String(it.name||'').replace('信物',''); const term=SOLAR_TERMS.find(x=>x.name===termName);
+  return term&&term.art;
+}
+function journalChipHTML(it){ const art=journalItemArt(it); return `<span class="chip">${art?`<img class="chip-art" src="${art}" alt="">`:it.em} ${it.name}</span>`; }
+function postcardStamp(){ return `<span class="stamp-ring">${ic('paw')}</span><span class="stamp-bars"></span>`; }
+function journalRegionPopoverHTML(r,align){
+  const entries=(S.journal||[]).filter(e=>{
+    const dest=DEST.find(d=>d.id===e.destId);
+    return dest&&dest.regionId===r.id;
+  }).sort((a,b)=>b.day-a.day);
+  const trips=(S.regionCount&&S.regionCount[r.id])||0;
+  if(entries.length){
+    const e=entries[0];
+    const chips=(e.items||[]).map(journalChipHTML).join('');
+    return `<div class="journal-atlas-popover ${align}" role="dialog" aria-label="${r.name}旅行详情"><button class="atlas-close" type="button" data-journal-atlas-close aria-label="关闭地区详情">×</button><div class="atlas-detail-head">${journalPlaceThumb(e)}<span>${r.name} · 最近一篇旅行手账</span></div><p>第 ${e.day} 天 · ${e.destName}：${e.story}</p><div class="atlas-chips"><span class="chip">${ic('map')} 已旅行 ${trips} 次</span>${chips}</div></div>`;
+  }
+  const dest=DEST.find(d=>d.regionId===r.id);
+  const hint=dest&&dest.stories&&dest.stories[0]?dest.stories[0]:`下一次出发，去认识 ${r.name} 的风景与故事。`;
+  return `<div class="journal-atlas-popover ${align}" role="dialog" aria-label="${r.name}旅行详情"><button class="atlas-close" type="button" data-journal-atlas-close aria-label="关闭地区详情">×</button><div class="atlas-detail-head">${r.art?`<img class="biome-place" src="${r.art}" alt="${r.name}">`:`<span class="atlas-em">${r.em||'🗺️'}</span>`}<span>${r.name} · 待启程</span></div><p>${trips?`曾到访 ${trips} 次，但早期手账已归档。再去一次，让它补上一页新的见闻。`:hint}</p></div>`;
+}
+function journalRegionAtlasHTML(){
+  const all=REGIONS.slice().sort((a,b)=>Number(b.domestic)-Number(a.domestic)||a.name.localeCompare(b.name,'zh-CN'));
+  const reached=all.filter(r=>(S.regionCount&&S.regionCount[r.id])>0).length;
+  const tiles=all.map((r,index)=>{
+    const count=(S.regionCount&&S.regionCount[r.id])||0;
+    const visited=count>0;
+    const selected=journalAtlasSelected===r.id;
+    const align=index%4===0?'align-start':index%4===3?'align-end':'';
+    const thumb=r.art?`<img src="${r.art}" alt="${r.name}" onerror="this.outerHTML='<span class=&quot;atlas-em&quot;>${r.em||'🗺️'}</span>'">`:`<span class="atlas-em">${r.em||'🗺️'}</span>`;
+    return `<div class="journal-region-wrap ${selected?'selected':''}"><button class="journal-region ${visited?'on':'locked'} ${selected?'selected':''}" type="button" data-journal-region="${r.id}" title="${r.name}${visited?` · 已旅行 ${count} 次`:' · 尚未抵达'}" aria-pressed="${selected}">${thumb}<b>${r.name}</b><span>${visited?`已达 ${count}`:'待启程'}</span></button>${selected?journalRegionPopoverHTML(r,align):''}</div>`;
+  }).join('');
+  return `<details class="journal-atlas" ${journalAtlasOpen?'open':''}><summary><span>${ic('map')} 地域旅行册</span><b>${reached}/${all.length}</b></summary><p>点按地区图标，即可在图标上方查看它的旅行手账、纪念物或待启程故事。</p><div class="journal-atlas-grid">${tiles}</div></details>`;
+}
+function journalCardHTML(e){
+  const chips=(e.items||[]).map(journalChipHTML).join('');
+  const extra=(e.festival?`<span class="chip fest">${ic("lantern")} 节庆</span>`:'')+(e.solarTerm?`<span class="chip solar">${ic("leaf")} 节气</span>`:'')+(e.lost?`<span class="chip">${ic('lost')} 迷路了，空手而归</span>`:'');
+  const framed=(S.framedJournal||[]).indexOf(e.id)>=0;
+  const frameButton=framed?'<span class="chip" style="background:#fff2c9;color:#a16b1a">🖼️ 已装裱</span>':`<button class="btn ghost" style="margin-top:8px;font-size:12px" data-frame-journal="${e.id}">🖼️ 装裱此页 · ${JOURNAL_FRAME_COST}⭐</button>`;
+  // 遇友合影：双宠同框，仅私藏手账（无"寄给好友"分享按钮）
+  if(e.meet){
+    const m=e.meet;
+    return `<div class="postcard" style="position:relative;margin-bottom:12px;border-color:var(--accent)">
+      <div class="pc-stamp">${postcardStamp()}</div>
+      <div class="pc-mark">偶遇合影</div>
+      <div class="pc-head">${journalPlaceThumb(e)}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
+      <div class="pic meet-pets">${journalCompanionHTML()}<span class="meet-amp">×</span><span class="meet-amp">${cmp(m.companion)}</span></div>
+      <div class="txt">${e.story}</div>
+      <div class="gain" style="margin-top:8px"><span class="chip enc">${ic('social')} 偶遇旅友 ${m.name}</span></div>
+    </div>`;
+  }
+  return `<div class="postcard ${framed?'framed':''}" style="position:relative;margin-bottom:12px">
+    <div class="pc-stamp">${postcardStamp()}</div>
+    <div class="pc-head">${journalPlaceThumb(e)}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
+    <div class="pic">${journalCompanionHTML()}</div>
+    <div class="txt">${e.story}</div>
+    ${(chips||extra)?`<div class="gain" style="margin-top:8px">${chips}${extra}</div>`:''}
+    <button class="btn ghost" style="margin-top:8px;font-size:12px" onclick="shareFriend()">${ic('social')} 寄给好友</button>${frameButton}
+  </div>`;
+}
+function journalHTML(){
+  const J=S.journal||[];
+  let h='<div class="card"><h3>'+ic('journal')+' 旅行手账（'+J.length+' 篇）</h3>';
+  h+='<p class="muted">每次出游都会自动记一篇——目的地、故事、带回的小东西。翻翻旧旅程，或把喜欢的明信片寄给好友。</p>';
+  h+=journalRegionAtlasHTML();
+  if(!J.length){ h+='<p class="muted">还没有手账记录——出发去旅行吧，它会把见闻写下来寄给你。</p></div>'; return h; }
+  const recentSeason=J[J.length-1].season;
+  ['春','夏','秋','冬'].forEach(se=>{
+    const list=J.filter(e=>e.season===se);
+    if(!list.length) return;
+    h+=`<details class="journal-volume" ${se===recentSeason?'open':''}><summary><span>${ic("flower")} ${se}之卷（${list.length} 篇）</span></summary><div class="journal-volume-body">`;
+    list.slice().reverse().forEach(e=>h+=journalCardHTML(e));
+    h+='</div></details>';
+  });
+  h+='</div>';
+  return h;
+}
+function homeProsperity(){
+  return (S.items||[]).length*2 + (S.souvenirs||[]).length*3 + (S.festivals||[]).length*5 + (S.solarTerms||[]).length*2 + (S.houTerms||[]).length*1;
+}
+function selectHomeTheme(id){
+  const theme=HOME_THEME_BY_ID[id];
+  if(!theme) return;
+  const owned=(S.homeThemes||[]).indexOf(id)>=0;
+  if(owned){ S.activeHomeTheme=id; audio.emit('game:click'); save(); render(); toast(`小窝已换成「${theme.name}」`); return; }
+  if(S.star<theme.cost){ toast(`星屑不足，需要 ${theme.cost}⭐`); return; }
+  S.star-=theme.cost; S.homeThemes=[...(S.homeThemes||[]),id]; S.activeHomeTheme=id;
+  track('economy_home_theme_purchase',{theme:id,cost:theme.cost}); audio.emit('game:unlock'); save(); render(); toast(`小窝添置了「${theme.name}」`);
+}
+function frameJournal(id){
+  if(!id||(S.framedJournal||[]).indexOf(id)>=0) return;
+  if(!(S.journal||[]).some(e=>e.id===id)){ toast('这页手账已经归档了'); return; }
+  if(S.star<JOURNAL_FRAME_COST){ toast(`星屑不足，需要 ${JOURNAL_FRAME_COST}⭐`); return; }
+  S.star-=JOURNAL_FRAME_COST; S.framedJournal=[...(S.framedJournal||[]),id];
+  track('economy_journal_frame',{cost:JOURNAL_FRAME_COST}); audio.emit('game:unlock'); save(); render(); toast('这页旅行记忆已经装裱好啦 🖼️');
+}
+function homeShowcaseHTML(){
+  // 纪念品优先采用已配套的道具图，避免设备缺少 emoji 字形时显示为带斜线的占位框。
+  const souv=homeSouvenirSelection().map(s=>{ const art=souvenirArt(s); return `<button class="show-tile showcase-tile" type="button" data-showcase="souvenir" data-showcase-id="${s.name}" title="查看${s.name}的旅行故事" aria-label="查看纪念品${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</button>`; });
+  // 小窝固定陈列 14 件独立纪念品；整件及其变体保留在图鉴中，避免泛化图重复堆放。
+  const all=souv;
+  if(!all.length) return '<span class="muted">架子还空着——去旅行，把纪念品带回来摆上吧。</span>';
+  return all.join('');
+}
+function showShowcaseDetail(kind,id,variantKey){
+  const isSouvenir=kind==='souvenir';
+  const entry=isSouvenir?(S.souvenirs||[]).find(s=>s.name===id):(S.items||[]).find(it=>it.id===id&&it.variant===(variantKey||'普通'));
+  if(!entry) return;
+  const dest=isSouvenir?DEST.find(d=>d.souvenir&&d.souvenir.name===entry.name):null;
+  const cluster=!isSouvenir?Object.values(CLUSTERS).find(c=>c.items.some(it=>it.id===entry.id)):null;
+  const art=isSouvenir?souvenirArt(entry):entry.art;
+  const variant=entry.variant||'普通';
+  const variantText=variant==='闪光'?'闪光：在旅行中偶遇的稀有光泽形态。':variant==='羁绊'?'羁绊：与旅伴共同经历后留存的特别形态。':'普通：这件旅行收获最初的样子。';
+  const story=(isSouvenir?souvenirStoryOf(entry):storyOf(entry))[0]||entry.story||'它安静地留在小窝里，提醒着每一次出发。';
+  const type=isSouvenir?'地点纪念品':'旅行整件';
+  const source=isSouvenir?`获得地点：${dest?`${dest.name} · ${dest.tag||'旅行目的地'}`:'一次特别的旅行'}`:`所属收藏：${cluster?cluster.name:'旅行收藏'} · 集齐对应残片后合成`;
+  const visual=art?`<img class="showcase-detail-art" src="${art}" alt="${entry.name}" onerror="this.outerHTML='<div style=&quot;font-size:52px;text-align:center;margin:8px 0&quot;>${entry.em||'🎁'}</div>'">`:`<div style="font-size:52px;text-align:center;margin:8px 0">${entry.em||'🎁'}</div>`;
+  document.getElementById('genSheet').innerHTML=`<button type="button" class="closeX" aria-label="关闭纪念品详情">×</button>${visual}<h3 style="text-align:center;margin:0 24px 6px">${entry.name}</h3><p class="muted" style="text-align:center;margin:0 0 12px">${type}${isSouvenir?'':' · '+variant}</p><div class="card" style="margin:0 0 10px;background:#fff8ee"><b>${source}</b><p class="muted" style="margin:7px 0 0;line-height:1.65">${story}</p></div>${isSouvenir?'':`<p class="muted" style="margin:0 0 10px">${varEm(variant)} ${variantText}</p>`}<button class="btn ghost" onclick="closeModals()">收好这段回忆</button>`;
+  document.getElementById('genMask').classList.add('on');
+}
+
+// —— v1.2 故事书：整件/纪念品多章叙事（章节导航 + 阅读进度）——
+function codexTabs(){
+  return `<div class="codex-tabs" style="display:flex;gap:4px;margin-bottom:12px">
+    <button class="btn ${codexTab==='codex'?'on':'ghost'}" data-codemapl="codex" style="flex:1">🧩 图鉴</button>
+    <button class="btn ${codexTab==='storybook'?'on':'ghost'}" data-codemapl="storybook" style="flex:1">📖 故事</button>
+  </div>`;
+}
+function sbChapterHTML(p,i,n){ return `<p>${p}</p>`; }
+function storyEntryHTML(id, name, icon, story, isRead, isLegend){
+  const n=story.length; const cur=SB_CH[id]||0;
+  const body = n>1
+    ? `<div class="sb-chapter-view" id="sbv-${id}">${sbChapterHTML(story[cur],cur,n)}</div>
+       <div class="sb-nav">
+         <button data-sbprev="${id}" ${cur<=0?'disabled':''}>‹</button>
+         <div class="sb-dots">${story.map((_,i)=>`<i class="${i===cur?'on':''}"></i>`).join('')}</div>
+         <span class="sb-label" id="sbl-${id}">第 ${cur+1}/${n} 章</span>
+         <button data-sbnext="${id}" ${cur>=n-1?'disabled':''}>›</button>
+       </div>`
+    : `<div class="sb-chapter-view">${sbChapterHTML(story[0],0,n)}</div>`;
+  return `<div class="story-entry ${isRead?'read':'unread'} ${SB_OPEN[id]?'open':''}">
+    <div class="story-head" data-story="${id}">
+      <div class="s-ic">${icon}</div>
+      <div class="s-name">${name}${isLegend?' <span class="chip legend" style="font-size:9px;padding:1px 4px">渠道独占</span>':''}</div>
+      <div class="s-stat">${!isRead?'<span class="s-tag-new">新</span>':''}<span>${isRead?'✅':'📖'}</span><span class="s-chev">▶</span></div>
+    </div>
+    <div class="story-body" id="sb-${id}"><div class="s-inner">${body}</div></div>
+  </div>`;
+}
+function storybookHTML(){
+  const itemsWithStory=S.items.filter(it=>!it.festival);
+  const souvs=S.souvenirs||[];
+  const total=itemsWithStory.length+souvs.length;
+  const read=S.storybook||[];
+  const readCount=read.filter(id=>itemsWithStory.some(it=>it.id===id)||souvs.some(s=>s.name===id)).length;
+  let h='<div class="card"><h3>📖 故事书</h3>';
+  h+=codexTabs();
+  const pct=total?Math.round(readCount/total*100):0;
+  h+=`<div class="sb-progress"><span>📖 阅读进度</span><div class="bar"><i style="width:${pct}%"></i></div><span class="pct">${pct}%</span><span style="color:var(--soft)">（${readCount}/${total}）</span></div>`;
+  if(total && readCount===total) h+='<div class="sb-done">🎉 所有藏品的故事都已读完——星球的回音，你都听见了。</div>';
+  h+='<p class="muted">每一件收集物背后都有一段小故事——点开看看，也许能听见它们在旅途里的回音。</p>';
+  if(!total){ h+='<p class="muted">还没有解锁任何藏品的故事——去旅行吧，每结识一件新藏品都会带来一段小故事。</p></div>'; return h; }
+  if(itemsWithStory.length){
+    const read1=read.filter(id=>itemsWithStory.some(it=>it.id===id)).length;
+    h+='<details class="story-category" open><summary><span>🏺 整件故事 <span class="story-count">（'+read1+'/'+itemsWithStory.length+' 已读）</span></span></summary><div class="story-category-body">';
+    itemsWithStory.forEach(it=>{
+      const isLegend=it.id==='唐三彩'||it.id==='青铜剑'||it.id==='圣甲虫护符'||it.id==='黑绘陶罐'||it.id==='秦俑'||it.id==='影青瓷盏'||
+        it.id==='先民信物'||it.id==='古境信物'||it.id==='部落图腾'||it.id==='定海珠'||it.id==='镇魂钟';
+      h+=storyEntryHTML(it.id, it.name, itemIcon(it), storyOf(it), read.indexOf(it.id)>=0, isLegend);
+    });
+    h+='</div></details>';
+  }
+  if(souvs.length){
+    const read2=read.filter(id=>souvs.some(s=>s.name===id)).length;
+    h+='<details class="story-category"><summary><span>📍 纪念品故事 <span class="story-count">（'+read2+'/'+souvs.length+' 已读）</span></span></summary><div class="story-category-body">';
+    souvs.forEach(s=>{ const sa=souvenirArt(s); h+=storyEntryHTML(s.name, s.name, sa?`<img src="${sa}" alt="">`:s.em, souvenirStoryOf(s), read.indexOf(s.name)>=0, false); });
+    h+='</div></details>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function codexHTML(){
+  if(codexTab==='storybook') return storybookHTML();
+  let h='';
+  h+=codexTabs();
+  h+='<div class="codex-toolbar"><button class="btn ghost" data-codexall>展开/折叠全部</button></div>';
+  h+='<div class="card codex-card" data-codexsec="frags"><h3>🧩 残片收集（已接触 '+CLUSTER_KEYS.filter(k=>S.frags[k]>0 && !CLUSTERS[k].festival).length+' 种）</h3>';
+  h+=`<p class="muted">残片集齐即可合成整件（普通/稀有/史诗 5 张，藏宝图 3 张）。深度越深，越容易掉稀有以上。带回第一片残片后，对应的簇会显示在这里。</p>`;
+  const activeClusters=CLUSTER_KEYS.filter(k=>S.frags[k]>0 && !CLUSTERS[k].festival);
+  if(!activeClusters.length && !(S.tmapFrag>0||S.tmap>0)) h+='<p class="muted">还没收集到任何残片——出发去探索吧。</p>';
+  activeClusters.forEach(key=>{
+    const c=CLUSTERS[key]; const have=S.frags[key];
+    h+=`<div class="codex-item"><div class="em">${fragmentIcon(key)}</div><div style="flex:1">
+      <div class="t">${c.name} <span style="font-size:11px;color:var(--soft)">${rarName(c.rarity)}</span></div>
+      <div class="s">持有 ${have} / ${c.synth} 张</div>
+      <div class="bar"><i style="width:${Math.min(100,have/c.synth*100)}%"></i></div></div></div>`;
+  });
+  // 藏宝图进度（有进度才显示，Phase：未获取隐藏）
+  if(S.tmapFrag>0 || S.tmap>0){
+    h+=`<div class="codex-item"><div class="em">${ic("map")}</div><div style="flex:1">
+      <div class="t">藏宝图（可用钥匙）</div>
+      <div class="s">残片 ${S.tmapFrag} / 3 · 已合成 ${S.tmap} 张 · 保底计数 ${S.missedTreasure}/${M_TREASURE}</div>
+      <div class="bar"><i style="width:${Math.min(100,S.tmapFrag/3*100)}%"></i></div></div></div>`;
+  }
+  h+='</div>';
+  h+='<div class="card codex-card" data-codexsec="items"><h3>✨ 已合成整件（'+S.items.length+'）</h3>';
+  if(!S.items.length) h+='<p class="muted">攒齐残片即可在这里看到它们背后的故事。</p>';
+  S.items.filter(it=>!it.festival).forEach(it=>{
+    const isLegend=it.id==='唐三彩'||it.id==='青铜剑'||it.id==='圣甲虫护符'||it.id==='黑绘陶罐'||it.id==='秦俑'||it.id==='影青瓷盏'||
+      it.id==='先民信物'||it.id==='古境信物'||it.id==='部落图腾'||it.id==='定海珠'||it.id==='镇魂钟';
+    h+=`<div class="codex-item"><div class="item-visual">${itemIcon(it)}${it.variant?`<span class="variant-mark" aria-label="${it.variant}">${varEm(it.variant)}</span>`:''}</div><div><div class="t">${it.name}${it.variant?` <span style="font-size:11px;color:var(--soft)">${it.variant}</span>`:''}${isLegend?' <span class="chip legend" style="font-size:10px;padding:1px 5px;vertical-align:middle">渠道独占</span>':''}</div><div class="s">${it.story}</div></div></div>`;
+  });
+  h+='</div>';
+  // P0 呈现强化：图鉴完美度总览 + 变体缺口可视化
+  const ps=perfectionStats();
+  h+=`<div class="card codex-card" data-codexsec="perfect"><h3>${ic("crystal")} 图鉴完美度 ${ps.pct}%</h3>
+    <p class="muted">所有非节庆整件的「普通 / 闪光 / 羁绊」三种形态合计 ${ps.total} 格。集齐闪光与羁绊是长线追求。</p>
+    <div class="bar" style="height:14px"><i style="width:${ps.pct}%"></i></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--soft)">
+      <span>普通 ${ps.normal}/${ps.total}</span><span>🌟 闪光 ${ps.shiny}/${ps.total}</span><span>💞 羁绊 ${ps.bond}/${ps.total}</span>
+    </div></div>`;
+  h+=variantMatrixHTML();
+  // ③ 秘境时代分组主题化：按时代分组 + 时代色/图标 + 每时代解锁进度
+  const secretTotal=HIDDEN.length;
+  const secretGot=HIDDEN.filter(d=>S.hiddenUnlocked[d.id]).length;
+  h+=`<div class="card codex-card" data-codexsec="secret"><h3>${ic("star")} 隐藏秘境 · 时代图鉴（${secretGot}/${secretTotal}）</h3>
+    <p class="muted">秘境按「时代」分组，每个时代有独特色彩与图标。解锁的秘境亮起并显示 CG 图标；未解锁的留作剪影，等待你在对应季节用藏宝图开启。</p>`;
+  Object.keys(ERA_META).forEach(era=>{
+    const em=ERA_META[era];
+    const list=HIDDEN.filter(d=>d.era===era);
+    if(!list.length) return;
+    const got=list.filter(d=>S.hiddenUnlocked[d.id]).length;
+    const pct=Math.round(got/list.length*100);
+    h+=`<div class="era-block" style="border-left:5px solid ${em.bar};background:linear-gradient(120deg,${em.c1},${em.c2});border-radius:12px;padding:10px 12px;margin:10px 0">
+      <div class="era-head" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span class="era-ic">${em.art?`<img class="era-ic-img" src="${em.art}" alt="" onerror="this.outerHTML='${em.ic}'">`:em.ic}</span>
+        <b style="color:${em.txt}">${era}</b>
+        <span class="era-prog" style="margin-left:auto;font-size:12px;color:${em.txt}">已解锁 ${got}/${list.length}</span>
+      </div>
+      <div class="bar" style="height:8px;margin-bottom:8px"><i style="width:${pct}%;background:${em.bar}"></i></div>
+      <div class="era-secs">${list.map(d=>{ const on=S.hiddenUnlocked[d.id]; const ric=d.art||REALM_ART[d.id];
+        return `<div class="era-sec ${on?'on':''}" style="${on?'':'opacity:.55'}">
+          <div class="sec-em">${ric?`<img src="${ric}" alt="${d.name}" onerror="this.outerHTML='${d.em}'">`:d.em}</div>
+          <div><div class="sec-n">${on?d.name:'？？？'}</div><div class="sec-d">${on?'深度'+d.depth+' · 已解锁':'未解锁'}${isSecretInSeason(d.id)?' <span class="chip season-on" style="font-size:9px;padding:1px 5px">当季</span>':''}</div></div>
+        </div>`; }).join('')}</div>
+    </div>`;
+  });
+  h+='</div>';
+  // 地点纪念品（仅显示已带回的，未获取隐藏）
+  const gotSouv=DEST.filter(d=>S.souvenirs.find(i=>i.name===d.souvenir.name));
+  h+='<div class="card codex-card" data-codexsec="souvenir"><h3>'+ic('pin')+' 地点纪念品（已带回 '+gotSouv.length+' 件）</h3>';
+  h+='<p class="muted">每个目的地都有一件专属纪念品，只有去到那里才可能带回，记录属于那片土地的故事。已带回的会显示在这里。</p>';
+  if(!gotSouv.length) h+='<p class="muted">还没带回任何纪念品——出发去探索吧。</p>';
+  gotSouv.forEach(d=>{
+    const sa=souvenirArt(d.souvenir);
+    h+=`<div class="codex-item"><div class="souv-art">${sa?`<img class="souv-img" src="${sa}" alt="${d.souvenir.name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${d.souvenir.em}</span>'">`:`<span class="em">${d.souvenir.em}</span>`}</div><div style="flex:1"><div class="t">${d.souvenir.name} · <span style="color:var(--soft);font-size:12px">${d.name}</span></div><div class="s">${d.souvenir.story}</div></div></div>`;
+  });
+  h+='</div>';
+  const showcasePicked=(S.homeShowcase||[]);
+  const showcaseChoices=(S.souvenirs||[]).slice().sort((a,b)=>COMPLETE_SOUVENIR_NAMES.indexOf(a.name)-COMPLETE_SOUVENIR_NAMES.indexOf(b.name));
+  h+=`<div class="card codex-card" data-codexsec="home-showcase"><h3>🏡 小窝陈列设置（${showcasePicked.length}/${HOME_SHOWCASE_LIMIT}）</h3>
+    <p class="muted">从已带回的纪念品中自由挑选，最多 ${HOME_SHOWCASE_LIMIT} 件。小窝始终以 7×2 的完整两排呈现；少于 ${HOME_SHOWCASE_LIMIT} 件时会自动补齐收藏，避免出现空格。</p>
+    <button class="btn ghost" type="button" data-home-showcase-reset>恢复推荐陈列</button>
+    <div class="home-souvenir-picker">${showcaseChoices.map(s=>{ const selected=showcasePicked.indexOf(s.name)>=0; const art=souvenirArt(s); return `<button class="show-tile showcase-tile ${selected?'on':''}" type="button" data-home-showcase="${s.name}" title="${selected?'移出':'加入'}小窝陈列：${s.name}" aria-label="${selected?'移出':'加入'}小窝陈列：${s.name}" aria-pressed="${selected}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}${selected?'<span class="picker-check">✓</span>':''}</button>`; }).join('')}</div>
+  </div>`;
+  // 节气信物（仅显示已收集，未获取隐藏，Phase 3）
+  h+='<div class="card codex-card" data-codexsec="solar"><h3>🌿 节气信物（'+(S.solarTerms||[]).length+'/24）</h3>';
+  h+='<p class="muted">每个节气期间首次出游，会带回一张该节气的限定信物，记录四季流转中旅伴的故事。已收集到的会显示在这里。</p>';
+  if(!(S.solarTerms||[]).length) h+='<p class="muted">尚未收集到节气信物——在每个节气期间出游即可带回。</p>';
+  h+='<div class="solar-term-grid">';
+  SOLAR_TERMS.filter(t=>(S.solarTerms||[]).indexOf(t.id)>=0).forEach(t=>{
+    h+=`<div class="codex-item solar-term-card"><div class="em">${solarIcon(t)}</div><div class="solar-term-copy"><div class="t solar-term-name">${t.name}</div><div class="solar-term-date">${t.m}/${t.d}</div><div class="s">${t.flavor}</div></div></div>`;
+  });
+  h+='</div></div>';
+  // 七十二候信物（Phase 5：传统文化七十二物候，每节气3候，按初/次/末候出游掉落）
+  h+='<div class="card codex-card collapsed" data-codexsec="hou"><h3>🍃 七十二候信物（'+(S.houTerms||[]).length+'/72）</h3>';
+  h+='<p class="muted">每候~5日，候内首次出游会带回该候的限定信物，记录物候流转中旅伴的故事。已收集到的会显示在这里；跨年复得显示 *N 岁月徽章。</p>';
+  if(!(S.houTerms||[]).length) h+='<p class="muted">尚未收集到候信物——在当前节气期间出游即可带回对应候信物。</p>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">';
+  SOLAR_TERMS.forEach(t=>{
+    if(!t.hou) return;
+    t.hou.filter(h=>(S.houTerms||[]).indexOf(h.id)>=0).forEach(hv=>{
+      const dup=S.houDup[hv.id]||1; const dupTag=dup>1?`<span style="color:var(--gold);font-weight:700;font-size:11px;margin-left:2px">×${dup}</span>`:'';
+      h+=`<div class="codex-item" style="flex:1;min-width:120px"><div class="em">${itemIcon(hv)}</div><div style="flex:1"><div class="t">${hv.name}${dupTag} <span style="font-size:11px;color:var(--soft)">${t.name}候</span></div><div class="s">${hv.flavor}</div></div></div>`;
+    });
+  });
+  h+='</div></div>';
+  // 节庆图鉴（Phase A：节日限定碎片 + 限定整件，跨年轮转；独立于主 11 簇与节气信物）
+  const festKeys=CLUSTER_KEYS.filter(k=>CLUSTERS[k].festival);
+  const festGot=festKeys.filter(k=>(S.frags[k]>0)||CLUSTERS[k].items.some(it=>S.items.some(i=>i.id===it.id)));
+  const festTitleCnt=['f_spring','f_yuanxiao','f_qingming','f_duanwu','f_qixi','f_zhongqiu','f_chongyang','f_dongzhi','f_laba','f_crossyear'].filter(k=>S.titles.indexOf(k)>=0).length;
+  h+='<div class="card codex-card collapsed" data-codexsec="festival"><h3>'+ic('lantern')+'节庆图鉴（'+festTitleCnt+'/10 收藏家）</h3>';
+  h+=festivalCountdownHTML();
+  h+='<p class="muted">节日窗口内出游会带回对应"节庆碎片"，集齐即可合成该节庆的限定整件——错过要等明年。已接触的节庆会显示在这里。</p>';
+  if(!festGot.length) h+='<p class="muted">还没接触任何节庆限定——在春节/端午/中秋期间出游即可带回。</p>';
+  festGot.forEach(key=>{
+    const c=CLUSTERS[key]; const have=S.frags[key]||0;
+    const made=CLUSTERS[key].items.filter(it=>S.items.some(i=>i.id===it.id)).length;
+    h+=`<div class="codex-item"><div class="em">${c.em}</div><div style="flex:1">
+      <div class="t">${c.name} <span style="font-size:11px;color:var(--soft)">${rarName(c.rarity)}</span></div>
+      <div class="s">持有 ${have} / ${c.synth} 张 · 已合成 ${made}/${CLUSTERS[key].items.length} 件</div>
+      <div class="bar"><i style="width:${Math.min(100,have/c.synth*100)}%"></i></div></div></div>`;
+  });
+  const festItems=S.items.filter(it=>it.festival);
+  if(festItems.length){ h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'; festItems.forEach(it=>{ h+=`<div class="codex-item" style="flex:1;min-width:140px"><div class="item-visual">${itemIcon(it)}${it.variant?`<span class="variant-mark" aria-label="${it.variant}">${varEm(it.variant)}</span>`:''}</div><div style="flex:1"><div class="t">${it.name}${it.variant?` <span style="font-size:11px;color:var(--soft)">${it.variant}</span>`:''}</div><div class="s">${it.story}</div></div></div>`; }); h+='</div>'; }
+  h+='</div>';
+  // 节日活动（仅显示已参与，未获取隐藏，Phase 4）
+  const doneFest=FESTIVALS.filter(f=>(S.festivals||[]).indexOf(f.id)>=0);
+  h+='<div class="card codex-card" data-codexsec="festact"><h3>'+ic('gift')+' 传统节日活动（'+doneFest.length+'/7）</h3>';
+  h+='<p class="muted">节日期间出游/登录会触发专属内容，完成即可获得对应限定称号。已参与的会显示在这里。</p>';
+  if(!doneFest.length) h+='<p class="muted">还没参与任何节日活动——节日期间出游/登录会触发专属内容。</p>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">';
+  doneFest.forEach(f=>{
+    h+=`<div class="btn ghost" style="flex:1;min-width:120px;padding:10px;font-size:13px;border-color:var(--accent);background:var(--bg)">${f.em} ${f.name}<br><small style="font-weight:400;font-size:11px">已完成 ✅</small></div>`;
+  });
+  h+='</div></div>';
+  // 称号成就
+  h+='<div class="card codex-card" data-codexsec="titles"><h3>🎖️ 称号成就</h3>';
+  if(!S.titles.length){ h+='<p class="muted">集齐某簇所有整件或解锁秘境即可获得称号，可在图鉴中装备展示。</p>'; }
+  else {
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">';
+    S.titles.forEach(k=>{
+      const t=TITLES[k]; if(!t) return;
+      const lv=(S.titleLv||{})[k]||1; const lvTag=lv>1?`<span style="color:var(--gold);font-weight:700;font-size:11px;margin-left:2px">Lv.${lv}</span>`:'';
+      const cur=S.currentTitle===k?'on':'';
+      h+=`<button class="btn ghost" style="flex:1;min-width:120px;padding:10px;font-size:13px${cur?';border-color:var(--accent);background:var(--bg)':''}" data-title="${k}">${t.art?`<img style="width:20px;height:20px;vertical-align:-3px;margin-right:2px" src="${t.art}" alt="">`:t.em} ${t.name}${lvTag}<br><small style="font-weight:400;font-size:11px">${t.desc}</small></button>`;
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+  // 全部称号进度（探索/社交/成就/节气/节日，未解锁也可见进度，可装备已解锁者）
+  h+='<div class="card codex-card collapsed" data-codexsec="titlesAll"><h3>'+ic('compass')+' 全部称号进度</h3>';
+  h+='<p class="muted">称号仅叙事风味、无数值加成；已解锁者可点击装备展示。下列按类别列出解锁进度。</p>';
+  TITLE_GROUPS.forEach(grp=>{
+    const gotKeys=grp.keys.filter(k=>TITLES[k] && S.titles.indexOf(k)>=0);
+    h+=`<div style="font-weight:700;font-size:13px;margin:10px 0 6px;color:var(--soft)">${grp.label} · 已解锁 ${gotKeys.length}/${grp.keys.length}</div>`;
+    if(!gotKeys.length){ h+='<p class="muted" style="margin:2px 0 8px">暂无已解锁称号。</p>'; return; }
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    gotKeys.forEach(k=>{
+      const t=TITLES[k];
+      const cur=S.currentTitle===k?'on':'';
+      const lv=(S.titleLv||{})[k]||1; const lvTag=lv>1?`<span style="color:var(--gold);font-weight:700;font-size:11px"> Lv.${lv}</span>`:'';
+      const sub=t.fn?'已解锁 ✅'+lvTag:t.desc;
+      h+=`<button class="btn ghost" style="flex:1;min-width:110px;padding:9px;font-size:13px${cur?';border-color:var(--accent);background:var(--bg)':''}" data-title="${k}">${t.art?`<img style="width:20px;height:20px;vertical-align:-3px;margin-right:2px" src="${t.art}" alt="">`:t.em} ${t.name}${lvTag}<br><small style="font-weight:400;font-size:11px">${sub}</small></button>`;
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+/* ---------- 互送 / 秘境（缺张互送 · K≥1 有机裂变） ---------- */
+// 缺口判定：差 1 张即集齐（簇残片=SYNTH-1，或藏宝图残片=SYNTH.treasure-1）
+function gapNearKeys(){
+  const g=[];
+  for(const k of CLUSTER_KEYS){ if(S.frags[k]===CLUSTERS[k].synth-1 && !CLUSTERS[k].festival) g.push(k); }
+  if(S.tmapFrag===SYNTH.treasure-1) g.push('tmap');
+  return g;
+}
+function gapLabel(k){ return k==='tmap' ? '藏宝图残片' : CLUSTERS[k].name.replace('簇','')+'残片'; }
+function socialHTML(){
+  let h='<details class="card social-panel" open><summary><span class="social-panel-title">'+ic('social')+' 互送残片 <span class="social-panel-count">（轻绑定 · P3）</span></span></summary><div class="social-panel-body">';
+  h+=`<p class="muted">互送是正和：你<b>多的一张</b>，可能是朋友<b>缺的那张</b>。赠冗余零成本、补缺口是关键一步 —— 这比硬广更能驱动分享（K 因子）。</p>`;
+  h+=`<p class="muted">今日已赠 <b>${S.friendGift}</b> / 5 次 · 互送网络：已帮 <b>${S.helped}</b> 人 · 被帮 <b>${S.helpedBy}</b> 次</p>`;
+  const _bl=(S.bondLevel||0), _bnext=[10,30,60,120][_bl]||null, _bprog=_bnext?Math.min(100,Math.round((S.helped||0)/_bnext*100)):100;
+  h+=`<details class="card social-panel" open style="margin-top:8px"><summary><span class="social-panel-title">💞 羁绊等级 <span class="social-panel-count">Lv${_bl}</span></span></summary><div class="social-panel-body"><div style="display:flex;justify-content:space-between;font-size:13px"><span>连续赠礼 <b>${S.giftStreak||0}</b> 天</span><span class="muted">促成羁绊 <b>${S.bondFill||0}</b> 次</span></div><div class="bar" style="margin-top:6px"><i style="width:${_bprog}%"></i></div><div class="muted" style="font-size:11px;margin-top:2px">${_bnext?`距下一级还需赠出 ${Math.max(0,_bnext-(S.helped||0))} 次`:'羁绊已满级 💞'}</div></div></details>`;
+  h+=`<p class="legend-note">防刷/限频（不靠广告墙）：每日可收 ≤5 次 · 单好友每日 ≤${GIFT_PER_FRIEND_CAP} 次 · 关系满 ${FRIEND_MIN_DAYS} 天方可互送 · 同设备/IP 多账号计 1 节点。</p>`;
+  // 缺张触点（差 1 张集齐 → 软求赠，非强迫）
+  const gaps=gapNearKeys();
+  if(gaps.length){
+    h+='<p class="muted" style="color:var(--accent2);font-weight:700">'+ic('bell')+'你差 1 张就能集齐，向旅友求赠吧：</p><div>';
+    gaps.forEach(k=>{ h+=`<button class="btn ghost" style="margin:4px" data-giftreq="${k}">求赠 ${gapLabel(k)}</button>`; });
+    h+='</div>';
+  }
+  // 赠出冗余残片
+  const opts=[];
+  for(const k of CLUSTER_KEYS){ if(S.frags[k]>0 && !CLUSTERS[k].festival) opts.push(`<button class="btn ghost" style="margin:4px" data-gift="${k}">赠 ${CLUSTERS[k].name}残片 (${S.frags[k]})</button>`); }
+  h+=`<p class="muted" style="margin-top:8px">赠出多余残片（冗余即货币）：</p>`;
+  if(opts.length) h+=`<div>${opts.join('')}</div>`; else h+='<p class="muted">暂时没有可赠的残片，先去旅行吧。</p>';
+  if(S.tmap>0) h+=`<button class="btn sec" id="useMapBtn" style="margin-top:10px">${ic("star")} 使用藏宝图解锁秘境</button>`;
+  h+='</div></details>';
+  // 分享邀请（K 因子 / 裂变）
+  h+='<details class="card social-panel"><summary><span class="social-panel-title">'+ic('social')+'分享邀请好友 <span class="social-panel-count">（裂变 · K 因子）</span></span></summary><div class="social-panel-body">';
+  h+=`<p class="muted">分享邀请得 <b>+${SHARE_STAR} 星屑 / +${SHARE_FOOD} 干粮</b>，并奖励 <b>1 次额外广告机会</b>（当日补给广告上限 +1）。轻绑定、每日上限 ${SHARE_DAILY_CAP} 次（防刷）。</p>`;
+  h+=`<p class="muted">今日已分享 <b>${S.shareToday}</b> / ${SHARE_DAILY_CAP} 次 · 额外广告机会 <b>${S.bonusAdToday}</b> 次</p>`;
+  const sdis = S.shareToday>=SHARE_DAILY_CAP ? 'disabled' : '';
+  h+=`<button class="btn" id="shareBtn" ${sdis} style="margin-top:6px">${ic("social")} 分享邀请得星屑+干粮+1次广告机会</button>`;
+  if(S.shareToday>=SHARE_DAILY_CAP) h+='<p class="muted" style="color:var(--accent)">今日分享奖励已用完，明天再来 🌙</p>';
+  h+='</div></details>';
+  h+=`<details class="card social-panel"><summary><span class="social-panel-title">🐶 旅伴朋友们 <span class="social-panel-count">（${Object.keys(S.friends||{}).length}）</span></span></summary><div class="social-panel-body">`;
+  const fks=Object.keys(S.friends||{});
+  if(!fks.length) h+='<p class="muted">还没有旅友——去旅行，也许会在路上遇见谁。</p>';
+  else {
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    fks.forEach(fid=>{ const f=S.friends[fid]; h+=`<div class="friend-tile"><div class="ft-comp">${cmp(f.companion)}</div><div class="ft-info"><div class="ft-name">${f.name}</div><div class="ft-sub">${f.met?'路上偶遇的旅友':'游戏内好友'}</div></div><button class="vbtn" data-visit-friend="${fid}">🏡 拜访</button></div>`; });
+    h+='</div>';
+  }
+  h+=`<p class="muted">遇见的陌生旅友会成为<b>游戏内好友</b>（宠物ID，可互送残片，<b>不涉及微信</b>）。真实版好友来自微信关系链。</p></div></details>`;
+  return h;
+}
+// —— v1.2 拜访好友小窝（只读展示，无数值交互）——
+function visitFriend(fid){
+  track('visit_friend', {friend_id:fid});
+  const f=S.friends[fid]||{name:'旅友',companion:'🐶',since:S.day};
+  const days=(S.day||1)-(f.since||S.day);
+  const bond=Math.min(3,Math.floor(days/5));
+  const shelf=[];
+  if(bond>=1) shelf.push('🌟 友谊之证');
+  if(bond>=2) shelf.push('🎁 交换过纪念品');
+  if(bond>=3) shelf.push('💞 老朋友');
+  const m=document.getElementById('genSheet');
+  m.innerHTML=`<button type="button" class="closeX" aria-label="关闭好友小窝">${ic('x')}</button>
+    <div class="card"><h3>🏡 ${f.name} 的小窝</h3>
+    <div class="scene" style="background:linear-gradient(160deg,#fff6ea,#fdeef0);padding:20px;text-align:center;border-radius:12px;margin:10px 0">
+      <div class="pet" style="font-size:48px">${cmp(f.companion)}</div>
+      <p style="margin:8px 0 0;font-size:14px;font-weight:600;color:var(--ink)">${f.name} 的小旅伴</p>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin:10px 0">
+      <span class="chip">📅 认识 ${days} 天</span>
+      <span class="chip">💞 羁绊 Lv${bond}</span>
+    </div>
+    <h4>📦 友谊记忆架</h4>
+    <div class="visit-shelf" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">${shelf.length?shelf.map(s=>`<div class="show-tile" style="padding:8px 16px;background:linear-gradient(160deg,#fff3e0,#fde9f0);border-color:#f0d9c0">${s}</div>`).join(''):'<p class="muted">小窝还空着——多互送残片，友谊会让这里热闹起来。</p>'}</div>
+    <button class="btn ghost" onclick="closeModals()">关上小窝的门</button>`;
+  document.getElementById('genMask').classList.add('on');
+}
+function shareFriend(){ audio.emit('game:paperplane');
+  if(S.shareToday>=SHARE_DAILY_CAP){ toast('今日分享奖励已用完（防刷）'); return; }
+  const _sid='sh_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); S._lastShareId=_sid;
+  S.shareToday++; S.bonusAdToday++; S.star+=SHARE_STAR; S.food+=SHARE_FOOD;
+  track('share_generate',{type:'invite', share_id:_sid});
+  save(); logEvent('share', `+${SHARE_STAR}星+${SHARE_FOOD}粮+1广告机会`); render();
+  toast(`分享成功！+${SHARE_STAR} 星屑 +${SHARE_FOOD} 干粮 +1 次广告机会 📣`);
+}
+function fidName(fid){ if(S.friends && S.friends[fid]) return S.friends[fid].name; return fid==='hua' ? '花花' : '豆豆'; }
+function giftFriend(cl, fid){
+  fid = fid || 'dou';
+  if(isOwnPet(fid)){ toast('不能给自己的其他角色送残片'); return; }
+  S.giftToday = S.giftToday || {}; S.friendSince = S.friendSince || {}; S.friends = S.friends || {};
+  if(S.friendSince[fid]===undefined) S.friendSince[fid]=S.day;
+  if(!S.friends[fid]) S.friends[fid]={ name:fidName(fid), companion:fid==='hua'?'🐰':'🐶', since:S.friendSince[fid], met:false };
+  // 关系时长门槛（防小号互刷）
+  if((S.day - S.friendSince[fid]) < FRIEND_MIN_DAYS){ toast(`与 ${fidName(fid)} 关系未满 ${FRIEND_MIN_DAYS} 天，暂不能互送（防刷）`); return; }
+  // 单好友每日互送上限（防同一对高频互刷）
+  if((S.giftToday[fid]||0) >= GIFT_PER_FRIEND_CAP){ toast(`与 ${fidName(fid)} 今日互送已达上限（防刷）`); return; }
+  if(S.friendGift>=5){ toast('今日互送已达上限（轻绑定 P3）'); return; }
+  if(S.frags[cl]<=0) return;
+  // —— P1b 社交羁绊深化：连续赠礼天数（断一天即清零）——
+  if(S.lastGiftDay===S.day){ /* 同日多次赠礼，连击天数不重复计 */ }
+  else if(S.lastGiftDay===(S.day-1)){ S.giftStreak=(S.giftStreak||0)+1; }
+  else { S.giftStreak=1; }
+  S.lastGiftDay=S.day;
+  S.frags[cl]--; S.friendGift++; S.helped++; S.bondLevel=bondLevelCalc(); S.giftToday[fid]=(S.giftToday[fid]||0)+1;
+  logEvent('gift', `赠${CLUSTERS[cl].name}残片→${fidName(fid)}`);
+  track('gift_send', {to:fidName(fid), cluster:cl});
+  toast(`已赠出 ${CLUSTERS[cl].name}残片，${fidName(fid)}说谢谢 🐶`);
+  // 豆豆 / 花花 反应：模拟 §3 互惠闭环与裂变节点（K≥1 的有机来源）
+  const r=Math.random();
+  const myGap=()=>{ // 我方当前缺口（差 1 张集齐的簇，或藏宝图）
+    for(const k of CLUSTER_KEYS){ if(S.frags[k]===CLUSTERS[k].synth-1 && !CLUSTERS[k].festival) return k; }
+    if(S.tmapFrag===SYNTH.treasure-1) return 'tmap';
+    return null;
+  };
+  if(r<0.4){
+    const g=myGap();
+    if(g){
+      const room=S.backpack-backpackUsed();
+      if(room<=0){ toast('背包已满，'+fidName(fid)+'的回赠收不下（先扩容或合成释放空间）'); }
+      else { if(g==='tmap') S.tmapFrag++; else S.frags[g]++; S.helpedBy++; S.bondFill=(S.bondFill||0)+1; logEvent('recv',`${fidName(fid)}回赠`+gapLabel(g)); track('gift_receive', {from:fidName(fid)}); toast(`${fidName(fid)}回赠了你 1 张 ${gapLabel(g)}！（互惠闭环）`); }
+    }
+    else toast(`${fidName(fid)}：「谢啦，下次你有多的也给我呀」`);
+  } else if(r<0.7){
+    const want=pick(['ceramic','fabric','compass','bell','coin','herb']);
+    toast(`${fidName(fid)}：「我也差 ${CLUSTERS[want].name}残片，你多一张就回我呀」`);
+  } else if(r<0.9){
+    // 豆豆 把你的善举转给非玩家好友 花花 → 花花 入坑并补你缺口（裂变节点 +1）
+    const g=myGap(); S.fission=(S.fission||0)+1; S.bondFill=(S.bondFill||0)+1;
+    if(g){
+      const room=S.backpack-backpackUsed();
+      if(room<=0){ toast('背包已满，花花的入坑赠收不下（先扩容或合成释放空间）'); }
+      else { if(g==='tmap') S.tmapFrag++; else S.frags[g]++; S.helpedBy++; S.friendSince.hua=S.day; logEvent('recv','花花入坑赠'+gapLabel(g)); toast(`新旅友 花花 因你的分享入坑，送你 1 张 ${gapLabel(g)}！（裂变节点+1）`); }
+    }
+    else { S.helpedBy++; S.friendSince.hua=S.day; toast(`新旅友 花花 通过你的分享加入了猫狗星球 🐱（裂变节点+1）`); }
+  } else {
+    toast(`${fidName(fid)}收下了，先记在心里 🐶`);
+  }
+  save(); render();
+}
+function requestGift(k){
+  logEvent('request', `求赠${gapLabel(k)}`);
+  toast(`已向旅友广播：求 ${gapLabel(k)}（豆豆/花花 可能多一张）`);
+}
+function useTreasureMap(){
+  if(S.tmap<=0){ toast('没有藏宝图，先去旅行收集藏宝图残片吧'); return; }
+  const locked=DEST.filter(d=>d.secret && !S.hiddenUnlocked[d.id]);
+  if(!locked.length){ toast('隐藏秘境已全部解锁 🌌'); return; }
+  audio.emit('game:bell');
+  const seas=activeSeason();
+  const m=document.getElementById('genSheet');
+  let body=`<button type="button" class="closeX" aria-label="关闭秘境选择">${ic('x')}</button><h3>${ic("star")} 选择要解锁的秘境</h3><p class="muted">消耗 1 张藏宝图，开启一处隐藏地点。部分秘境还需对应的合成物（古钟 / 罗盘）作为钥匙。</p>`;
+  const ssk=seasonSkin(seas);
+  body+=`<div class="season-banner" style="margin-bottom:8px;background:linear-gradient(120deg,${ssk.c1},${ssk.c2});border-color:${ssk.border}"><span class="season-em">${seas.em}</span> 当前季节：<b>${seas.name}</b> · ${seas.desc}</div>`;
+  // 按时代分组
+  const groups={};
+  locked.forEach(d=>{ const e=d.era||'未知'; if(!groups[e]) groups[e]=[]; groups[e].push(d); });
+  Object.keys(groups).sort().forEach(era=>{
+    const em=eraMeta(era);
+    const _el=HIDDEN.filter(d=>d.era===era); const _eg=_el.filter(d=>S.hiddenUnlocked[d.id]).length;
+    body+=`<div class="era-badge" style="background:linear-gradient(120deg,${em.c1},${em.c2});border-left:5px solid ${em.bar};color:${em.txt}"><span class="era-ic">${em.art?`<img class="era-ic-img" src="${em.art}" alt="" onerror="this.outerHTML='${em.ic}'">`:em.ic}</span> ${era} <span style="margin-left:auto;font-size:12px;font-weight:700;opacity:.85">已解锁 ${_eg}/${_el.length}</span></div>`;
+    groups[era].forEach(d=>{
+      const inSeason=isSecretInSeason(d.id);
+      const needItem=d.req&&d.req.item;
+      const haveItem=!needItem || S.items.some(i=>i.id===needItem);
+      const can=S.tmap>=1 && haveItem && inSeason;
+      const tip=needItem?('需合成物：'+needItem+(haveItem?'（已拥有 ✅）':'（未拥有 ❌）')):'仅需藏宝图 ×1';
+      const legNote=d.drop&&d.drop.min==='legend'?' <span class="chip legend" style="font-size:10px;padding:2px 6px">渠道独占·传说</span>':'';
+      const seasonNote=inSeason?' <span class="chip season-on" style="font-size:10px;padding:2px 6px">当季开放</span>':' <span class="chip" style="font-size:10px;padding:2px 6px;background:var(--soft);color:#fff">已过季</span>';
+      const ric=d.art||REALM_ART[d.id];
+      body+=`<div class="dest" style="${can?'cursor:pointer':'opacity:.5;cursor:not-allowed'};border-radius:14px" ${can?`data-unlock="${d.id}"`:''}>
+        <span class="era-bar" style="background:${em.bar}"></span>
+        <div class="em">${ric?`<img src="${ric}" alt="${d.name}" onerror="this.outerHTML='${d.em}'">`:d.em}</div><div class="info"><div class="t">${d.name} <span class="depth-tag d6">深度6</span>${legNote}${seasonNote}</div>
+        <div class="d">${inSeason?tip:'当前季节不开放（'+seas.name+'期间可解锁）'}</div></div></div>`;
+    });
+  });
+  body+=`<button class="btn ghost" onclick="closeModals()" style="margin-top:8px">稍后再说</button>`;
+  m.innerHTML=body; document.getElementById('genMask').classList.add('on');
+}
+function unlockHidden(id){
+  const d=DEST.find(x=>x.id===id); if(!d||!d.secret) return;
+  if(S.hiddenUnlocked[id]){ toast('该秘境已解锁'); return; }
+  if(S.tmap<1){ toast('需要 1 张藏宝图'); return; }
+  if(d.req&&d.req.item && !S.items.some(i=>i.id===d.req.item)){ toast('还缺合成物：'+d.req.item+'（先合成对应整件）'); return; }
+  S.hiddenUnlocked[id]=true; S.secret=true;   // [可调] 秘境永久解锁：首次集齐藏宝图后不再消耗钥匙
+  const bonus=isSecretInSeason(id)?3:0; if(bonus){ S.star+=bonus; S.starTotal+=bonus; audio.emit('game:secretBonus'); }
+  track('treasure_use', {realm:d.name, success:true});
+  track('hidden_unlock', {ed:d.depth, realm_id:id});
+  save(); logEvent('map', '使用藏宝图解锁'+d.name); checkTitles(); render();
+  toast(`${ic("star")} 已解锁 ${d.name}！${bonus?`当季奖励 +${bonus}⭐ `:''}去策划旅行看看吧`);
+}
+
+/* ---------- 衣橱（L8 单宠装扮 + L9 世界观） ---------- */
+function wardrobeHTML(){
+  let h='<details class="card wardrobe-panel" open><summary><span class="wardrobe-panel-title">👗 我的旅伴</span></summary><div class="wardrobe-panel-body">';
+  h+=`<div class="scene wardrobe-scene" style="background:linear-gradient(160deg,#eaf6e7,#f4faf0)">
+      <div class="window-light"></div><div class="floor-shadow"></div>
+      <div class="pet" style="font-size:54px">${companionHTML(false)}</div>
+      <div class="wardrobe-decoration-layer">${wardrobeDecorHTML()}</div></div>`;
+  h+=`<p class="wardrobe-hint">小窝展示位 ${equippedCosmetics().length}/${MAX_HOME_DECOR} · 已穿戴的饰品可在小窝内自由拖动摆放。</p><p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。最多展示 ${MAX_HOME_DECOR} 件，点一下就能穿脱。</p></div></details>`;
+  // L8 装扮清单
+  h+='<details class="card wardrobe-panel" open><summary><span class="wardrobe-panel-title">'+ic('wardrobe')+S.name+' 的衣橱 <span class="wardrobe-panel-count">（'+(S.cosmetics||[]).length+'/'+COSMETICS.length+'）</span></span></summary><div class="wardrobe-panel-body"><div class="cos-grid">';
+  COSMETICS.forEach(c=>{
+    const owned=(S.cosmetics||[]).indexOf(c.id)>=0;
+    const on=(S.equipped||[]).indexOf(c.id)>=0;
+    if(owned){
+      h+=`<button class="cos-item ${on?'on':''}" data-cosmetic="${c.id}"><div class="cos-em">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</div><div class="cos-n">${c.name}</div><div class="cos-s">${on?'已穿戴':'点击穿戴'}</div></button>`;
+    } else {
+      h+=`<div class="cos-item locked"><div class="cos-em">❔</div><div class="cos-n">？？？</div><div class="cos-s">${c.desc}<br><span class="muted">来源：${c.src}</span></div></div>`;
+    }
+  });
+  h+='</div></div></details>';
+  const outfitStories=COSMETICS.filter(c=>(S.cosmetics||[]).indexOf(c.id)>=0);
+  if(outfitStories.length){
+    h+='<details class="card wardrobe-panel outfit-stories"><summary><span class="wardrobe-panel-title">🗺️ 旅行衣橱故事 <span class="wardrobe-panel-count">（'+outfitStories.length+'）</span></span></summary><div class="wardrobe-panel-body">';
+    outfitStories.forEach(c=>{ h+=`<div class="outfit-story">${c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`}<div><b>${c.name}</b><span class="src">${c.src}</span></div><p>${c.story||c.desc}</p></div>`; });
+    h+='</div></details>';
+  }
+  // L9 世界观（收集深度解锁的剧情碎片）
+  h+='<details class="card wardrobe-panel"><summary><span class="wardrobe-panel-title">'+ic('book')+'世界观 <span class="wardrobe-panel-count">（'+(LORE.filter(l=>l.cond()).length)+'/'+LORE.length+'）</span></span></summary><div class="wardrobe-panel-body"><p class="muted">随着旅程越走越深，星球的故事会一段段亮起。这是只属于阅读者的奖励。</p>';
+  LORE.forEach(l=>{
+    const ok=l.cond();
+    h+=`<div class="lore-item ${ok?'on':''}">
+      <div class="lore-h"><b>${ok?'🌟 ':''}${l.name}</b> <span class="muted">${ok?'已解锁':('解锁进度 '+l.prog())}</span></div>
+      ${ok?`<div class="lore-txt">${l.text}</div>`:`<div class="lore-hint">🔒 ${l.hint}</div>`}
+    </div>`;
+  });
+  h+='</div></details>';
+  return h;
+}
+
+/* ---------- 商店 ---------- */
+function shopHTML(){
+  const cap=AD_CAP_SUPPLY+S.bonusAdToday, q=supplyAdLeft(), rem=Math.max(0,cap-S.supplyAdToday);
+  let h='<div class="card"><h3>'+ic('shop')+' 星屑商店（纯 IAA 经济）</h3>';
+  h+=`<p class="muted">星屑只从旅行/登录/互送/广告获得，<b>绝不出售</b>。可买干粮（效率项，不影响稀有度 —— ADR-1）。传说/稀有收集物不入市、不可直购（P4 红线）。</p>`;
+  h+=`<button class="btn ghost" id="buyFood" style="margin:8px 0">${ic('food')} 补干粮 +${SHOP_FOOD_GET}（${SHOP_FOOD_COST} 星屑）当前 ${S.star}</button>`;
+  h+='</div>';
+  h+='<div class="card"><h3>'+ic('backpack')+' 背包容量</h3>';
+  h+=`<p class="muted">残片和藏宝图残片共用背包空间。当前 <b>${backpackUsed()} / ${S.backpack}</b>。容量满时将无法获取新残片，需要扩容或通过合成/互送释放空间。</p>`;
+  if(!S.firstAdSlots){
+    h+='<button class="btn sec" id="adFirstSlotsBtn" style="margin:6px 0">'+ic('play')+'看广告 +10 背包格（仅首次·独立计数）</button>';
+  } else {
+    h+='<p class="muted" style="color:var(--accent)">✅ 已领取首次看广告 +10 格扩容</p>';
+  }
+  h+=`<button class="btn ghost" id="expandBackpackBtn" style="margin:8px 0">${ic('backpack')} 扩充背包 +${EXPAND_SLOTS} 格（${EXPAND_COST} 星屑）当前 ${S.star}⭐</button>`;
+  h+='</div>';
+  h+='<div class="card"><h3>'+ic('play')+'看广告·补给（非强制 IAA）</h3>';
+  h+=`<p class="muted">星屑/干粮补给广告<b>硬顶 ${AD_CAP_SUPPLY}/日</b>（护 P1 治愈感），分享邀请可 +1 次（当前上限 <b>${cap}</b>）；与出行加速广告（${AD_CAP_TRAVEL} 次/日）<b>互不共享</b>。只给<b>星屑/干粮</b>等效率资源，<b>绝不</b>给残片/藏宝图/传说（ADR-1 / P4 红线）。</p>`;
+  h+=`<p class="muted">今日补给广告剩余 <b>${rem}/${cap}</b></p>`;
+  const dis = q<=0 ? 'disabled' : '';
+  h+=`<button class="btn sec" id="adStarBtn" ${dis} style="margin:6px 0">▶️ 看广告 +${AD_STAR_REWARD} 星屑</button>`;
+  h+=`<button class="btn sec" id="adFoodBtn" ${dis} style="margin-bottom:8px">▶️ 看广告 +${AD_FOOD_REWARD} 干粮</button>`;
+  if(q<=0) h+='<p class="muted" style="color:var(--accent)">今日补给广告已达上限，明天再来 🌙（护 P1）</p>';
+  h+='</div>';
+  h+=`<div class="card"><button class="btn ghost" id="resetBtn" style="color:#c06">♻️ 重置原型</button>`;
+  h+=`<p class="legend-note">IAA 触点两类：①出行加速（每出行 1 次/日，硬顶 ${AD_CAP_TRAVEL}，省时）；②商店补星屑/干粮（基础 ${AD_CAP_SUPPLY}/日，分享可 +）。全部<b>非强制</b>、奖励仅效率资源。无内购、无抽卡。</p></div>`;
+  return h;
+}
+function buyFood(){ if(S.star<SHOP_FOOD_COST){ toast('星屑不足，去旅行赚点 ⭐'); return; } S.star-=SHOP_FOOD_COST; S.food+=SHOP_FOOD_GET; save(); logEvent('buy', `干粮+${SHOP_FOOD_GET}(花${SHOP_FOOD_COST}星)`); render(); toast('干粮 +'+SHOP_FOOD_GET+' 🍞'); }
+function resetAll(){
+  clearGameSaves(); S=loadActivePet();
+  view='home'; render(); toast('已重置');
+}
+function expandBackpack(){ audio.emit('game:bagExpand');
+  if(S.star<EXPAND_COST){ toast(`星屑不足，需要 ${EXPAND_COST}⭐`); return; }
+  S.star-=EXPAND_COST; S.backpack+=EXPAND_SLOTS; S.expandCount=(S.expandCount||0)+1;
+  save(); logEvent('expand', `背包+${EXPAND_SLOTS}格(花${EXPAND_COST}⭐)`); render();
+  toast(`背包已扩容至 ${S.backpack} 格 📦`);
+}
+
+/* ---------- 调参面板（试玩回灌） ---------- */
+const TUNE_GAME = [
+  {k:'AD_CAP_TRAVEL',  label:'出行加速广告硬顶', min:0, max:20, step:1},
+  {k:'AD_CAP_SUPPLY',  label:'补给广告硬顶(基础)', min:0, max:20, step:1},
+  {k:'AD_STAR_REWARD', label:'看广告得星屑', min:0, max:200, step:1},
+  {k:'AD_FOOD_REWARD', label:'看广告得干粮', min:0, max:100, step:1},
+  {k:'LOGIN_FOOD',     label:'每日登录干粮', min:0, max:50, step:1},
+  {k:'SHARE_STAR',     label:'分享得星屑', min:0, max:200, step:1},
+  {k:'SHARE_FOOD',     label:'分享得干粮', min:0, max:100, step:1},
+  {k:'SHARE_DAILY_CAP',label:'分享每日上限', min:0, max:20, step:1},
+  {k:'TREASURE_P',     label:'藏宝图独立掉率', min:0, max:1, step:0.01},
+  {k:'M_TREASURE',     label:'藏宝图保底次数', min:1, max:50, step:1},
+  {k:'K_FOOD',         label:'干粮稀有加成系数', min:0, max:1, step:0.01},
+];
+const TUNE_REV = [
+  {k:'watch', label:'有效观看率', min:0, max:1, step:0.05},
+  {k:'ecpm',  label:'eCPM (¥/1000)', min:1, max:200, step:1},
+  {k:'dau',   label:'DAU (示例)', min:100, max:1000000, step:1000},
+  {k:'arpu',  label:'ARPU目标 (¥/人/日)', min:0.01, max:5, step:0.01},
+  {k:'conv',  label:'分享→安装转化率', min:0, max:1, step:0.01},
+  {k:'shareFill', label:'分享奖励完成度', min:0, max:1, step:0.05},
+  {k:'activePets', label:'平均活跃宠物/账号', min:1, max:5, step:0.1},
+];
+function revCalc(){
+  const shareFill=Math.max(0,Math.min(1,Number(REV.shareFill)||0));
+  const activePets=Math.max(1,Number(REV.activePets)||1);
+  const invPerPet = AD_CAP_TRAVEL + AD_CAP_SUPPLY + SHARE_DAILY_CAP*shareFill;
+  const inv = invPerPet*activePets;
+  const eff = inv * REV.watch;
+  const arpu = eff * REV.ecpm/1000;
+  const need = REV.arpu / (REV.ecpm/1000);
+  const ok = eff >= need;
+  const revDay = REV.dau * arpu;
+  const kFloor = SHARE_DAILY_CAP * REV.conv;
+  const starCap = STAR_PER_TRIP*DAILY_TRIPS + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_STAR_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_STAR;
+  const foodCap = LOGIN_FOOD + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_FOOD_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_FOOD;
+  return {invPerPet,inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap,shareFill,activePets};
+}
+function tuneHTML(){
+  let g='';
+  TUNE_GAME.forEach(t=>{
+    const val = gameCur(t.k);
+    g+=`<label class="trow"><span>${t.label}</span>
+      <input type="number" class="tin" data-tune-game="${t.k}" value="${val}" min="${t.min}" max="${t.max}" step="${t.step}"></label>`;
+  });
+  let r='';
+  TUNE_REV.forEach(t=>{
+    r+=`<label class="trow"><span>${t.label}</span>
+      <input type="number" class="tin" data-tune-rev="${t.k}" value="${REV[t.k]}" min="${t.min}" max="${t.max}" step="${t.step}"></label>`;
+  });
+  const c=revCalc();
+  const cal=`
+   <div class="calc">
+     <div class="crow"><span>广告库存 / 活跃宠物</span><b>${c.invPerPet.toFixed(2)} 次/日</b></div>
+     <div class="crow"><span>分享奖励完成度 · 活跃宠物</span><b>${Math.round(c.shareFill*100)}% · ${c.activePets.toFixed(1)}</b></div>
+     <div class="crow"><span>账号广告库存</span><b>${c.inv.toFixed(2)} 次/日</b></div>
+     <div class="crow"><span>有效展示 (×观看率 ${REV.watch})</span><b>${c.eff.toFixed(2)} 次/账号/日</b></div>
+     <div class="crow"><span>ARPU</span><b>¥${c.arpu.toFixed(3)} / 人/日</b></div>
+     <div class="crow"><span>达标所需展示 (ARPU ${REV.arpu})</span><b>${c.need.toFixed(2)}</b></div>
+     <div class="crow ${c.ok?'ok':'bad'}"><span>收入目标可达性</span><b>${c.ok?'✅ 可达':'⚠️ 不足'}</b></div>
+     <div class="crow"><span>日收入 (DAU ${REV.dau})</span><b>¥${Math.round(c.revDay).toLocaleString()} / 日</b></div>
+     <div class="crow"><span>K 地板(仅主动邀请)</span><b>${c.kFloor.toFixed(2)}</b></div>
+     <div class="crow"><span>星屑获取上限 / 宠 / 日</span><b>${c.starCap.toFixed(0)}</b></div>
+     <div class="crow"><span>干粮获取上限 / 宠 / 日</span><b>${c.foodCap.toFixed(0)}</b></div>
+   </div>`;
+  const overridesOn = Object.keys(O).length>0;
+  let h='';
+  h+=`<div class="card"><h3>${ic('tune')} 调参面板（试玩回灌）</h3>
+    <p class="muted">改完即时生效并写入 localStorage，刷新不丢、不动源码基线。收入测算以原反推模型为基础，并显式区分分享完成度与平均活跃宠物数；两项均须以上线埋点回灌，不可当作默认收入。${overridesOn?' <b style="color:var(--accent)">当前有游戏常量覆盖生效中</b>':''}。</p></div>`;
+  h+=`<div class="card"><h3>${ic("tune")} 游戏常量（IAA / 探索）</h3>${g}
+    <button class="btn ghost" id="resetTune" style="margin-top:8px">♻️ 清除游戏常量覆盖（恢复基线）</button></div>`;
+  h+=`<div class="card"><h3>${ic("shop")} 变现反推输入（即时算可达性）</h3>${r}${cal}</div>`;
+  h+=`<div class="card"><h3>${ic("journal")} 单局日志（${(S.log||[]).length} 条）</h3>
+    <div class="logbox">${logHTML()}</div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn ghost" id="copyLog">📋 复制日志</button>
+      <button class="btn ghost" id="clearLog">🗑️ 清空</button>
+    </div></div>`;
+  h+=analyticsCard();
+  return h;
+}
+/* ---------- P2 MVP 数据分析看板（参数聚类 / 分宠下钻 / 硬顶 A/B 自动化）----------
+ * 纯前端快照：读取 window.__analytics.dump()（本地匿名事件缓冲），不上传个人信息。
+ * 对应《猫狗星球_MVP埋点设计方案.md》P2：参数聚类、分宠维度下钻、硬顶 A/B 自动化看板。
+ */
+function analyticsCard(){
+  const buf = (typeof window.__analytics==='object' && window.__analytics) ? window.__analytics.dump() : [];
+  const n = buf.length;
+  // ① 参数聚类：按事件聚合计数
+  const byEv = {};
+  buf.forEach(e=>{ byEv[e.ev] = (byEv[e.ev]||0)+1; });
+  const maxEv = Object.values(byEv).length ? Math.max.apply(null, Object.values(byEv)) : 1;
+  const evRows = Object.keys(byEv).sort((a,b)=>byEv[b]-byEv[a]).map(ev=>{
+    const c = byEv[ev];
+    const w = n? Math.round(c/n*100):0;
+    const bw = n? Math.max(4, Math.round(c/maxEv*100)) : 0;
+    return `<tr><td>${ev}</td><td class="num">${c}</td><td><span class="bar" style="width:${bw}px"></span>${w}%</td></tr>`;
+  }).join('') || '<tr><td colspan="3" class="muted">暂无事件数据，先去首页旅行 / 看广告 / 分享试试。</td></tr>';
+  // ad_cap_hit 按 type 细分
+  const capByType = {};
+  buf.filter(e=>e.ev==='ad_cap_hit').forEach(e=>{ const t=(e.p&&e.p.type)||'unknown'; capByType[t]=(capByType[t]||0)+1; });
+  const capDetail = Object.keys(capByType).length
+    ? '<p class="muted" style="margin-top:8px">撞顶事件细分（ad_cap_hit · type）：'+Object.keys(capByType).map(t=>`${t} ${capByType[t]}`).join(' · ')+'</p>'
+    : '';
+  // ② 分宠下钻：按 pid 分组
+  const roster = (typeof listPets==='function')?listPets():[];
+  const nameOf = pid => {
+    if(!pid) return '未归属(全局)';
+    const p=roster.find(x=>x.id===pid);
+    if(!p) return pid;
+    const cmp = (typeof p.companion==='string' && p.companion.indexOf('/')<0 && p.companion.indexOf('.')<0) ? p.companion : '🐾';
+    return `${cmp} ${p.name}`;
+  };
+  const byPid = {};
+  buf.forEach(e=>{ const k=e.pid||'__null__'; byPid[k]=byPid[k]||{}; byPid[k][e.ev]=(byPid[k][e.ev]||0)+1; });
+  const drillRows = Object.keys(byPid).sort((a,b)=>{
+    const ta=Object.values(byPid[b]).reduce((s,x)=>s+x,0), tb=Object.values(byPid[a]).reduce((s,x)=>s+x,0); return ta-tb;
+  }).map(pid=>{
+    const evs = byPid[pid]; const tot = Object.values(evs).reduce((s,x)=>s+x,0);
+    const dist = Object.keys(evs).sort((a,b)=>evs[b]-evs[a]).map(ev=>`${ev} ×${evs[ev]}`).join('，');
+    return `<div class="adrill"><div class="nm">${nameOf(pid==='__null__'?null:pid)} <span class="muted">(${tot})</span></div><div class="muted">${dist}</div></div>`;
+  }).join('') || '<p class="muted">暂无分宠数据。</p>';
+  // ③ 硬顶 A/B 自动化看板
+  const trig={}, hit={};
+  buf.forEach(e=>{
+    if(e.ev==='ad_trigger' && e.p && e.p.type) trig[e.p.type]=(trig[e.p.type]||0)+1;
+    if(e.ev==='ad_cap_hit' && e.p && e.p.type) hit[e.p.type]=(hit[e.p.type]||0)+1;
+  });
+  const shareGen = buf.filter(e=>e.ev==='share_generate').length;
+  const capTravel = gameCur('AD_CAP_TRAVEL'), capSupply = gameCur('AD_CAP_SUPPLY'), capShare = gameCur('SHARE_DAILY_CAP');
+  function hint(h,c){ if(h===0) return '<span class="ok">未触顶 · 有余量可收紧</span>'; const r=c? h/c:0;
+    if(r>0.5) return '<span class="bad">撞顶偏高 · 体验受限，建议上调</span>';
+    if(r>0.2) return '<span class="warn">撞顶适中 · 观察留存</span>';
+    return '<span class="ok">撞顶偏低 · 可收紧控成本</span>'; }
+  const abRows = [
+    ['出行加速', capTravel, trig.travel||0, hit.travel||0, hint(hit.travel||0, trig.travel||0)],
+    ['补给广告', capSupply, trig.supply||0, hit.supply||0, hint(hit.supply||0, trig.supply||0)],
+  ].map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}</td><td class="num">${r[2]}</td><td class="num">${r[3]}</td><td class="num">${r[2]?Math.round(r[3]/r[2]*100):0}%</td><td>${r[4]}</td></tr>`).join('');
+  return `
+  <div class="card"><h3>📊 MVP 数据分析 · 参数聚类</h3>
+    <p class="muted">基于本地匿名事件缓冲 <code>mdjh_proto_analytics</code>（当前 ${n} 条）。纯前端快照、不上传个人信息；正式上线接 reportEvent 后即真实看板（对应《MVP 埋点设计方案》P2）。</p>
+    <table class="atab"><tr><th>事件</th><th style="text-align:right">次数</th><th>占比</th></tr>${evRows}</table>
+    ${capDetail}
+  </div>
+  <div class="card"><h3>🐾 分宠下钻</h3>
+    <p class="muted">按 petId 归类的事件分布。未归属=全局/尚未切换；切换宠物后新事件归属对应 pid，可对比各宠行为差异。</p>
+    ${drillRows}
+  </div>
+  <div class="card"><h3>🎯 硬顶 A/B 自动化看板</h3>
+    <p class="muted">当前游戏常量（gameCur 实时值）对比撞顶次数，辅助校准「≤4 护 P1」最优数值（设计方案 §4.2）。调参面板改动即时反映于此。</p>
+    <table class="atab"><tr><th>广告类型</th><th style="text-align:right">当前硬顶</th><th style="text-align:right">触发数</th><th style="text-align:right">撞顶数</th><th style="text-align:right">撞顶率</th><th>解读</th></tr>${abRows}</table>
+    <p class="muted" style="margin-top:6px">分享：每日上限 <b>${capShare}</b> · 分享生成数 <b>${shareGen}</b></p>
+    <button class="btn ghost" data-analytics-refresh style="margin-top:8px">🔄 刷新数据</button>
+  </div>
+  ${PT.enabled?`<div class="card" style="border:1px dashed var(--accent)"><h3>🎬 试玩会话采集</h3>
+    <p class="muted">当前采集模式：<b>${PT.ptid}</b>。下方导出本会话全部事件流与状态快照（JSON），在《试玩小样本采集方案》中归档为 ${PT.ptid}.json。</p>
+    <button class="btn" id="ptExportBtn" style="margin-top:8px">📤 导出试玩会话（JSON）</button>
+  </div>`:''}`;
+}
+function logHTML(){
+  const log=(S.log||[]).slice().reverse();
+  if(!log.length) return '<p class="muted">暂无日志。去旅行 / 看广告 / 分享 / 互送后，这里会记录每步行为与单局数值，便于试玩回灌到反推模型。</p>';
+  return log.map(e=>`<div class="logrow"><span class="lt">${fmtTime(e.t)}</span> <span class="ltag">${e.type}</span>${e.detail||''}</div>`).join('');
+}
+function logEvent(type, detail){
+  S.log = S.log || [];
+  S.log.push({t:Date.now(), type, detail});
+  if(S.log.length>300) S.log = S.log.slice(-300);
+  save();
+}
+function fmtTime(t){ const d=new Date(t), p=n=>String(n).padStart(2,'0'); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
+function copyLog(){
+  const txt=(S.log||[]).map(e=>`[${fmtTime(e.t)}] ${e.type}: ${e.detail||''}`).join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(()=>toast('日志已复制')).catch(()=>toast('复制失败，请手动选择')); }
+  else toast('当前环境不支持自动复制');
+}
+
+/* ---------- MVP 埋点（P0，见《猫狗星球_MVP埋点设计方案.md》）----------
+ * track(ev,p)：写入匿名事件缓冲（localStorage: mdjh_proto_analytics），并调用 reportEvent 钩子。
+ * 事件名对齐方案：session_start / day_active / ad_trigger / ad_complete / ad_cap_hit / share_generate / share_back / pet_add / pet_switch / multi_active
+ * 合规：原型仅本地存储，不上传个人信息；正式上线须先完成隐私授权，再在 reportEvent 接入上报管道。
+ */
+const ANALYTICS_KEY='mdjh_proto_analytics';
+const ANALYTICS_VER='1.2';
+let ANALYTICS_BUF=(function(){ try{ return JSON.parse(_L.getItem(ANALYTICS_KEY))||[]; }catch(e){ return []; } })();
+let _anFlushT=0, _anDirty=false;
+function anPush(e){ ANALYTICS_BUF.push(e); if(ANALYTICS_BUF.length>2000) ANALYTICS_BUF=ANALYTICS_BUF.slice(-2000); _anDirty=true; }
+function flushAnalytics(){ try{ _L.setItem(ANALYTICS_KEY, JSON.stringify(ANALYTICS_BUF)); _anDirty=false; }catch(e){} }
+function track(ev, p){
+  const _pp = Object.assign({}, p||{});
+  if(typeof PT!=='undefined' && PT.ptid) _pp.ptid = PT.ptid;   // 试玩采集：会话级归因
+  anPush({t:Date.now(), ver:ANALYTICS_VER, ev:ev, p:_pp, pid:(typeof S!=='undefined'&&S&&S.petId)?S.petId:null});
+  try{ if(typeof reportEvent==='function') reportEvent(ev, p||{}); }catch(e){}
+  const now=Date.now(); if(now-_anFlushT>5000){ _anFlushT=now; flushAnalytics(); }
+}
+function reportEvent(ev,p){ /* 上报钩子：正式上线替换为微信自定义分析/自建后端；原型默认空实现 */ }
+function bootAnalytics(){
+  const q=new URLSearchParams(location.search), sid=q.get('sid');
+  track('session_start', {open_from: sid?'share':'active', sid: sid||null});
+  if(sid) track('share_back', {source_share_id: sid});   // 原型用 ?sid= 模拟分享回流归因；正式环境改由 wx 分享票据回传
+  const flush=()=>flushAnalytics();
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flush(); });
+}
+function dumpAnalytics(){ return ANALYTICS_BUF.slice(); }
+window.__analytics={track:track, dump:dumpAnalytics, flush:flushAnalytics};
+
+/* ---------- 试玩小样本采集（T62 / P5j）：会话级采集 · 卡点标记 · 一键导出 ----------
+ * 进入方式：URL 追加 ?ptid=pt01（试玩员编号）。仅采集模式下显示横幅/卡点按钮/导出入口。
+ * 采集内容：全部 track 事件自动带 ptid；视图切换记 view 事件；卡点记 pt_friction；
+ *          导出为单会话 JSON（事件流 + 状态快照），不含个人信息。正式上线接 reportEvent 后即为真实看板。
+ */
+const PT = (function(){
+  const q = new URLSearchParams(location.search);
+  const ptid = q.get('ptid');                 // 试玩员编号，如 pt01
+  const enabled = !!ptid;                     // 仅 ?ptid= 显式进入采集模式
+  const startedAt = Date.now();
+  function friction(note){
+    if(!enabled) return;
+    track('pt_friction', {ptid, note:(note==null?'':String(note))});
+    toast('已记录一个卡点 ✍️ 可在反馈表补充细节');
+  }
+  function exportSession(){
+    if(!enabled){ toast('未处于试玩采集模式（需 ?ptid=）'); return; }
+    const snapshot=(typeof S!=='undefined')?JSON.parse(JSON.stringify(S)):null;
+    // 本地自定义头像属于个人图片，不随试玩记录导出。
+    if(snapshot && typeof snapshot.companion==='string' && snapshot.companion.indexOf('data:image/')===0){
+      snapshot.companion='[本地头像已脱敏]'; snapshot.hasLocalAvatar=true;
+    }
+    const data = {
+      meta:{ tool:'猫狗星球_试玩采集', ptid, exportedAt:new Date().toISOString(),
+             note:'本文件为试玩员单会话原始采集，含事件流与状态快照；本地头像原图已自动脱敏。events=埋点缓冲(view/ad/share等)，log=行为日志(depart/return/share等漏斗)。' },
+      startedAt,
+      events: dumpAnalytics().filter(e=>!ptid || (e.p&&e.p.ptid)===ptid),
+      log: (typeof S!=='undefined' && S.log)? S.log.slice() : [],
+      snapshot
+    };
+    try{
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='playtest_'+ptid+'_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'')+'.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+      toast('试玩会话已导出 📤');
+    }catch(e){ toast('导出失败：'+e.message); }
+  }
+  return {enabled, ptid, friction, exportSession};
+})();
+if(PT.enabled){
+  // 顶部采集横幅
+  const banner=document.createElement('div'); banner.id='ptBanner';
+  banner.textContent='🎬 试玩采集中 · '+PT.ptid+'（操作会被匿名记录；结束点"导出会话"）';
+  document.body.appendChild(banner);
+  // 右下角卡点标记按钮
+  const f=document.createElement('button'); f.id='ptFrictionBtn'; f.textContent='😕 卡住了';
+  f.onclick=()=>{ let note=null; try{ note=prompt('这一刻卡在哪？（可留空直接提交）'); }catch(e){} if(note!==null) PT.friction(note); };
+  document.body.appendChild(f);
+}
+
+/* ---------- 工具 ---------- */
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+// 加权抽取：偏好簇 fav 权重 B_TERM，其余簇权重 1；fav 不在池中则退化为均匀 pick
+function weightedPick(pool, fav){
+  if(!fav || pool.indexOf(fav)<0) return pick(pool);
+  const w=pool.map(c=> c===fav?B_TERM:1);
+  let s=0; for(const x of w) s+=x;
+  let r=Math.random()*s;
+  for(let i=0;i<pool.length;i++){ r-=w[i]; if(r<0) return pool[i]; }
+  return pool[pool.length-1];
+}
+function tierOfCluster(cl){
+  for(const tk of ['normal','rare','epic','legend']){ if(OPEN_TIERS[tk].indexOf(cl)>=0) return tk; }
+  return null;
+}
+// 当前节气掉率倾向（md §5 / 节气系统）：返回 {cluster:开放簇或null, tier:档或null}
+function termBias(){
+  const t=getCurrentTerm();
+  if(!t || !t.bias) return {cluster:null, tier:null};
+  const open=OPEN_TIERS.normal.concat(OPEN_TIERS.rare, OPEN_TIERS.epic, OPEN_TIERS.legend);
+  if(open.indexOf(t.bias)>=0) return {cluster:t.bias, tier:tierOfCluster(t.bias)};
+  if(t.bias==='primor') return {cluster:null, tier:'rare'}; // 节气灵性 → 稀有档（温和代理）
+  return {cluster:null, tier:null};
+}
+function poisson(lambda){ // Knuth
+  const L=Math.exp(-lambda); let k=0,p=1;
+  do{ k++; p*=Math.random(); }while(p>L); return k-1;
+}
+
+/* ---------- 升级版音频引擎（事件驱动 · 配置化合成 · Phase 1 占位） ---------- */
+const audio = (function(){
+  let ctx = null;
+  // 音频总线
+  const buses = {};
+  ['master','sfx','bgm'].forEach(k=>{ buses[k]={gain:null,vol:1}; });
+  // BGM 状态
+  let bgmNodes = []; let bgmId = null; let bgmGain = null; let bgmAudio = null;
+  const fileSfxPool = new Map();
+  let bgmLFOs = [];
+  // 载入与选择旅伴阶段共用「夜院微光」；避免角色页落入持续的合成底音。
+  const BGM_FILES = {
+    splash:'bgm_splash.ogg', roster:'bgm_splash.ogg', frost:'bgm_frost.ogg', thaw:'bgm_thaw.ogg', bloom:'bgm_bloom.ogg',
+    scorch:'bgm_scorch.ogg', harvest:'bgm_harvest.ogg', yearend:'bgm_yearend.ogg'
+  };
+  // 偏好存储：开关和音量分别记入本地账号存档。
+  let sfxOn = true; let bgmOn = true; let sfxVol = 0.4; let bgmVol = 0.2; let prefsSaveTimer = null;
+
+  function _clampVolume(value, fallback){ const n=Number(value); return Number.isFinite(n)?Math.max(0,Math.min(1,n)):fallback; }
+  function _prefs(){ return (typeof S!=='undefined'&&S&&S.audioPrefs)?S.audioPrefs:null; }
+  function _restorePrefs(){
+    const p=_prefs(); if(!p) return;
+    bgmOn=p.bgmOn!==false; sfxOn=p.sfxOn!==false;
+    bgmVol=_clampVolume(p.bgmVol,0.2); sfxVol=_clampVolume(p.sfxVol,0.4);
+  }
+  function _savePrefs(defer=false){
+    const p=_prefs(); if(!p) return;
+    p.bgmOn=bgmOn; p.sfxOn=sfxOn; p.bgmVol=bgmVol; p.sfxVol=sfxVol;
+    if(prefsSaveTimer){ clearTimeout(prefsSaveTimer); prefsSaveTimer=null; }
+    if(defer){ prefsSaveTimer=setTimeout(()=>{ prefsSaveTimer=null; if(typeof save==='function') save(); },180); }
+    else if(typeof save==='function') save();
+  }
+  function _applyVolumes(){
+    if(buses.bgm.gain) buses.bgm.gain.gain.value=bgmVol;
+    if(buses.sfx.gain) buses.sfx.gain.gain.value=sfxVol;
+    if(bgmAudio) bgmAudio.volume=bgmVol;
+  }
+
+  function _ctx(){ if(!ctx) try{ ctx=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){} return ctx; }
+  function _ensure(){
+    const c=_ctx(); if(!c) return null;
+    if(c.state==='suspended') c.resume();
+    if(!buses.master.gain){
+      // 初始化总线
+      Object.keys(buses).forEach(k=>{
+        const g=c.createGain(); g.gain.value=1;
+        if(k==='master') g.connect(c.destination);
+        buses[k].gain=g;
+      });
+      buses.sfx.gain.connect(buses.master.gain);
+      buses.bgm.gain.connect(buses.master.gain);
+      _applyVolumes();
+    }
+    return c;
+  }
+
+  // --- 事件 → SFX 映射 ---
+  const EVENT_MAP = {
+    'ui:click':'sfx_click', 'ui:back':'sfx_back', 'ui:modal_open':'sfx_bell', 'ui:stepper':'sfx_tick',
+    'game:depart':'sfx_depart', 'game:return':'sfx_return', 'game:star':'sfx_star', 'game:food':'sfx_food',
+    'game:unlock':'sfx_unlock', 'game:visitor':'sfx_visitor', 'game:toast':'sfx_toast', 'game:gift':'sfx_gift',
+    'game:chime':'sfx_chime', 'game:petPick':'sfx_petPick', 'game:petConfirm':'sfx_petConfirm',
+    'game:splash':'sfx_splash', 'game:secretBonus':'sfx_secretBonus',
+    'game:seasonChange':'sfx_seasonChange', 'game:frag':'sfx_frag', 'game:souvenir':'sfx_chime',
+    'game:title':'sfx_fanfare', 'game:craft':'sfx_craft', 'game:share':'sfx_paperplane',
+    // 向后兼容别名（audio.playSFX(X) → audio.emit('game:X')）
+    'game:click':'sfx_click', 'game:splashComplete':'sfx_splash', 'game:secret_bonus':'sfx_secretBonus',
+    // 缺失补全
+    'game:adBoost':'sfx_ad_boost', 'game:adReward':'sfx_ad_reward', 'game:select':'sfx_select',
+    'game:cat':'sfx_cat', 'game:login':'sfx_login', 'game:bagExpand':'sfx_bag_expand',
+    'game:swipe':'sfx_swipe', 'game:paper':'sfx_paper',
+  };
+
+  // --- SFX 合成配置（事件驱动） ---
+  function _genNoise(ctx, dur, cutoff){
+    const sr=ctx.sampleRate, buf=ctx.createBuffer(1,Math.ceil(sr*dur),sr), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++){ const p=i/d.length; d[i]=(Math.random()*2-1)*Math.pow(1-p,2)*(0.5+0.5*Math.sin(p*20)); }
+    return buf;
+  }
+  function _synth(name, ctx, bus, vol, rate){
+    const t=ctx.currentTime, v=vol*(0.85+Math.random()*0.3), r=rate*(0.95+Math.random()*0.1);
+    const o=ctx.createOscillator(), g=ctx.createGain(), n=ctx.createOscillator();
+    const bufSrc=()=>{ const s=ctx.createBufferSource(); s.buffer=_genNoise(ctx,0.12,3000); return s; };
+    const play=(src,gainNode)=>{ src.connect(gainNode); gainNode.connect(bus); src.start(t); };
+    g.gain.setValueAtTime(0,t);
+    switch(name){
+      case 'sfx_click': o.type='sine'; o.frequency.setValueAtTime(600*r,t); o.frequency.linearRampToValueAtTime(400*r,t+0.04); g.gain.linearRampToValueAtTime(v*0.3,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.06); play(o,g); break;
+      case 'sfx_back': o.type='sine'; o.frequency.setValueAtTime(500*r,t); o.frequency.linearRampToValueAtTime(200*r,t+0.2); g.gain.linearRampToValueAtTime(v*0.25,t+0.01); g.gain.exponentialRampToValueAtTime(0.001,t+0.25); play(o,g); break;
+      case 'sfx_bell': [880,1320,1760].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.frequency.value=f*r; g2.gain.setValueAtTime(v*(0.2-i*0.05),t+i*0.02); g2.gain.exponentialRampToValueAtTime(0.001,t+0.3); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.02); o2.stop(t+0.4); }); break;
+      case 'sfx_tick': o.type='triangle'; o.frequency.value=1200*r; g.gain.linearRampToValueAtTime(v*0.3,t+0.002); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); play(o,g); break;
+      case 'sfx_depart': o.type='sawtooth'; o.frequency.setValueAtTime(300*r,t); o.frequency.linearRampToValueAtTime(550*r,t+0.35); g.gain.setValueAtTime(v*0.12,t); g.gain.linearRampToValueAtTime(v*0.2,t+0.15); g.gain.exponentialRampToValueAtTime(0.001,t+0.5); const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2000; o.connect(lp); lp.connect(g); g.connect(bus); o.start(t); o.stop(t+0.5); // 背包扣叠加
+        n.type='triangle'; n.frequency.setValueAtTime(2000,t+0.05); n.frequency.exponentialRampToValueAtTime(400,t+0.15); const g2=ctx.createGain(); g2.gain.setValueAtTime(v*0.15,t+0.05); g2.gain.exponentialRampToValueAtTime(0.001,t+0.2); n.connect(g2); g2.connect(bus); n.start(t+0.05); n.stop(t+0.2); break;
+      case 'sfx_return': [880*r,1100*r,660*r].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f; g2.gain.setValueAtTime(v*(0.15-i*0.03),t+i*0.12); g2.gain.exponentialRampToValueAtTime(0.001,t+0.8); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.12); o2.stop(t+1.0); }); break;
+      case 'sfx_star': [523,659,784].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='triangle'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.25,t+i*0.08+0.005); g2.gain.exponentialRampToValueAtTime(0.001,t+i*0.08+0.25); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.08); o2.stop(t+i*0.08+0.3); }); break;
+      case 'sfx_food': { const s=bufSrc(), g3=ctx.createGain(); g3.gain.setValueAtTime(v*0.2,t); g3.gain.exponentialRampToValueAtTime(0.001,t+0.12); s.connect(g3); g3.connect(bus); s.start(t); } break;
+      case 'sfx_unlock': [523,659,784,1047].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.3,t+i*0.12); g2.gain.exponentialRampToValueAtTime(0.001,t+i*0.12+0.4); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.12); o2.stop(t+i*0.12+0.5); }); break;
+      case 'sfx_visitor': n.type='triangle'; n.frequency.value=880*r; n.start(t); n.stop(t+0.3); o.type='sine'; o.frequency.setValueAtTime(600*r,t); o.frequency.linearRampToValueAtTime(900*r,t+0.2); o.start(t); o.stop(t+0.2); g.gain.setValueAtTime(v*0.3,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3); n.connect(g); o.connect(g); g.connect(bus); break;
+      case 'sfx_toast': o.type='sine'; o.frequency.value=200*r; g.gain.linearRampToValueAtTime(v*0.3,t+0.01); g.gain.exponentialRampToValueAtTime(0.001,t+0.15); play(o,g); break;
+      case 'sfx_gift': [660,880,1100].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='triangle'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.25,t+i*0.1); g2.gain.exponentialRampToValueAtTime(0.001,t+i*0.1+0.25); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.1); o2.stop(t+i*0.1+0.3); }); break;
+      case 'sfx_chime': [523,659,784,1047,1319].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.25,t+i*0.12); g2.gain.exponentialRampToValueAtTime(0.001,t+0.7); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.12); o2.stop(t+0.8); }); break;
+      case 'sfx_petPick': o.type='triangle'; o.frequency.setValueAtTime(660*r,t); o.frequency.setValueAtTime(880*r,t+0.1); g.gain.linearRampToValueAtTime(v*0.3,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.25); play(o,g); break;
+      case 'sfx_petConfirm': [523,784,1047,1319].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.25,t+i*0.15); g2.gain.exponentialRampToValueAtTime(0.001,t+0.7); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.15); o2.stop(t+0.8); }); break;
+      case 'sfx_splash': [440,554,659,880,1100].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.2,t+i*0.1); g2.gain.exponentialRampToValueAtTime(0.001,t+0.6); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.1); o2.stop(t+0.7); }); break;
+      case 'sfx_secretBonus': [880,1100,1320,1760].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.25,t+i*0.08); g2.gain.exponentialRampToValueAtTime(0.001,t+0.4); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.08); o2.stop(t+0.5); }); break;
+      case 'sfx_seasonChange': [660,880,1100,1319,880,660].forEach((f,i)=>{ const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.2,t+i*0.1); g2.gain.exponentialRampToValueAtTime(0.001,t+0.6); o2.connect(g2); g2.connect(bus); o2.start(t+i*0.1); o2.stop(t+0.7); }); break;
+      case 'sfx_frag': o.type='sine'; o.frequency.setValueAtTime(800*r,t); o.frequency.linearRampToValueAtTime(1200*r,t+0.08); g.gain.linearRampToValueAtTime(v*0.15,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.12); play(o,g); break;
+      case 'sfx_fanfare': o.type='sine'; [523,659,784,1047,1319,1661].forEach((f,i)=>{ setTimeout(()=>{ if(!ctx) return; const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='sine'; o2.frequency.value=f*r; g2.gain.linearRampToValueAtTime(v*0.2,0); g2.gain.exponentialRampToValueAtTime(0.001,0.5); o2.connect(g2); g2.connect(bus); o2.start(); o2.stop(ctx.currentTime+0.6); },i*80); }); break;
+      case 'sfx_craft': o.type='triangle'; o.frequency.setValueAtTime(200*r,t); o.frequency.linearRampToValueAtTime(600*r,t+0.3); g.gain.setValueAtTime(v*0.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.4); play(o,g); break;
+      case 'sfx_paperplane': o.type='sine'; o.frequency.setValueAtTime(800*r,t); o.frequency.linearRampToValueAtTime(2000*r,t+0.2); g.gain.setValueAtTime(v*0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3); play(o,g); break;
+      // 缺失补全
+      case 'sfx_swipe': { const dur=0.2,buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*dur),ctx.sampleRate),d=buf.getChannelData(0); for(let i=0;i<d.length;i++){const p=i/d.length;d[i]=(Math.random()*2-1)*Math.pow(1-p,3)*Math.sin(p*Math.PI);} const src=ctx.createBufferSource();src.buffer=buf; const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(6000,t);lp.frequency.linearRampToValueAtTime(500,t+dur); const g2=ctx.createGain();g2.gain.setValueAtTime(v*0.15,t);g2.gain.exponentialRampToValueAtTime(0.001,t+dur);src.connect(lp);lp.connect(g2);g2.connect(bus);src.start(t); } break;
+      case 'sfx_paper': { const dur=0.25,buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*dur),ctx.sampleRate),d=buf.getChannelData(0); for(let i=0;i<d.length;i++){const p=i/d.length;d[i]=(Math.random()*2-1)*Math.pow(1-p,3)*(0.5+0.5*Math.sin(p*20));} const src=ctx.createBufferSource();src.buffer=buf; const g3=ctx.createGain();g3.gain.setValueAtTime(v*0.12,t);g3.gain.exponentialRampToValueAtTime(0.001,t+dur);src.connect(g3);g3.connect(bus);src.start(t); } break;
+      case 'sfx_ad_boost': o.type='sawtooth'; o.frequency.setValueAtTime(400*r,t); o.frequency.linearRampToValueAtTime(1200*r,t+0.35); g.gain.setValueAtTime(v*0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.4); const lp2=ctx.createBiquadFilter();lp2.type='lowpass';lp2.frequency.value=3000; o.connect(lp2);lp2.connect(g);g.connect(bus); o.start(t); o.stop(t+0.45); break;
+      case 'sfx_ad_reward': o.type='triangle'; o.frequency.setValueAtTime(880*r,t); o.frequency.setValueAtTime(1100*r,t+0.08); g.gain.linearRampToValueAtTime(v*0.25,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); play(o,g); break;
+      case 'sfx_select': o.type='triangle'; o.frequency.value=660*r; g.gain.linearRampToValueAtTime(v*0.2,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.1); play(o,g); break;
+      case 'sfx_cat': n.type='triangle'; n.frequency.setValueAtTime(800*r,t); n.frequency.linearRampToValueAtTime(400*r,t+0.15); o.type='sine'; o.frequency.setValueAtTime(400*r,t+0.05); o.frequency.linearRampToValueAtTime(600*r,t+0.18); const g4=ctx.createGain();g4.gain.setValueAtTime(v*0.12,t);g4.gain.exponentialRampToValueAtTime(0.001,t+0.25); n.connect(g4); o.connect(g4);g4.connect(bus); n.start(t); n.stop(t+0.2); o.start(t+0.05); o.stop(t+0.22); break;
+      case 'sfx_login': o.type='triangle'; o.frequency.setValueAtTime(523*r,t); o.frequency.setValueAtTime(659*r,t+0.08); o.frequency.setValueAtTime(784*r,t+0.16); g.gain.linearRampToValueAtTime(v*0.2,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.28); play(o,g); break;
+      case 'sfx_bag_expand': o.type='triangle'; o.frequency.setValueAtTime(330*r,t); o.frequency.setValueAtTime(440*r,t+0.08); o.frequency.setValueAtTime(550*r,t+0.16); o.frequency.setValueAtTime(660*r,t+0.24); g.gain.linearRampToValueAtTime(v*0.2,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.35); play(o,g); break;
+      default: o.type='sine'; o.frequency.value=440; g.gain.linearRampToValueAtTime(v*0.2,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.05); play(o,g);
+    }
+  }
+
+  return {
+    init(){ _restorePrefs(); _ensure(); _applyVolumes(); },
+    get muted(){ return !sfxOn; },
+    get bgmOn(){ return bgmOn; },
+    get sfxOn(){ return sfxOn; },
+    get bgmVolume(){ return bgmVol; },
+    get sfxVolume(){ return sfxVol; },
+    emit(eventName, opt){
+      const c=_ensure(); if(!c) return;
+      const sfxId=EVENT_MAP[eventName];
+      if(!sfxId||!sfxOn) return;
+      _synth(sfxId,c,buses.sfx.gain,0.4+(opt&&opt.vol||0),1.0);
+    },
+    // 向后兼容：audio.playSFX('depart') → audio.emit('game:depart')
+    playSFX(id){ this.emit('game:'+id); },
+    // 复用随包音效：适合底部导航等必须有明确听感的交互。
+    playFileSFX(file, volume=.3){
+      if(!sfxOn) return;
+      let pool=fileSfxPool.get(file);
+      if(!pool){
+        pool=Array.from({length:3},()=>{ const a=new Audio('猫狗星球_音频美术/'+file); a.preload='metadata'; return a; });
+        fileSfxPool.set(file,pool);
+      }
+      const fx=pool.find(a=>a.paused||a.ended)||pool[0];
+      try{ fx.currentTime=0; }catch(e){}
+      fx.volume=Math.max(0,Math.min(1,volume*sfxVol));
+      fx.play().catch(()=>{});
+    },
+
+    // BGM 系统
+    playBGM(id){
+      const c=_ensure(); if(!c||bgmId===id) return;
+      this.stopBGM(); bgmId=id;
+      if(!bgmOn) return;
+      const file=BGM_FILES[id];
+      if(file){
+        bgmAudio=new Audio('猫狗星球_音频美术/'+file);
+        bgmAudio.loop=true; bgmAudio.preload='auto'; bgmAudio.volume=bgmVol;
+        bgmAudio.play().catch(()=>{
+          // 浏览器阻止自动播放时，下一次用户点击会触发 render 并重新尝试。
+          if(bgmId===id){ bgmAudio=null; bgmId=null; }
+        });
+        return;
+      }
+      bgmGain=c.createGain(); bgmGain.gain.value=0.08; bgmGain.connect(buses.bgm.gain);
+      const sMap={splash:[180,270,360,0.04],roster:[330,440,550,0.06],frost:[200,300,400,0.05],
+        thaw:[260,390,520,0.06],bloom:[260,390,520,0.06],scorch:[250,375,500,0.05],
+        harvest:[220,330,440,0.05],yearend:[200,300,400,0.05]};
+      const cfg=sMap[id]||[220,330,440,0.05];
+      cfg.slice(0,3).forEach((f,i)=>{
+        const o=c.createOscillator(); o.type='sine'; o.frequency.value=f;
+        const g=c.createGain(); g.gain.value=cfg[3]+(0.012*i);
+        const lfo=c.createOscillator(); lfo.type='sine'; lfo.frequency.value=0.1+(i*0.05);
+        const lg=c.createGain(); lg.gain.value=0.012;
+        lfo.connect(lg); lg.connect(g.gain); lfo.start();
+        o.connect(g); g.connect(bgmGain); o.start();
+        bgmNodes.push(o); bgmLFOs.push(lfo);
+      });
+    },
+    stopBGM(){ bgmId=null;
+      if(bgmAudio){ try{ bgmAudio.pause(); bgmAudio.currentTime=0; }catch(e){} bgmAudio=null; }
+      [...bgmNodes,...bgmLFOs].forEach(n=>{ try{n.stop();n.disconnect();}catch(e){} });
+      bgmNodes=[]; bgmLFOs=[]; if(bgmGain) try{bgmGain.disconnect();}catch(e){} bgmGain=null;
+    },
+    toggleBGM(){ this.setBGMOn(!bgmOn); },
+    toggleSFX(){ this.setSFXOn(!sfxOn); },
+    setBGMOn(v){
+      bgmOn=!!v; _savePrefs();
+      if(bgmOn){ const sea=activeSeason(); this.playBGM(S.seenSplash?(!S.chosen||view==='onboard'||view==='roster'?'roster':sea.id):'splash'); }
+      else this.stopBGM();
+      return bgmOn;
+    },
+    setSFXOn(v){ sfxOn=!!v; _savePrefs(); return sfxOn; },
+    setBGMVolume(v){ bgmVol=_clampVolume(v,bgmVol); _applyVolumes(); _savePrefs(true); return bgmVol; },
+    setSFXVolume(v){ sfxVol=_clampVolume(v,sfxVol); _applyVolumes(); _savePrefs(true); return sfxVol; },
+    commitPreferences(){ _savePrefs(); },
+  };
+})();
+audio.init();
+
+// 事件钩子注入（通过 audio.emit 驱动）
+(function(){
+  const _depart=window.depart; if(_depart) window.depart=function(){ audio.emit('game:depart'); return _depart.apply(this,arguments); };
+  const _toast=window.toast; if(_toast) window.toast=function(){ audio.emit('game:toast'); return _toast.apply(this,arguments); };
+  const _uh=window.unlockHidden; if(_uh) window.unlockHidden=function(id){ audio.emit('game:unlock'); return _uh.apply(this,arguments); };
+  const _render=window.render;
+  if(_render) window.render=function(){ const r=_render.apply(this,arguments);
+    if(!S.seenSplash) audio.playBGM('splash');
+    else if(!S.chosen||view==='onboard'||view==='roster') audio.playBGM('roster');
+    else{ const sea=activeSeason(); audio.playBGM(sea.id); }
+    return r;
+  };
+})();
+
+// 调参面板：设置 BGM/SFX 开关
+(function(){
+  const _tune=tuneHTML; if(_tune) tuneHTML=function(){ let h=_tune();
+    const seas=activeSeason();
+    const bgmPercent=Math.round(audio.bgmVolume*100), sfxPercent=Math.round(audio.sfxVolume*100);
+    h+=`<div class="card"><h3>🔊 声音</h3>
+      <div style="padding:5px 0 9px;border-bottom:1px solid #eee7dc"><div class="tune-row" style="margin:0"><label>🎵 背景音乐</label><span style="font-size:12px;color:var(--soft);flex:1">${seas?seas.em+' '+seas.name:''}</span>
+        <button class="btn ghost ${audio.bgmOn?'':'on'}" style="font-size:12px;padding:4px 10px;min-width:56px" data-audio-bgm>${audio.bgmOn?'关闭':'开启'}</button></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:8px 2px 0 27px"><input id="audioBgmVolume" type="range" min="0" max="100" step="1" value="${bgmPercent}" aria-label="背景音乐音量" style="flex:1;accent-color:var(--accent)"><output id="audioBgmVolumeValue" style="width:34px;text-align:right;font-size:12px;color:var(--soft)">${bgmPercent}%</output></div></div>
+      <div style="padding:9px 0 2px"><div class="tune-row" style="margin:0"><label>🔔 音效</label><span style="flex:1"></span>
+        <button class="btn ghost ${audio.sfxOn?'':'on'}" style="font-size:12px;padding:4px 10px;min-width:56px" data-audio-sfx>${audio.sfxOn?'关闭':'开启'}</button></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:8px 2px 0 27px"><input id="audioSfxVolume" type="range" min="0" max="100" step="1" value="${sfxPercent}" aria-label="音效音量" style="flex:1;accent-color:var(--accent)"><output id="audioSfxVolumeValue" style="width:34px;text-align:right;font-size:12px;color:var(--soft)">${sfxPercent}%</output></div></div>
+      <p class="muted" style="font-size:11px">音效包括：点击、出发、归来、解锁、季节更替等交互反馈。</p></div>`;
+    return h;
+  };
+  const _bind=bind; if(_bind) bind=function(){ _bind.apply(this,arguments);
+    const bgmBtn=document.querySelector('[data-audio-bgm]'); if(bgmBtn) bgmBtn.onclick=function(){
+      audio.toggleBGM(); toast(audio.bgmOn?'背景音乐已开启 🎵':'背景音乐已关闭 🔇'); render();
+    };
+    const sfxBtn=document.querySelector('[data-audio-sfx]'); if(sfxBtn) sfxBtn.onclick=function(){
+      audio.toggleSFX(); toast(audio.sfxOn?'音效已开启 🔔':'音效已关闭 🔇'); render();
+    };
+    const bgmVolume=document.getElementById('audioBgmVolume'); if(bgmVolume) bgmVolume.oninput=function(){
+      const value=audio.setBGMVolume(Number(this.value)/100); const out=document.getElementById('audioBgmVolumeValue'); if(out) out.textContent=Math.round(value*100)+'%';
+    };
+    if(bgmVolume) bgmVolume.onchange=function(){ audio.commitPreferences(); };
+    const sfxVolume=document.getElementById('audioSfxVolume'); if(sfxVolume){
+      sfxVolume.oninput=function(){ const value=audio.setSFXVolume(Number(this.value)/100); const out=document.getElementById('audioSfxVolumeValue'); if(out) out.textContent=Math.round(value*100)+'%'; };
+      sfxVolume.onchange=function(){ audio.commitPreferences(); if(audio.sfxOn) audio.emit('ui:click'); };
+    }
+  };
+})();
+
+bootAnalytics();
+if(window.__preSplashStarted){ S.seenSplash=true; save(); }
+try{ applyOverrides(); render(); }catch(e){ window.onerror(e&&e.message||String(e),'init',0,0,e); }
+window.__appReady=true;
