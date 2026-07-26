@@ -337,6 +337,15 @@
   .wardrobe-panel[open] summary{border-bottom:1px solid rgba(180,151,113,.2);}
   .wardrobe-panel[open] summary::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
   .wardrobe-panel-body{padding:12px 14px 14px;}
+  .social-panel{padding:0!important;overflow:hidden;}
+  .social-panel summary{min-height:50px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;font-weight:800;color:var(--ink);}
+  .social-panel summary::-webkit-details-marker{display:none;}
+  .social-panel-title{font-size:15px;}
+  .social-panel-count{margin-left:4px;color:var(--soft);font-size:12px;font-weight:700;}
+  .social-panel summary::after{content:'展开';padding:3px 7px;border-radius:999px;background:#f4ede3;color:var(--accent);font-size:10px;font-weight:700;}
+  .social-panel[open] summary{border-bottom:1px solid rgba(180,151,113,.2);}
+  .social-panel[open] summary::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
+  .social-panel-body{padding:12px 14px 14px;}
   /* 邮戳（虚线圆环 + 斜印文字） */
   .pc-mark{position:absolute; top:13px; right:54px; width:54px; height:54px; z-index:2; pointer-events:none;
     border:2px dashed rgba(122,92,62,.55); border-radius:50%; transform:rotate(-14deg);
@@ -3639,11 +3648,11 @@ function gapNearKeys(){
 }
 function gapLabel(k){ return k==='tmap' ? '藏宝图残片' : CLUSTERS[k].name.replace('簇','')+'残片'; }
 function socialHTML(){
-  let h='<div class="card"><h3>'+ic('social')+' 互送残片（轻绑定 · P3）</h3>';
+  let h='<details class="card social-panel" open><summary><span class="social-panel-title">'+ic('social')+' 互送残片 <span class="social-panel-count">（轻绑定 · P3）</span></span></summary><div class="social-panel-body">';
   h+=`<p class="muted">互送是正和：你<b>多的一张</b>，可能是朋友<b>缺的那张</b>。赠冗余零成本、补缺口是关键一步 —— 这比硬广更能驱动分享（K 因子）。</p>`;
   h+=`<p class="muted">今日已赠 <b>${S.friendGift}</b> / 5 次 · 互送网络：已帮 <b>${S.helped}</b> 人 · 被帮 <b>${S.helpedBy}</b> 次</p>`;
   const _bl=(S.bondLevel||0), _bnext=[10,30,60,120][_bl]||null, _bprog=_bnext?Math.min(100,Math.round((S.helped||0)/_bnext*100)):100;
-  h+=`<div class="card" style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>💞 羁绊等级 <b>Lv${_bl}</b></span><span class="muted">连续赠礼 <b>${S.giftStreak||0}</b> 天 · 促成羁绊 <b>${S.bondFill||0}</b> 次</span></div><div class="bar" style="margin-top:6px"><i style="width:${_bprog}%"></i></div><div class="muted" style="font-size:11px;margin-top:2px">${_bnext?`距下一级还需赠出 ${Math.max(0,_bnext-(S.helped||0))} 次`:'羁绊已满级 💞'}</div></div>`;
+  h+=`<details class="card social-panel" open style="margin-top:8px"><summary><span class="social-panel-title">💞 羁绊等级 <span class="social-panel-count">Lv${_bl}</span></span></summary><div class="social-panel-body"><div style="display:flex;justify-content:space-between;font-size:13px"><span>连续赠礼 <b>${S.giftStreak||0}</b> 天</span><span class="muted">促成羁绊 <b>${S.bondFill||0}</b> 次</span></div><div class="bar" style="margin-top:6px"><i style="width:${_bprog}%"></i></div><div class="muted" style="font-size:11px;margin-top:2px">${_bnext?`距下一级还需赠出 ${Math.max(0,_bnext-(S.helped||0))} 次`:'羁绊已满级 💞'}</div></div></details>`;
   h+=`<p class="legend-note">防刷/限频（不靠广告墙）：每日可收 ≤5 次 · 单好友每日 ≤${GIFT_PER_FRIEND_CAP} 次 · 关系满 ${FRIEND_MIN_DAYS} 天方可互送 · 同设备/IP 多账号计 1 节点。</p>`;
   // 缺张触点（差 1 张集齐 → 软求赠，非强迫）
   const gaps=gapNearKeys();
@@ -3658,16 +3667,16 @@ function socialHTML(){
   h+=`<p class="muted" style="margin-top:8px">赠出多余残片（冗余即货币）：</p>`;
   if(opts.length) h+=`<div>${opts.join('')}</div>`; else h+='<p class="muted">暂时没有可赠的残片，先去旅行吧。</p>';
   if(S.tmap>0) h+=`<button class="btn sec" id="useMapBtn" style="margin-top:10px">${ic("star")} 使用藏宝图解锁秘境</button>`;
-  h+='</div>';
+  h+='</div></details>';
   // 分享邀请（K 因子 / 裂变）
-  h+='<div class="card"><h3>'+ic('social')+'分享邀请好友（裂变 · K 因子）</h3>';
+  h+='<details class="card social-panel"><summary><span class="social-panel-title">'+ic('social')+'分享邀请好友 <span class="social-panel-count">（裂变 · K 因子）</span></span></summary><div class="social-panel-body">';
   h+=`<p class="muted">分享邀请得 <b>+${SHARE_STAR} 星屑 / +${SHARE_FOOD} 干粮</b>，并奖励 <b>1 次额外广告机会</b>（当日补给广告上限 +1）。轻绑定、每日上限 ${SHARE_DAILY_CAP} 次（防刷）。</p>`;
   h+=`<p class="muted">今日已分享 <b>${S.shareToday}</b> / ${SHARE_DAILY_CAP} 次 · 额外广告机会 <b>${S.bonusAdToday}</b> 次</p>`;
   const sdis = S.shareToday>=SHARE_DAILY_CAP ? 'disabled' : '';
   h+=`<button class="btn" id="shareBtn" ${sdis} style="margin-top:6px">${ic("social")} 分享邀请得星屑+干粮+1次广告机会</button>`;
   if(S.shareToday>=SHARE_DAILY_CAP) h+='<p class="muted" style="color:var(--accent)">今日分享奖励已用完，明天再来 🌙</p>';
-  h+='</div>';
-  h+=`<div class="card"><h3>🐶 旅伴朋友们</h3>`;
+  h+='</div></details>';
+  h+=`<details class="card social-panel"><summary><span class="social-panel-title">🐶 旅伴朋友们 <span class="social-panel-count">（${Object.keys(S.friends||{}).length}）</span></span></summary><div class="social-panel-body">`;
   const fks=Object.keys(S.friends||{});
   if(!fks.length) h+='<p class="muted">还没有旅友——去旅行，也许会在路上遇见谁。</p>';
   else {
@@ -3675,7 +3684,7 @@ function socialHTML(){
     fks.forEach(fid=>{ const f=S.friends[fid]; h+=`<div class="friend-tile"><div class="ft-comp">${cmp(f.companion)}</div><div class="ft-info"><div class="ft-name">${f.name}</div><div class="ft-sub">${f.met?'路上偶遇的旅友':'游戏内好友'}</div></div><button class="vbtn" data-visit-friend="${fid}">🏡 拜访</button></div>`; });
     h+='</div>';
   }
-  h+=`<p class="muted">遇见的陌生旅友会成为<b>游戏内好友</b>（宠物ID，可互送残片，<b>不涉及微信</b>）。真实版好友来自微信关系链。</p></div>`;
+  h+=`<p class="muted">遇见的陌生旅友会成为<b>游戏内好友</b>（宠物ID，可互送残片，<b>不涉及微信</b>）。真实版好友来自微信关系链。</p></div></details>`;
   return h;
 }
 // —— v1.2 拜访好友小窝（只读展示，无数值交互）——
