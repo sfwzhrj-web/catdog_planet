@@ -1694,7 +1694,7 @@ const CLUSTERS = {
   compass:{name:'罗盘簇',em:'🧭',rarity:'rare',synth:5,items:[
     {id:'罗盘',art:'猫狗星球_整件美术/bronze_compass.png',em:'🧭',name:'青铜罗盘',story:'罗盘总指向"家"，无论它在哪片海域。'},
     {id:'指北星盘',art:'猫狗星球_整件美术/star_dial.png',em:'⭐',name:'指北星盘',story:'星图绣在铜盘上，迷路时抬头便有方向。'},
-    {id:'航海图',art:'猫狗星球_整件美术/sea_chart.png',em:'${ic("map")}',name:'航海星图',story:'图上画着所有去过的港口，连起来是一条温柔的弧线。'}]},
+    {id:'航海图',art:'猫狗星球_整件美术/sea_chart.png',em:'🗺️',name:'航海星图',story:'图上画着所有去过的港口，连起来是一条温柔的弧线。'}]},
   bell:{name:'古钟簇',em:'🔔',rarity:'rare',synth:5,items:[
     {id:'古钟',art:'猫狗星球_整件美术/courtyard_bell.png',em:'🔔',name:'庭院古钟',story:'钟声不报时，只报平安——它挂在庭院里，替你守着家。'},
     {id:'铜磬',art:'猫狗星球_整件美术/bronze_qing.png',em:'🛎️',name:'铜磬',story:'轻敲一下，余音里全是它没说出口的惦记。'},
@@ -1853,7 +1853,7 @@ const TITLES = {
   xa:{name:'陕西考古员', em:'🪔', desc:'陕西出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_shaanxi||0)>=10},
   dh:{name:'甘肃守护者', em:'🏜️', desc:'甘肃出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_gansu||0)>=10},
   bj:{name:'北京文物员', em:'🏯', desc:'北京出游累计 10 次', type:'explore', fn:()=>(S.regionCount.r_beijing||0)>=10},
-  shanhe:{name:'山河客', em:'${ic("map")}', desc:'踏遍全部省级行政区', type:'explore', fn:()=>REGIONS.filter(r=>r.domestic).filter(r=>(S.regionCount[r.id]||0)>=1).length>=DOMESTIC_REGION_TOTAL},
+  shanhe:{name:'山河客', em:'🗺️', desc:'踏遍全部省级行政区', type:'explore', fn:()=>REGIONS.filter(r=>r.domestic).filter(r=>(S.regionCount[r.id]||0)>=1).length>=DOMESTIC_REGION_TOTAL},
   wan:{name:'全境行者', em:'🧭', desc:'踏遍 6 大代表省份（浙江/四川/江苏/陕西/甘肃/北京）', type:'explore', fn:()=>['r_zhejiang','r_sichuan','r_jiangsu','r_shaanxi','r_gansu','r_beijing'].every(r=>(S.regionCount[r]||0)>=1)},
   deep:{name:'深度探索者', em:'⚡', desc:'有效深度≥4 出游 20 次', type:'explore', fn:()=>(S.deepTrips||0)>=20},
   abyss:{name:'深渊勇者', em:'🔥', desc:'秘境(有效深度6)出游 5 次', type:'explore', fn:()=>(S.secretTrips||0)>=5},
@@ -1942,7 +1942,7 @@ const TITLES = {
   lv1:{name:'初心旅伴', em:'🌱', desc:'等级达到 1 级', fn:()=>S.level>=1},
   lv3:{name:'见习向导', em:'🧭', desc:'等级达到 3 级', fn:()=>S.level>=3},
   lv5:{name:'资深旅人', em:'🧳', desc:'等级达到 5 级', fn:()=>S.level>=5},
-  lv10:{name:'漫游大师', em:'${ic("map")}', desc:'等级达到 10 级', fn:()=>S.level>=10},
+  lv10:{name:'漫游大师', em:'🗺️', desc:'等级达到 10 级', fn:()=>S.level>=10},
   lv20:{name:'传奇旅者', em:'🏅', desc:'等级达到 20 级', fn:()=>S.level>=20},
   lv30:{name:'猫狗传奇', em:'👑', desc:'等级达到 30 级', fn:()=>S.level>=30},
   // —— 方向② Batch2：新增探索/世界/秘境联动称号（与新增目的地、国家、秘境挂钩）——
@@ -2278,7 +2278,7 @@ function homeHTML(){
   h+=`<div class="card"><h3>${ic('pin')} 今日进度</h3>
     <p class="muted">等级 <b>Lv${S.level}</b> · ${S.xp} XP · 出游 ${S.trips}/${DAILY_TRIPS} 次 · 已合成整件 ${S.items.length} 件 · 图鉴残片 ${Object.values(S.frags).reduce((a,b)=>a+b,0)} 片${S.tmap>0?' · 藏宝图 '+S.tmap+' 张':''}</p>
     <p class="muted">广告：加速 ${S.travelAdToday}/${AD_CAP_TRAVEL} · 补给 ${S.supplyAdToday}/${AD_CAP_SUPPLY+S.bonusAdToday}（两类互不共享）· 分享 ${S.shareToday}/${SHARE_DAILY_CAP}</p>
-    ${S.secret?'<p class="muted">${ic("star")} 已解锁秘境 — 深度探索的钥匙在你手里。</p>':''}
+    ${S.secret?`<p class="muted">${ic("star")} 已解锁秘境 — 深度探索的钥匙在你手里。</p>`:''}
   </div>`;
   return h;
 }
@@ -3670,7 +3670,7 @@ function unlockHidden(id){
   track('treasure_use', {realm:d.name, success:true});
   track('hidden_unlock', {ed:d.depth, realm_id:id});
   save(); logEvent('map', '使用藏宝图解锁'+d.name); checkTitles(); render();
-  toast('${ic("star")} 已解锁 '+d.name+'！'+(bonus?'当季奖励 +'+bonus+'⭐ ':'')+'去策划旅行看看吧');
+  toast(`${ic("star")} 已解锁 ${d.name}！${bonus?`当季奖励 +${bonus}⭐ `:''}去策划旅行看看吧`);
 }
 
 /* ---------- 衣橱（L8 单宠装扮 + L9 世界观） ---------- */
