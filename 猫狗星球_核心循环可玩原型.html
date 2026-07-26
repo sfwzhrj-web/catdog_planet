@@ -134,6 +134,10 @@
   @keyframes rise{from{transform:translateY(20px); opacity:0;}to{transform:translateY(0); opacity:1;}}
   .postcard{border-radius:16px; padding:16px; background:linear-gradient(160deg,#fff,#fdf2e3);
     border:1px solid var(--line); margin-bottom:14px;}
+  .postcard.framed{border:4px double #d7aa5f; box-shadow:inset 0 0 0 3px #fff7df,0 5px 14px rgba(156,109,43,.13);}
+  .home-theme-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px;}
+  .home-theme-btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 9px;font:inherit;font-size:11px;cursor:pointer;color:var(--ink);}
+  .home-theme-btn.on{border-color:var(--accent);background:#fff1de;color:#9b5f2a;font-weight:700;}
   .postcard .loc{font-size:12px; color:var(--soft); letter-spacing:1px;}
   .postcard .pic{font-size:46px; text-align:center; margin:6px 0;}
   .postcard .txt{font-size:14px; line-height:1.7;}
@@ -955,6 +959,17 @@ const COSMETICS = [
 ];
 const FESTIVAL_COSMETICS={yuanxiao:'lantern',zhongqiu:'moon_rabbit_hood',dongzhi:'winter_lights'};
 const MAX_HOME_DECOR=8;
+// 星屑长期消耗：纯视觉小窝主题，不影响掉落、秘境或稀有收集。
+// 主题均可永久保留并自由切换，避免把星屑变成一次性、不可逆的惩罚。
+const HOME_THEMES=[
+  {id:'seasonal',name:'四季窗台',em:'🌿',cost:0,desc:'跟随当下节气变换窗外的颜色。',bg:null},
+  {id:'sunroom',name:'晨光花房',em:'🌤️',cost:80,desc:'把一次远行换来的暖光，留在小窝里。',bg:'linear-gradient(160deg,#fff1c9,#fce6d8)'},
+  {id:'rainstudy',name:'雨夜书房',em:'📚',cost:140,desc:'雨声、旧地图与尚未寄出的明信片。',bg:'linear-gradient(160deg,#dce9f0,#e9e3f1)'},
+  {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)'},
+  {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)'}
+];
+const HOME_THEME_BY_ID=Object.fromEntries(HOME_THEMES.map(t=>[t.id,t]));
+const JOURNAL_FRAME_COST=15;
 function availableEncounterCosmetics(owned){ return COSMETICS.filter(c=>owned.indexOf(c.id)<0&&c.acquire==='encounter'&&(!c.unlock||c.unlock())); }
 // 偶遇事件（L6：出游被动触发，给惊喜与装扮来源）
 const ENCOUNTERS = [
@@ -1169,7 +1184,7 @@ function levelFromXp(xp){ let L=1; while(xp >= xpNeed(L+1)) L++; return L; }
 ============================================================================ */
 const O_KEY='mdjh_overrides', R_KEY='mdjh_rev';
 let O = {};
-let REV = {watch:0.7, ecpm:30, dau:10000, arpu:0.15, conv:0.15};
+let REV = {watch:0.7, ecpm:30, dau:10000, arpu:0.15, conv:0.15, shareFill:0, activePets:1};
 try{ O = JSON.parse(_L.getItem(O_KEY))||{}; }catch(e){}
 try{ REV = Object.assign(REV, JSON.parse(_L.getItem(R_KEY))||{}); }catch(e){}
 const BASELINE = {AD_CAP_TRAVEL:3,AD_CAP_SUPPLY:5,AD_STAR_REWARD:8,AD_FOOD_REWARD:2,LOGIN_FOOD:4,
@@ -2106,7 +2121,7 @@ const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1
   houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
   chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
   travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
-  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(), homeShowcaseExcluded:[],
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], framedJournal:[], homeThemes:['seasonal'], activeHomeTheme:'seasonal', equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(), homeShowcaseExcluded:[],
   friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false,
   audioPrefs:{bgmOn:true,sfxOn:true,bgmVol:0.2,sfxVol:0.4} };
 
@@ -2117,6 +2132,13 @@ function sanitize(s){
   if(typeof s.frags!=='object'||Array.isArray(s.frags)) s.frags={...t.frags};
   for(const k in t.frags){ if(typeof s.frags[k]!=='number') s.frags[k]=t.frags[k]; }
   if(!Array.isArray(s.items)) s.items=[];
+  if(!Array.isArray(s.journal)) s.journal=[];
+  s.journal.forEach((j,i)=>{ if(!j||typeof j!=='object') return; if(typeof j.id!=='string'||!j.id) j.id=`legacy_${j.day||0}_${j.destId||'entry'}_${i}`; });
+  if(!Array.isArray(s.framedJournal)) s.framedJournal=[];
+  s.framedJournal=[...new Set(s.framedJournal)].filter(id=>typeof id==='string'&&s.journal.some(j=>j&&j.id===id));
+  if(!Array.isArray(s.homeThemes)) s.homeThemes=[];
+  s.homeThemes=[...new Set(['seasonal',...s.homeThemes])].filter(id=>HOME_THEME_BY_ID[id]);
+  if(typeof s.activeHomeTheme!=='string'||s.homeThemes.indexOf(s.activeHomeTheme)<0) s.activeHomeTheme='seasonal';
   if(!Array.isArray(s.log)) s.log=[];
   if(typeof s.giftToday!=='object'||Array.isArray(s.giftToday)) s.giftToday={};
   if(typeof s.friendSince!=='object'||Array.isArray(s.friendSince)) s.friendSince={};
@@ -2182,6 +2204,7 @@ function buildFullDemoAccount(){
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
   d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
   d.homeShowcaseExcluded=[];
+  d.homeThemes=HOME_THEMES.map(t=>t.id); d.activeHomeTheme='stardeck';
   d.journal=REGIONS.map((r,i)=>{
     const x=DEST.find(dest=>dest.regionId===r.id&&dest.stories&&dest.stories.length);
     if(!x) return null;
@@ -2372,7 +2395,9 @@ function homeHTML(){
   }
   const _season=seasonOf((getCurrentTerm()||{m:today().getMonth()+1}).m);
   const _skin={'春':'linear-gradient(160deg,#eaf6e7,#f4faf0)','夏':'linear-gradient(160deg,#e6f1f8,#eef6fb)','秋':'linear-gradient(160deg,#fbf0dd,#fdf6ec)','冬':'linear-gradient(160deg,#eef2f7,#f5f8fb)'}[_season];
-  h+=`<div class="card"><div class="scene companion-showcase" style="background:${_skin}">
+  const _homeTheme=HOME_THEME_BY_ID[S.activeHomeTheme]||HOME_THEME_BY_ID.seasonal;
+  const _homeSkin=_homeTheme.bg||_skin;
+  h+=`<div class="card"><div class="scene companion-showcase" style="background:${_homeSkin}">
       <div class="window-light"></div>
       <div class="floor-shadow"></div>
       <div class="pet">${companionHTML(false)}</div>
@@ -2385,7 +2410,9 @@ function homeHTML(){
   // P1 家园装饰：繁荣度 + 季节皮肤 + 陈列架（展示不管理）
   const _pros=homeProsperity();
   h+=`<div class="card"><h3>${ic("home")} 小窝（繁荣度 ${_pros}）</h3>
-    <p class="muted">季节皮肤：<b>${_season}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝陈列 14 件，每件都有对应的旅行实物。可在图鉴自由调整。</p>
+    <p class="muted">当前主题：<b>${_homeTheme.em} ${_homeTheme.name}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝陈列 14 件，每件都有对应的旅行实物。可在图鉴自由调整。</p>
+    <div class="home-theme-row">${HOME_THEMES.map(t=>{const owned=(S.homeThemes||[]).indexOf(t.id)>=0, active=S.activeHomeTheme===t.id; return `<button class="home-theme-btn ${active?'on':''}" type="button" data-home-theme="${t.id}" ${active?'aria-pressed="true"':''}>${t.em} ${t.name}${owned?(active?' · 使用中':' · 使用'):` · ${t.cost}⭐`}</button>`;}).join('')}</div>
+    <p class="muted" style="font-size:11px;margin-top:8px">主题只改变小窝视觉，不购买残片、藏宝图或传说物；已拥有的主题可随时切换。</p>
     <div class="home-souvenir-grid">${homeShowcaseHTML()}</div>
   </div>`;
   if(S.onboard===0){
@@ -2600,6 +2627,8 @@ function bind(){
     render();
   };
   document.querySelectorAll('[data-showcase]').forEach(e=>e.onclick=()=>{ audio.emit('game:click'); showShowcaseDetail(e.dataset.showcase,e.dataset.showcaseId,e.dataset.showcaseVariant); });
+  document.querySelectorAll('[data-home-theme]').forEach(e=>e.onclick=()=>selectHomeTheme(e.dataset.homeTheme));
+  document.querySelectorAll('[data-frame-journal]').forEach(e=>e.onclick=()=>frameJournal(e.dataset.frameJournal));
   document.querySelectorAll('[data-home-showcase]').forEach(e=>e.onclick=()=>{
     audio.emit('game:click');
     const name=e.dataset.homeShowcase;
@@ -3306,12 +3335,12 @@ function recordJournal(dest, story, gained, lost){
   }).filter(Boolean);
   const af=activeFestivals();
   S.journal=S.journal||[];
-  S.journal.push({ day:S.day, destId:dest.id, destName:dest.name, destTag:dest.tag||rn, destEm:dest.em,
+  S.journal.push({ id:`j_${Date.now().toString(36)}_${S.journal.length}`, day:S.day, destId:dest.id, destName:dest.name, destTag:dest.tag||rn, destEm:dest.em,
     story, season, items, festival: af.length?af[0]:null, solarTerm: term?term.id:null, lost:!!lost });
   // 遇友合影（私藏手账，双人 postcard；即便未加友也留存）
   const meet=(gained||[]).find(g=>g.type==='meet');
   if(meet){
-    S.journal.push({ day:S.day, destId:dest.id, destName:dest.name, destTag:dest.tag||rn, destEm:dest.em,
+    S.journal.push({ id:`j_${Date.now().toString(36)}_${S.journal.length}`, day:S.day, destId:dest.id, destName:dest.name, destTag:dest.tag||rn, destEm:dest.em,
       story: meet.story, season, items:[], festival: af.length?af[0]:null, solarTerm: term?term.id:null, lost:false, meet: meet.stranger });
   }
   if(S.journal.length>200) S.journal=S.journal.slice(-200);
@@ -3357,6 +3386,8 @@ function journalRegionAtlasHTML(){
 function journalCardHTML(e){
   const chips=(e.items||[]).map(journalChipHTML).join('');
   const extra=(e.festival?`<span class="chip fest">${ic("lantern")} 节庆</span>`:'')+(e.solarTerm?`<span class="chip solar">${ic("leaf")} 节气</span>`:'')+(e.lost?`<span class="chip">${ic('lost')} 迷路了，空手而归</span>`:'');
+  const framed=(S.framedJournal||[]).indexOf(e.id)>=0;
+  const frameButton=framed?'<span class="chip" style="background:#fff2c9;color:#a16b1a">🖼️ 已装裱</span>':`<button class="btn ghost" style="margin-top:8px;font-size:12px" data-frame-journal="${e.id}">🖼️ 装裱此页 · ${JOURNAL_FRAME_COST}⭐</button>`;
   // 遇友合影：双宠同框，仅私藏手账（无"寄给好友"分享按钮）
   if(e.meet){
     const m=e.meet;
@@ -3369,13 +3400,13 @@ function journalCardHTML(e){
       <div class="gain" style="margin-top:8px"><span class="chip enc">${ic('social')} 偶遇旅友 ${m.name}</span></div>
     </div>`;
   }
-  return `<div class="postcard" style="position:relative;margin-bottom:12px">
+  return `<div class="postcard ${framed?'framed':''}" style="position:relative;margin-bottom:12px">
     <div class="pc-stamp">${postcardStamp()}</div>
     <div class="pc-head">${journalPlaceThumb(e)}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
     <div class="pic">${journalCompanionHTML()}</div>
     <div class="txt">${e.story}</div>
     ${(chips||extra)?`<div class="gain" style="margin-top:8px">${chips}${extra}</div>`:''}
-    <button class="btn ghost" style="margin-top:8px;font-size:12px" onclick="shareFriend()">${ic('social')} 寄给好友</button>
+    <button class="btn ghost" style="margin-top:8px;font-size:12px" onclick="shareFriend()">${ic('social')} 寄给好友</button>${frameButton}
   </div>`;
 }
 function journalHTML(){
@@ -3397,6 +3428,22 @@ function journalHTML(){
 }
 function homeProsperity(){
   return (S.items||[]).length*2 + (S.souvenirs||[]).length*3 + (S.festivals||[]).length*5 + (S.solarTerms||[]).length*2 + (S.houTerms||[]).length*1;
+}
+function selectHomeTheme(id){
+  const theme=HOME_THEME_BY_ID[id];
+  if(!theme) return;
+  const owned=(S.homeThemes||[]).indexOf(id)>=0;
+  if(owned){ S.activeHomeTheme=id; audio.emit('game:click'); save(); render(); toast(`小窝已换成「${theme.name}」`); return; }
+  if(S.star<theme.cost){ toast(`星屑不足，需要 ${theme.cost}⭐`); return; }
+  S.star-=theme.cost; S.homeThemes=[...(S.homeThemes||[]),id]; S.activeHomeTheme=id;
+  track('economy_home_theme_purchase',{theme:id,cost:theme.cost}); audio.emit('game:unlock'); save(); render(); toast(`小窝添置了「${theme.name}」`);
+}
+function frameJournal(id){
+  if(!id||(S.framedJournal||[]).indexOf(id)>=0) return;
+  if(!(S.journal||[]).some(e=>e.id===id)){ toast('这页手账已经归档了'); return; }
+  if(S.star<JOURNAL_FRAME_COST){ toast(`星屑不足，需要 ${JOURNAL_FRAME_COST}⭐`); return; }
+  S.star-=JOURNAL_FRAME_COST; S.framedJournal=[...(S.framedJournal||[]),id];
+  track('economy_journal_frame',{cost:JOURNAL_FRAME_COST}); audio.emit('game:unlock'); save(); render(); toast('这页旅行记忆已经装裱好啦 🖼️');
 }
 function homeShowcaseHTML(){
   // 纪念品优先采用已配套的道具图，避免设备缺少 emoji 字形时显示为带斜线的占位框。
@@ -3942,18 +3989,23 @@ const TUNE_REV = [
   {k:'dau',   label:'DAU (示例)', min:100, max:1000000, step:1000},
   {k:'arpu',  label:'ARPU目标 (¥/人/日)', min:0.01, max:5, step:0.01},
   {k:'conv',  label:'分享→安装转化率', min:0, max:1, step:0.01},
+  {k:'shareFill', label:'分享奖励完成度', min:0, max:1, step:0.05},
+  {k:'activePets', label:'平均活跃宠物/账号', min:1, max:5, step:0.1},
 ];
 function revCalc(){
-  const inv = AD_CAP_TRAVEL + AD_CAP_SUPPLY + SHARE_DAILY_CAP;
+  const shareFill=Math.max(0,Math.min(1,Number(REV.shareFill)||0));
+  const activePets=Math.max(1,Number(REV.activePets)||1);
+  const invPerPet = AD_CAP_TRAVEL + AD_CAP_SUPPLY + SHARE_DAILY_CAP*shareFill;
+  const inv = invPerPet*activePets;
   const eff = inv * REV.watch;
   const arpu = eff * REV.ecpm/1000;
   const need = REV.arpu / (REV.ecpm/1000);
   const ok = eff >= need;
   const revDay = REV.dau * arpu;
   const kFloor = SHARE_DAILY_CAP * REV.conv;
-  const starCap = STAR_PER_TRIP*DAILY_TRIPS + (AD_CAP_SUPPLY+SHARE_DAILY_CAP)*AD_STAR_REWARD + SHARE_DAILY_CAP*SHARE_STAR;
-  const foodCap = LOGIN_FOOD + (AD_CAP_SUPPLY+SHARE_DAILY_CAP)*AD_FOOD_REWARD + SHARE_DAILY_CAP*SHARE_FOOD;
-  return {inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap};
+  const starCap = STAR_PER_TRIP*DAILY_TRIPS + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_STAR_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_STAR;
+  const foodCap = LOGIN_FOOD + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_FOOD_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_FOOD;
+  return {invPerPet,inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap,shareFill,activePets};
 }
 function tuneHTML(){
   let g='';
@@ -3970,20 +4022,22 @@ function tuneHTML(){
   const c=revCalc();
   const cal=`
    <div class="calc">
-     <div class="crow"><span>最大广告库存</span><b>${c.inv} 次/人/日</b></div>
-     <div class="crow"><span>有效展示 (×观看率 ${REV.watch})</span><b>${c.eff.toFixed(2)} 次/人/日</b></div>
+     <div class="crow"><span>广告库存 / 活跃宠物</span><b>${c.invPerPet.toFixed(2)} 次/日</b></div>
+     <div class="crow"><span>分享奖励完成度 · 活跃宠物</span><b>${Math.round(c.shareFill*100)}% · ${c.activePets.toFixed(1)}</b></div>
+     <div class="crow"><span>账号广告库存</span><b>${c.inv.toFixed(2)} 次/日</b></div>
+     <div class="crow"><span>有效展示 (×观看率 ${REV.watch})</span><b>${c.eff.toFixed(2)} 次/账号/日</b></div>
      <div class="crow"><span>ARPU</span><b>¥${c.arpu.toFixed(3)} / 人/日</b></div>
      <div class="crow"><span>达标所需展示 (ARPU ${REV.arpu})</span><b>${c.need.toFixed(2)}</b></div>
      <div class="crow ${c.ok?'ok':'bad'}"><span>收入目标可达性</span><b>${c.ok?'✅ 可达':'⚠️ 不足'}</b></div>
      <div class="crow"><span>日收入 (DAU ${REV.dau})</span><b>¥${Math.round(c.revDay).toLocaleString()} / 日</b></div>
      <div class="crow"><span>K 地板(仅主动邀请)</span><b>${c.kFloor.toFixed(2)}</b></div>
-     <div class="crow"><span>星屑获取上限 / 日</span><b>${c.starCap}</b></div>
-     <div class="crow"><span>干粮获取上限 / 日</span><b>${c.foodCap}</b></div>
+     <div class="crow"><span>星屑获取上限 / 宠 / 日</span><b>${c.starCap.toFixed(0)}</b></div>
+     <div class="crow"><span>干粮获取上限 / 宠 / 日</span><b>${c.foodCap.toFixed(0)}</b></div>
    </div>`;
   const overridesOn = Object.keys(O).length>0;
   let h='';
   h+=`<div class="card"><h3>${ic('tune')} 调参面板（试玩回灌）</h3>
-    <p class="muted">改完即时生效并写入 localStorage，刷新不丢、不动源码基线。反推口径与「猫狗星球_变现反推模型.xlsx」§2.7 完全一致${overridesOn?'。<b style="color:var(--accent)">当前有游戏常量覆盖生效中</b>':''}。</p></div>`;
+    <p class="muted">改完即时生效并写入 localStorage，刷新不丢、不动源码基线。收入测算以原反推模型为基础，并显式区分分享完成度与平均活跃宠物数；两项均须以上线埋点回灌，不可当作默认收入。${overridesOn?' <b style="color:var(--accent)">当前有游戏常量覆盖生效中</b>':''}。</p></div>`;
   h+=`<div class="card"><h3>${ic("tune")} 游戏常量（IAA / 探索）</h3>${g}
     <button class="btn ghost" id="resetTune" style="margin-top:8px">♻️ 清除游戏常量覆盖（恢复基线）</button></div>`;
   h+=`<div class="card"><h3>${ic("shop")} 变现反推输入（即时算可达性）</h3>${r}${cal}</div>`;
