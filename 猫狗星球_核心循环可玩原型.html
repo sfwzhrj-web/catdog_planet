@@ -154,6 +154,13 @@
   @keyframes petPop{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
   .codex-item .t{font-weight:700; font-size:13px;}
   .codex-item .s{font-size:11px; color:var(--soft);}
+  .solar-term-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 8px;margin-top:6px;}
+  .solar-term-card{min-width:0;min-height:116px;align-items:flex-start;gap:8px;padding:9px 5px;}
+  .solar-term-card .em{flex:none;margin-top:30px;}
+  .solar-term-copy{min-width:0;flex:1;align-self:stretch;}
+  .solar-term-card .solar-term-name{height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .solar-term-date{height:18px;line-height:18px;font-size:11px;color:var(--soft);}
+  .solar-term-card .s{line-height:1.48;}
   .bar{height:8px; background:#eee4d4; border-radius:6px; overflow:hidden; margin-top:6px;}
   .bar>i{display:block; height:100%; background:var(--accent2);}
   .toast{position:fixed; left:50%; bottom:100px; transform:translateX(-50%);
@@ -3402,9 +3409,9 @@ function codexHTML(){
   h+='<div class="card codex-card" data-codexsec="solar"><h3>🌿 节气信物（'+(S.solarTerms||[]).length+'/24）</h3>';
   h+='<p class="muted">每个节气期间首次出游，会带回一张该节气的限定信物，记录四季流转中旅伴的故事。已收集到的会显示在这里。</p>';
   if(!(S.solarTerms||[]).length) h+='<p class="muted">尚未收集到节气信物——在每个节气期间出游即可带回。</p>';
-  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">';
+  h+='<div class="solar-term-grid">';
   SOLAR_TERMS.filter(t=>(S.solarTerms||[]).indexOf(t.id)>=0).forEach(t=>{
-    h+=`<div class="codex-item" style="flex:1;min-width:120px"><div class="em">${solarIcon(t)}</div><div style="flex:1"><div class="t">${t.name} <span style="font-size:11px;color:var(--soft)">${t.m}/${t.d}</span></div><div class="s">${t.flavor}</div></div></div>`;
+    h+=`<div class="codex-item solar-term-card"><div class="em">${solarIcon(t)}</div><div class="solar-term-copy"><div class="t solar-term-name">${t.name}</div><div class="solar-term-date">${t.m}/${t.d}</div><div class="s">${t.flavor}</div></div></div>`;
   });
   h+='</div></div>';
   // 七十二候信物（Phase 5：传统文化七十二物候，每节气3候，按初/次/末候出游掉落）
