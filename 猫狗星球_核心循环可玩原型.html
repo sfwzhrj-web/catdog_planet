@@ -1323,7 +1323,15 @@ const FEATURED_SOUVENIR_ART = {
   '唐三彩马':'猫狗星球_纪念品美术/精选陈列/tang_horse.png',
 };
 const FEATURED_SOUVENIR_NAMES=Object.keys(FEATURED_SOUVENIR_ART);
-function souvenirArt(s){ return FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
+// 全图鉴 104 件一物一图；序号与目的地纪念品清单保持固定，便于后续增量补图。
+const COMPLETE_SOUVENIR_NAMES=[
+  '西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝',
+  '星屑瓶','古境徽记','沉钟铃','回廊沙漏','棱镜坠','地宫钥匙','迷宫星盘','圣殿符牌','星轨车票','云虹坠','龙宫贝','树心琥珀','镜湖沙','星梦种子','遗迹藤种','渊晶核','停钟芯','棱镜碎片','锻炉余烬',
+  '赵州桥石构件','晋商古币','辽代鎏金马具','渤海国瓦当','金代铜镜','明孝陵石像生','三国铜权','海上丝路罗盘','滕王阁诗文卷','齐鲁竹简','龙门石龛残件','编钟残片','马王堆帛书','南越玉印','南海珊瑚信物','夜郎铜鼓','滇王金印','河西简牍','吐谷浑金饰','红砖厝信物','北魏鎏金佛','骆越铜鼓','鎏金小佛像','西夏文残碑','楼兰织锦','漕运铜砝码','元青花瓷片','钓鱼城弩机','维港灯塔模型','葡式瓷砖','刺桐港罗盘','唐三彩马','北宋汴绣','东巴木牌','黄山松石','泰山经石峪刻石','平遥古钱币','土楼夯土砖','九寨彩石','漓江鸬鹚信物','喀纳斯鹿石','鼓浪屿琴键',
+  '圣甲虫护符','黑绘陶罐','罗马金币','平安画卷','铜佛残片','神殿石雕','圣索菲亚马赛克','汉谟拉比法典残片','波斯金杯','翡翠面具','黄金太阳盘','古卷残页','佛牙匣残片','中世纪彩窗','泰姬白玉','琥珀宫残片','巨石阵石楔','城堡铜钥','摩尔彩陶','会安锦灯','大城佛首','鎏金塔刹','新罗金冠','突厥金饰','佩特拉石龛','岩石教堂残件','美泉宫瓷盘','布拉格铜钟残件','蒲甘佛塔砖','浮屠石佛','撒马尔罕釉砖','城堡山铜钥'
+];
+function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); return i<0?null:`猫狗星球_纪念品美术/全图鉴/s${String(i+1).padStart(3,'0')}.png`; }
+function souvenirArt(s){ return completeSouvenirArt(s)||FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
 function homeSouvenirSelection(){
   const owned=S.souvenirs||[];
   const featured=FEATURED_SOUVENIR_NAMES.map(n=>owned.find(s=>s.name===n)).filter(Boolean);
@@ -2915,7 +2923,7 @@ function showReturn(dest, story, gained, synthMsg, mapMsg, lost){
     if(g.type==='lost'){ audio.emit('game:toast'); chips+=`<span class="chip">${ic('lost')} 迷路了，这趟空手而归（下次换短途更稳）</span>`; }
     else if(g.type==='tmap'){ audio.emit('game:frag'); chips+='<span class="chip tmap">🗺️ 藏宝图残片</span>'; }
     else if(g.type==='whole'){ audio.emit('game:chime'); const nm=g.item?g.item.name:CLUSTERS[g.cl].name; const em=g.item?g.item.em:CLUSTERS[g.cl].em; chips+=`<span class="chip ${g.cl}">${em} 整件·${nm}</span>`; }
-    else if(g.type==='souvenir'){ audio.emit('game:souvenir'); const sa=SOUVENIR_ART[souvenirCat(g.name)]; chips+=`<span class="chip souv">${sa?`<img class="chip-art" src="${sa}" alt="">`:`${ic('pin')} ${g.em}`} ${g.name}（地点纪念品）</span>`; }
+    else if(g.type==='souvenir'){ audio.emit('game:souvenir'); const sa=souvenirArt({name:g.name}); chips+=`<span class="chip souv">${sa?`<img class="chip-art" src="${sa}" alt="">`:`${ic('pin')} ${g.em}`} ${g.name}（地点纪念品）</span>`; }
     else if(g.type==='solar'){ audio.emit('game:chime'); const t=SOLAR_TERMS.find(x=>x.id===g.id); chips+=`<span class="chip solar">🌿 ${t?t.name:'节气'}·节气信物</span>`; }
     else if(g.type==='hou'){ audio.emit('game:chime'); const term=SOLAR_TERMS.find(x=>x.id===g.id.split('_')[0]); const h=(term&&term.hou.find(x=>x.id===g.id))||{}; const hart=h.art||null; const hem=h.em||g.em||'🍃'; const hname=h.name||g.name||'七十二候'; chips+=`<span class="chip hou">${hart?`<img class="chip-art" src="${hart}" alt="">`:hem} 七十二候·${hname}</span>`; }
     else if(g.type==='redpack'){ audio.emit('game:star'); chips+='<span class="chip redpack">🧧 新春红包</span>'; }
@@ -3251,7 +3259,7 @@ function storybookHTML(){
   if(souvs.length){
     const read2=read.filter(id=>souvs.some(s=>s.name===id)).length;
     h+='<div style="margin-top:12px"><h4>📍 纪念品故事 <span class="story-count">（'+read2+'/'+souvs.length+' 已读）</span></h4>';
-    souvs.forEach(s=>{ h+=storyEntryHTML(s.name, s.name, s.art?`<img src="${s.art}" alt="">`:s.em, souvenirStoryOf(s), read.indexOf(s.name)>=0, false); });
+    souvs.forEach(s=>{ const sa=souvenirArt(s); h+=storyEntryHTML(s.name, s.name, sa?`<img src="${sa}" alt="">`:s.em, souvenirStoryOf(s), read.indexOf(s.name)>=0, false); });
     h+='</div>';
   }
   h+='</div>';
@@ -3331,7 +3339,7 @@ function codexHTML(){
   h+='<p class="muted">每个目的地都有一件专属纪念品，只有去到那里才可能带回，记录属于那片土地的故事。已带回的会显示在这里。</p>';
   if(!gotSouv.length) h+='<p class="muted">还没带回任何纪念品——出发去探索吧。</p>';
   gotSouv.forEach(d=>{
-    const sa=d.souvenir.art||SOUVENIR_ART[souvenirCat(d.souvenir.name)];
+    const sa=souvenirArt(d.souvenir);
     h+=`<div class="codex-item"><div class="souv-art">${sa?`<img class="souv-img" src="${sa}" alt="${d.souvenir.name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${d.souvenir.em}</span>'">`:`<span class="em">${d.souvenir.em}</span>`}</div><div style="flex:1"><div class="t">${d.souvenir.name} · <span style="color:var(--soft);font-size:12px">${d.name}</span></div><div class="s">${d.souvenir.story}</div></div></div>`;
   });
   h+='</div>';
