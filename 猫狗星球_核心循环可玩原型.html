@@ -297,6 +297,8 @@
   .journal-atlas summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-weight:800;color:var(--ink);list-style:none;}
   .journal-atlas summary::-webkit-details-marker{display:none;}
   .journal-atlas summary b{color:var(--accent);font-size:12px;}
+  .journal-atlas summary b::after{content:'展开';display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#f4ede3;color:var(--accent);font-size:10px;font-weight:700;line-height:1.1;}
+  .journal-atlas[open] summary b::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
   .journal-atlas p{margin:7px 0 9px;font-size:12px;line-height:1.45;color:var(--soft);}
   .journal-atlas-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}
   .journal-region-wrap{position:relative;min-width:0;z-index:1;}
