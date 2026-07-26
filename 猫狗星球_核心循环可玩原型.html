@@ -290,6 +290,7 @@
     background:#fff; border:1px solid var(--line); border-radius:4px; padding:3px;
     box-shadow:0 2px 7px rgba(60,50,40,.20); display:flex; align-items:center; justify-content:center;}
   .pc-stamp .ui-ic{width:26px; height:26px;}
+  .pc-stamp .stamp-word{display:block;text-align:center;font-size:10px;line-height:1.05;letter-spacing:2px;font-weight:800;color:#9a6042;text-shadow:0 1px 0 #fff;}
   /* 邮戳（虚线圆环 + 斜印文字） */
   .pc-mark{position:absolute; top:13px; right:54px; width:54px; height:54px; z-index:2; pointer-events:none;
     border:2px dashed rgba(122,92,62,.55); border-radius:50%; transform:rotate(-14deg);
@@ -302,6 +303,11 @@
     box-shadow:0 6px 16px rgba(60,50,40,.16);}
   .postcard .pic .cmp-img{width:78px; height:78px; border-radius:50%; border:3px solid #fff; box-shadow:0 10px 24px rgba(60,50,40,.22);}
   .postcard .pic .cmp-em{font-size:46px;}
+  .journal-pet-stage{position:relative;display:block;width:142px;height:88px;}
+  .journal-pet-stage>.cmp-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;}
+  .journal-decoration-layer{position:absolute;inset:0;z-index:4;pointer-events:none;}
+  .journal-decoration{position:absolute;width:32px;height:32px;display:grid;place-items:center;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 3px rgba(60,45,30,.22));}
+  .journal-decoration img{display:block;width:32px;height:32px;object-fit:contain;}
   /* 写实地貌缩略图（Track B · 圆角照片呈现旅行地） */
   .biome-art{width:46px; height:46px; border-radius:12px; object-fit:cover; flex:none;
     border:1px solid rgba(60,50,40,.07); box-shadow:0 3px 9px rgba(60,50,40,.16); background:var(--bg);}
@@ -1032,6 +1038,13 @@ function showcaseDecorHTML(){
     return `<span class="showcase-decoration" title="${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</span>`;
   }).join('');
 }
+function journalDecorHTML(){
+  return equippedCosmetics().map(id=>{
+    const c=COSMETICS.find(x=>x.id===id), p=decorPosition(id), art=c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`;
+    return `<span class="journal-decoration" title="${c.name}" style="left:${p.x}%;top:${p.y}%">${art}</span>`;
+  }).join('');
+}
+function journalCompanionHTML(){ return `<span class="journal-pet-stage">${companionHTML(false)}<span class="journal-decoration-layer">${journalDecorHTML()}</span></span>`; }
 // 伴侣/好友头像统一渲染：emoji 字符串、.png CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
 const FRIEND_ART = {'🐶':'猫狗星球_遇友美术/dog.png', '🐰':'猫狗星球_遇友美术/rabbit.png', '🐱':'猫狗星球_宠物美术/c_orange.png'};
 function cmp(c){
@@ -3004,7 +3017,7 @@ function showReturn(dest, story, gained, synthMsg, mapMsg, lost){
   const rn=parseRegionName(dest);
   let body=`<span class="closeX">${ic('x')}</span>
     <div class="postcard">
-      <div class="pc-stamp">${ic('stamp')}</div>
+      <div class="pc-stamp">${postcardStamp()}</div>
       <div class="pc-mark">已寄出</div>
       <div class="pc-head">
         ${biomeThumb(rn, dest.em, 'biome-place')}
@@ -3190,9 +3203,9 @@ function recordJournal(dest, story, gained, lost){
   const term=getCurrentTerm();
   const season=seasonOf(term? term.m : (today().getMonth()+1));
   const items=(gained||[]).filter(g=>g.type==='whole'||g.type==='souvenir'||g.type==='solar').map(g=>{
-    if(g.type==='whole') return {em:g.item?g.item.em:CLUSTERS[g.cl].em, name:g.item?g.item.name:CLUSTERS[g.cl].name};
-    if(g.type==='souvenir') return {em:g.em, name:g.name};
-    if(g.type==='solar'){ const t=SOLAR_TERMS.find(x=>x.id===g.id); return {em:'🌿', name:(t?t.name:'节气')+'信物'}; }
+    if(g.type==='whole') return {type:'whole',em:g.item?g.item.em:CLUSTERS[g.cl].em, name:g.item?g.item.name:CLUSTERS[g.cl].name, art:g.item&&g.item.art};
+    if(g.type==='souvenir') return {type:'souvenir',em:g.em, name:g.name, art:souvenirArt({name:g.name})};
+    if(g.type==='solar'){ const t=SOLAR_TERMS.find(x=>x.id===g.id); return {type:'solar',em:'🌿', name:(t?t.name:'节气')+'信物', art:t&&t.art}; }
     return null;
   }).filter(Boolean);
   const af=activeFestivals();
@@ -3207,25 +3220,35 @@ function recordJournal(dest, story, gained, lost){
   }
   if(S.journal.length>200) S.journal=S.journal.slice(-200);
 }
+function journalItemArt(it){
+  if(it.art) return it.art;
+  if(COMPLETE_SOUVENIR_NAMES.indexOf(it.name)>=0) return souvenirArt({name:it.name});
+  const whole=Object.values(CLUSTERS).flatMap(c=>c.items).find(x=>x.name===it.name||x.id===it.name);
+  if(whole&&whole.art) return whole.art;
+  const termName=String(it.name||'').replace('信物',''); const term=SOLAR_TERMS.find(x=>x.name===termName);
+  return term&&term.art;
+}
+function journalChipHTML(it){ const art=journalItemArt(it); return `<span class="chip">${art?`<img class="chip-art" src="${art}" alt="">`:it.em} ${it.name}</span>`; }
+function postcardStamp(){ return '<span class="stamp-word">旅<br>印</span>'; }
 function journalCardHTML(e){
-  const chips=(e.items||[]).map(it=>`<span class="chip">${it.em} ${it.name}</span>`).join('');
-  const extra=(e.festival?`<span class="chip fest">${ic("lantern")} 节庆</span>`:'')+(e.solarTerm?`<span class="chip solar">${ic("leaf")} 节气</span>`:'')+(e.lost?`<span class="chip">迷路了，空手而归</span>`:'');
+  const chips=(e.items||[]).map(journalChipHTML).join('');
+  const extra=(e.festival?`<span class="chip fest">${ic("lantern")} 节庆</span>`:'')+(e.solarTerm?`<span class="chip solar">${ic("leaf")} 节气</span>`:'')+(e.lost?`<span class="chip">${ic('lost')} 迷路了，空手而归</span>`:'');
   // 遇友合影：双宠同框，仅私藏手账（无"寄给好友"分享按钮）
   if(e.meet){
     const m=e.meet;
     return `<div class="postcard" style="position:relative;margin-bottom:12px;border-color:var(--accent)">
-      <div class="pc-stamp">${ic('stamp')}</div>
+      <div class="pc-stamp">${postcardStamp()}</div>
       <div class="pc-mark">偶遇合影</div>
-      <div class="pc-head">${biomeThumb(e.destTag, e.destEm, 'biome-place')}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
-      <div class="pic meet-pets">${companionHTML()}<span class="meet-amp">×</span><span class="meet-amp">${cmp(m.companion)}</span></div>
+      <div class="pc-head">${biomeThumb(parseRegionName({tag:e.destTag,name:e.destName}), e.destEm, 'biome-place')}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
+      <div class="pic meet-pets">${journalCompanionHTML()}<span class="meet-amp">×</span><span class="meet-amp">${cmp(m.companion)}</span></div>
       <div class="txt">${e.story}</div>
-      <div class="gain" style="margin-top:8px"><span class="chip enc">🤝 偶遇旅友 ${m.name}</span></div>
+      <div class="gain" style="margin-top:8px"><span class="chip enc">${ic('social')} 偶遇旅友 ${m.name}</span></div>
     </div>`;
   }
   return `<div class="postcard" style="position:relative;margin-bottom:12px">
-    <div class="pc-stamp">${ic('stamp')}</div>
-    <div class="pc-head">${biomeThumb(e.destTag, e.destEm, 'biome-place')}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
-    <div class="pic">${companionHTML()}</div>
+    <div class="pc-stamp">${postcardStamp()}</div>
+    <div class="pc-head">${biomeThumb(parseRegionName({tag:e.destTag,name:e.destName}), e.destEm, 'biome-place')}<div class="loc">第 ${e.day} 天 · ${e.destTag} · ${e.destName}</div></div>
+    <div class="pic">${journalCompanionHTML()}</div>
     <div class="txt">${e.story}</div>
     ${(chips||extra)?`<div class="gain" style="margin-top:8px">${chips}${extra}</div>`:''}
     <button class="btn ghost" style="margin-top:8px;font-size:12px" onclick="shareFriend()">${ic('social')} 寄给好友</button>
@@ -3233,7 +3256,7 @@ function journalCardHTML(e){
 }
 function journalHTML(){
   const J=S.journal||[];
-  let h='<div class="card"><h3>📔 旅行手账（'+J.length+' 篇）</h3>';
+  let h='<div class="card"><h3>'+ic('journal')+' 旅行手账（'+J.length+' 篇）</h3>';
   h+='<p class="muted">每次出游都会自动记一篇——目的地、故事、带回的小东西。翻翻旧旅程，或把喜欢的明信片寄给好友。</p>';
   if(!J.length){ h+='<p class="muted">还没有手账记录——出发去旅行吧，它会把见闻写下来寄给你。</p></div>'; return h; }
   ['春','夏','秋','冬'].forEach(se=>{
