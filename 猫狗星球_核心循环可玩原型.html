@@ -3308,7 +3308,7 @@ function journalRegionAtlasHTML(){
     return `<button class="journal-region ${visited?'on':'locked'} ${journalAtlasSelected===r.id?'selected':''}" type="button" data-journal-region="${r.id}" title="${r.name}${visited?` · 已旅行 ${count} 次`:' · 尚未抵达'}" aria-pressed="${journalAtlasSelected===r.id}">${thumb}<b>${r.name}</b><span>${visited?`已达 ${count}`:'待启程'}</span></button>`;
   }).join('');
   const selected=all.find(r=>r.id===journalAtlasSelected);
-  return `<details class="journal-atlas" ${journalAtlasOpen?'open':''}><summary><span>${ic('map')} 地域旅行册</span><b>${reached}/${all.length}</b></summary><p>点按地区图标，即可查看它的旅行手账、纪念物或待启程故事。</p><div class="journal-atlas-grid">${tiles}</div>${selected?journalRegionDetailHTML(selected):''}</details>`;
+  return `<details class="journal-atlas" ${journalAtlasOpen?'open':''}><summary><span>${ic('map')} 地域旅行册</span><b>${reached}/${all.length}</b></summary><p>点按地区图标，即可查看它的旅行手账、纪念物或待启程故事。</p>${selected?journalRegionDetailHTML(selected):''}<div class="journal-atlas-grid">${tiles}</div></details>`;
 }
 function journalCardHTML(e){
   const chips=(e.items||[]).map(journalChipHTML).join('');
