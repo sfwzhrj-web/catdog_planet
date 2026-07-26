@@ -328,6 +328,15 @@
   .journal-volume[open] summary{border-bottom:1px solid rgba(180,151,113,.2);color:var(--ink);}
   .journal-volume[open] summary::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
   .journal-volume-body{padding:10px 10px 0;}
+  .wardrobe-panel{padding:0!important;overflow:hidden;}
+  .wardrobe-panel summary{min-height:50px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;font-weight:800;color:var(--ink);}
+  .wardrobe-panel summary::-webkit-details-marker{display:none;}
+  .wardrobe-panel-title{font-size:15px;}
+  .wardrobe-panel-count{margin-left:4px;color:var(--soft);font-size:12px;font-weight:700;}
+  .wardrobe-panel summary::after{content:'展开';padding:3px 7px;border-radius:999px;background:#f4ede3;color:var(--accent);font-size:10px;font-weight:700;}
+  .wardrobe-panel[open] summary{border-bottom:1px solid rgba(180,151,113,.2);}
+  .wardrobe-panel[open] summary::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
+  .wardrobe-panel-body{padding:12px 14px 14px;}
   /* 邮戳（虚线圆环 + 斜印文字） */
   .pc-mark{position:absolute; top:13px; right:54px; width:54px; height:54px; z-index:2; pointer-events:none;
     border:2px dashed rgba(122,92,62,.55); border-radius:50%; transform:rotate(-14deg);
@@ -3811,14 +3820,14 @@ function unlockHidden(id){
 
 /* ---------- 衣橱（L8 单宠装扮 + L9 世界观） ---------- */
 function wardrobeHTML(){
-  let h='<div class="card"><h3>👗 我的旅伴</h3>';
+  let h='<details class="card wardrobe-panel" open><summary><span class="wardrobe-panel-title">👗 我的旅伴</span></summary><div class="wardrobe-panel-body">';
   h+=`<div class="scene wardrobe-scene" style="background:linear-gradient(160deg,#eaf6e7,#f4faf0)">
       <div class="window-light"></div><div class="floor-shadow"></div>
       <div class="pet" style="font-size:54px">${companionHTML(false)}</div>
       <div class="wardrobe-decoration-layer">${wardrobeDecorHTML()}</div></div>`;
-  h+=`<p class="wardrobe-hint">小窝展示位 ${equippedCosmetics().length}/${MAX_HOME_DECOR} · 已穿戴的饰品可在小窝内自由拖动摆放。</p><p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。最多展示 ${MAX_HOME_DECOR} 件，点一下就能穿脱。</p></div>`;
+  h+=`<p class="wardrobe-hint">小窝展示位 ${equippedCosmetics().length}/${MAX_HOME_DECOR} · 已穿戴的饰品可在小窝内自由拖动摆放。</p><p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。最多展示 ${MAX_HOME_DECOR} 件，点一下就能穿脱。</p></div></details>`;
   // L8 装扮清单
-  h+='<div class="card"><h3>'+ic('wardrobe')+S.name+' 的衣橱（'+(S.cosmetics||[]).length+'/'+COSMETICS.length+'）</h3><div class="cos-grid">';
+  h+='<details class="card wardrobe-panel" open><summary><span class="wardrobe-panel-title">'+ic('wardrobe')+S.name+' 的衣橱 <span class="wardrobe-panel-count">（'+(S.cosmetics||[]).length+'/'+COSMETICS.length+'）</span></span></summary><div class="wardrobe-panel-body"><div class="cos-grid">';
   COSMETICS.forEach(c=>{
     const owned=(S.cosmetics||[]).indexOf(c.id)>=0;
     const on=(S.equipped||[]).indexOf(c.id)>=0;
@@ -3828,15 +3837,15 @@ function wardrobeHTML(){
       h+=`<div class="cos-item locked"><div class="cos-em">❔</div><div class="cos-n">？？？</div><div class="cos-s">${c.desc}<br><span class="muted">来源：${c.src}</span></div></div>`;
     }
   });
-  h+='</div></div>';
+  h+='</div></div></details>';
   const outfitStories=COSMETICS.filter(c=>(S.cosmetics||[]).indexOf(c.id)>=0);
   if(outfitStories.length){
-    h+='<div class="card outfit-stories"><h3>🗺️ 旅行衣橱故事（'+outfitStories.length+'）</h3>';
+    h+='<details class="card wardrobe-panel outfit-stories"><summary><span class="wardrobe-panel-title">🗺️ 旅行衣橱故事 <span class="wardrobe-panel-count">（'+outfitStories.length+'）</span></span></summary><div class="wardrobe-panel-body">';
     outfitStories.forEach(c=>{ h+=`<div class="outfit-story">${c.art?`<img src="${c.art}" alt="${c.name}">`:`<span>${c.em}</span>`}<div><b>${c.name}</b><span class="src">${c.src}</span></div><p>${c.story||c.desc}</p></div>`; });
-    h+='</div>';
+    h+='</div></details>';
   }
   // L9 世界观（收集深度解锁的剧情碎片）
-  h+='<div class="card"><h3>'+ic('book')+'世界观（'+(LORE.filter(l=>l.cond()).length)+'/'+LORE.length+'）</h3><p class="muted">随着旅程越走越深，星球的故事会一段段亮起。这是只属于阅读者的奖励。</p>';
+  h+='<details class="card wardrobe-panel"><summary><span class="wardrobe-panel-title">'+ic('book')+'世界观 <span class="wardrobe-panel-count">（'+(LORE.filter(l=>l.cond()).length)+'/'+LORE.length+'）</span></span></summary><div class="wardrobe-panel-body"><p class="muted">随着旅程越走越深，星球的故事会一段段亮起。这是只属于阅读者的奖励。</p>';
   LORE.forEach(l=>{
     const ok=l.cond();
     h+=`<div class="lore-item ${ok?'on':''}">
@@ -3844,7 +3853,7 @@ function wardrobeHTML(){
       ${ok?`<div class="lore-txt">${l.text}</div>`:`<div class="lore-hint">🔒 ${l.hint}</div>`}
     </div>`;
   });
-  h+='</div>';
+  h+='</div></details>';
   return h;
 }
 
