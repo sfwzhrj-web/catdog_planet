@@ -1307,6 +1307,29 @@ const SOUVENIR_ART = {
   badge:'猫狗星球_纪念品美术/badge.png',
   snackbox:'猫狗星球_纪念品美术/snackbox.png',
 };
+// 小窝精选陈列：每件均有独立 CG 道具图，避免不同故事共用同一张泛化占位图。
+const FEATURED_SOUVENIR_ART = {
+  '西湖团扇':'猫狗星球_纪念品美术/精选陈列/westlake_fan.png',
+  '竹叶书签':'猫狗星球_纪念品美术/精选陈列/bamboo_bookmark.png',
+  '园林窗棂':'猫狗星球_纪念品美术/精选陈列/garden_window.png',
+  '陶土兵俑':'猫狗星球_纪念品美术/精选陈列/terracotta_warrior.png',
+  '飞天壁画':'猫狗星球_纪念品美术/精选陈列/apsara_mural.png',
+  '故宫脊兽':'猫狗星球_纪念品美术/精选陈列/roof_beast.png',
+  '武陵石峰':'猫狗星球_纪念品美术/精选陈列/wuling_peaks.png',
+  '鎏金坛城':'猫狗星球_纪念品美术/精选陈列/gilded_mandala.png',
+  '木鱼':'猫狗星球_纪念品美术/精选陈列/wooden_fish.png',
+  '太极玉牌':'猫狗星球_纪念品美术/精选陈列/taiji_jade.png',
+  '南海潮音贝':'猫狗星球_纪念品美术/精选陈列/tide_shell.png',
+  '唐三彩马':'猫狗星球_纪念品美术/精选陈列/tang_horse.png',
+};
+const FEATURED_SOUVENIR_NAMES=Object.keys(FEATURED_SOUVENIR_ART);
+function souvenirArt(s){ return FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
+function homeSouvenirSelection(){
+  const owned=S.souvenirs||[];
+  const featured=FEATURED_SOUVENIR_NAMES.map(n=>owned.find(s=>s.name===n)).filter(Boolean);
+  const rest=owned.filter(s=>FEATURED_SOUVENIR_NAMES.indexOf(s.name)<0);
+  return featured.concat(rest).slice(0,12);
+}
 function souvenirCat(name){
   if(/瓷|陶|窑|俑|砂|琉璃/.test(name)) return 'ceramic';
   if(/织|绣|帛|简|卷|书|画|扇|竹|木|窗|叶|幡|毯|牌/.test(name)) return 'fabric';
@@ -2213,7 +2236,7 @@ function homeHTML(){
   // P1 家园装饰：繁荣度 + 季节皮肤 + 陈列架（展示不管理）
   const _pros=homeProsperity();
   h+=`<div class="card"><h3>${ic("home")} 小窝（繁荣度 ${_pros}）</h3>
-    <p class="muted">季节皮肤：<b>${_season}</b> · 把旅行带回的纪念品和整件摆上架，就是你的小窝。繁荣度随收集自然增长，越高小窝越热闹。</p>
+    <p class="muted">季节皮肤：<b>${_season}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝精选陈列 12 件，每件都有对应的旅行实物。完整收藏可在图鉴查看。</p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${homeShowcaseHTML()}</div>
   </div>`;
   if(S.onboard===0){
@@ -3151,10 +3174,9 @@ function homeProsperity(){
 }
 function homeShowcaseHTML(){
   // 纪念品优先采用已配套的道具图，避免设备缺少 emoji 字形时显示为带斜线的占位框。
-  const souv=(S.souvenirs||[]).map(s=>{ const art=s.art||SOUVENIR_ART[souvenirCat(s.name)]; return `<button class="show-tile showcase-tile" type="button" data-showcase="souvenir" data-showcase-id="${s.name}" title="查看${s.name}的旅行故事" aria-label="查看纪念品${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</button>`; });
-  // 变体标记固定为图框内角标，不能参与内容流挤出卡片边界。
-  const items=(S.items||[]).slice(0,12).map(it=>{ const mark=it.variant==='闪光'?'🌟':it.variant==='羁绊'?'💞':''; return `<button class="show-tile showcase-tile" type="button" data-showcase="item" data-showcase-id="${it.id}" data-showcase-variant="${it.variant||'普通'}" title="查看${it.name}的旅行故事" aria-label="查看整件${it.name}${it.variant?'，'+it.variant:''}">${itemIcon(it)}${mark?`<span class="variant-mark" aria-label="${it.variant}">${mark}</span>`:''}</button>`; });
-  const all=souv.concat(items);
+  const souv=homeSouvenirSelection().map(s=>{ const art=souvenirArt(s); return `<button class="show-tile showcase-tile" type="button" data-showcase="souvenir" data-showcase-id="${s.name}" title="查看${s.name}的旅行故事" aria-label="查看纪念品${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</button>`; });
+  // 小窝只陈列 12 件独立纪念品；整件及其变体保留在图鉴中，避免泛化图重复堆放。
+  const all=souv;
   if(!all.length) return '<span class="muted">架子还空着——去旅行，把纪念品带回来摆上吧。</span>';
   return all.join('');
 }
@@ -3164,7 +3186,7 @@ function showShowcaseDetail(kind,id,variantKey){
   if(!entry) return;
   const dest=isSouvenir?DEST.find(d=>d.souvenir&&d.souvenir.name===entry.name):null;
   const cluster=!isSouvenir?Object.values(CLUSTERS).find(c=>c.items.some(it=>it.id===entry.id)):null;
-  const art=isSouvenir?(entry.art||SOUVENIR_ART[souvenirCat(entry.name)]):entry.art;
+  const art=isSouvenir?souvenirArt(entry):entry.art;
   const variant=entry.variant||'普通';
   const variantText=variant==='闪光'?'闪光：在旅行中偶遇的稀有光泽形态。':variant==='羁绊'?'羁绊：与旅伴共同经历后留存的特别形态。':'普通：这件旅行收获最初的样子。';
   const story=(isSouvenir?souvenirStoryOf(entry):storyOf(entry))[0]||entry.story||'它安静地留在小窝里，提醒着每一次出发。';
