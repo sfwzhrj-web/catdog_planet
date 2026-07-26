@@ -305,6 +305,13 @@
   .journal-region b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;line-height:1.2;color:var(--ink);}
   .journal-region span{font-size:9px;line-height:1.2;color:var(--soft);}
   .journal-region.locked{filter:saturate(.2);opacity:.58;}
+  .journal-volume{margin:12px 0 0;border:1px solid rgba(180,151,113,.28);border-radius:14px;background:rgba(255,255,255,.58);overflow:hidden;}
+  .journal-volume summary{min-height:43px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;font-weight:800;font-size:13px;color:var(--soft);}
+  .journal-volume summary::-webkit-details-marker{display:none;}
+  .journal-volume summary::after{content:'展开';padding:3px 7px;border-radius:999px;background:#f4ede3;color:var(--accent);font-size:10px;font-weight:700;}
+  .journal-volume[open] summary{border-bottom:1px solid rgba(180,151,113,.2);color:var(--ink);}
+  .journal-volume[open] summary::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
+  .journal-volume-body{padding:10px 10px 0;}
   /* 邮戳（虚线圆环 + 斜印文字） */
   .pc-mark{position:absolute; top:13px; right:54px; width:54px; height:54px; z-index:2; pointer-events:none;
     border:2px dashed rgba(122,92,62,.55); border-radius:50%; transform:rotate(-14deg);
@@ -3296,11 +3303,13 @@ function journalHTML(){
   h+='<p class="muted">每次出游都会自动记一篇——目的地、故事、带回的小东西。翻翻旧旅程，或把喜欢的明信片寄给好友。</p>';
   h+=journalRegionAtlasHTML();
   if(!J.length){ h+='<p class="muted">还没有手账记录——出发去旅行吧，它会把见闻写下来寄给你。</p></div>'; return h; }
+  const recentSeason=J[J.length-1].season;
   ['春','夏','秋','冬'].forEach(se=>{
     const list=J.filter(e=>e.season===se);
     if(!list.length) return;
-    h+=`<div style="font-weight:700;font-size:13px;margin:14px 0 6px;color:var(--soft)">${ic("flower")} ${se}之卷（${list.length} 篇）</div>`;
+    h+=`<details class="journal-volume" ${se===recentSeason?'open':''}><summary><span>${ic("flower")} ${se}之卷（${list.length} 篇）</span></summary><div class="journal-volume-body">`;
     list.slice().reverse().forEach(e=>h+=journalCardHTML(e));
+    h+='</div></details>';
   });
   h+='</div>';
   return h;
