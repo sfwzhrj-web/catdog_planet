@@ -540,7 +540,7 @@
   .era-sec .sec-d{font-size:10px;color:var(--soft);}
   .chip.season-on{background:linear-gradient(135deg,#7fb3a3,#5a9b8a);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(90,155,138,.3);}
   /* 登录载入界面（精修版） */
-  .splash{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.35)),url('猫狗星球_载入画面.png') center/cover no-repeat;z-index:100;overflow:hidden;animation:splashFade .8s ease}
+  .splash{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.35)),url('猫狗星球_载入画面.webp') center/cover no-repeat;z-index:100;overflow:hidden;animation:splashFade .8s ease}
   @keyframes splashFade{from{opacity:0}to{opacity:1}}
   .splash .sdec{position:absolute;font-size:18px;opacity:.12;pointer-events:none;animation:sDeco 6s ease-in-out infinite}
   @keyframes sDeco{0%,100%{transform:translateY(0) rotate(0deg);opacity:.08}50%{transform:translateY(-20px) rotate(5deg);opacity:.16}}
@@ -585,10 +585,10 @@
 </style>
 </head>
 <body>
-<div id="preSplash" style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.35)),url('猫狗星球_载入画面.png') center/cover no-repeat;z-index:9999;overflow:hidden">
+<div id="preSplash" style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.35)),url('猫狗星球_载入画面.webp') center/cover no-repeat;z-index:9999;overflow:hidden">
   <div style="padding-top:64px;text-align:center;position:relative;z-index:1">
     <div style="font-size:24px;color:#fff;opacity:.85;letter-spacing:14px;margin-bottom:6px">✦ ─ ✦</div>
-    <img class="brand-title-art" src="猫狗星球_登录气泡标题.png" alt="猫狗星球">
+    <img class="brand-title-art" src="猫狗星球_登录气泡标题.webp" alt="猫狗星球">
     <div style="font-size:14px;color:#fff8ec;letter-spacing:3px;margin-top:6px">— 和旅伴一起环游世界 —</div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;z-index:1;padding-bottom:80px">
@@ -627,24 +627,24 @@ document.getElementById('preStart').onclick=function(){
       <button id="petSwitchBtn" class="mini-btn" style="margin-left:auto;flex-shrink:0;font-size:12px;white-space:nowrap" title="切换宠物角色">🐾 角色</button>
     </div>
     <div class="res">
-      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/star.png" alt=""> 星屑 <b id="rStar">0</b></span>
-      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/food.png" alt=""> 干粮 <b id="rFood">5</b></span>
-      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/crystal.png" alt=""> 残片 <b id="rFrag">0</b></span>
-      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/map.png" alt=""> 藏宝图 <b id="rMap">0</b></span>
-      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/backpack.png" alt=""> 背包 <b id="rBackpack">0/20</b></span>
+      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/star.webp" alt=""> 星屑 <b id="rStar">0</b></span>
+      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/food.webp" alt=""> 干粮 <b id="rFood">5</b></span>
+      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/crystal.webp" alt=""> 残片 <b id="rFrag">0</b></span>
+      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/map.webp" alt=""> 藏宝图 <b id="rMap">0</b></span>
+      <span class="pill"><img class="ui-ic" src="猫狗星球_图标美术/backpack.webp" alt=""> 背包 <b id="rBackpack">0/20</b></span>
     </div>
   </header>
 
   <main id="main"><!-- dynamic --></main>
 
   <nav>
-    <button data-view="home" class="on"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/home.png" alt=""></span>家</button>
-    <button data-view="codex"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/book.png" alt=""></span>图鉴</button>
-    <button data-view="journal"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/journal.png" alt=""></span>手账</button>
-    <button data-view="social"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/social.png" alt=""></span>互送</button>
-    <button data-view="wardrobe"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/wardrobe.png" alt=""></span>衣橱</button>
-    <button data-view="shop"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/shop.png" alt=""></span>星屑</button>
-    <button data-view="tune"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/tune.png" alt=""></span>调参</button>
+    <button data-view="home" class="on"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/home.webp" alt=""></span>家</button>
+    <button data-view="codex"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/book.webp" alt=""></span>图鉴</button>
+    <button data-view="journal"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/journal.webp" alt=""></span>手账</button>
+    <button data-view="social"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/social.webp" alt=""></span>互送</button>
+    <button data-view="wardrobe"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/wardrobe.webp" alt=""></span>衣橱</button>
+    <button data-view="shop"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/shop.webp" alt=""></span>星屑</button>
+    <button data-view="tune"><span class="ic"><img class="ui-ic" src="猫狗星球_图标美术/tune.webp" alt=""></span>调参</button>
   </nav>
 </div>
 
@@ -757,7 +757,7 @@ function rosterHTML(){
     '<p class="muted" style="margin-top:6px;color:#b8860b">⚠️ 多角色均归属同一账号，实名认证与未成年保护对所有角色统一生效，切换不改变账号身份。</p>';
   pets.forEach(function(p){
     var act=p.id===m.activeId;
-    var isPng = typeof p.companion==='string' && p.companion.indexOf('.png')>=0;
+    var isPng = typeof p.companion==='string' && /\.(?:png|webp)$/i.test(p.companion);
     var thumb = isPng ? '<img class="cmp-thumb" src="'+p.companion+'" alt="" onerror="this.outerHTML=\'<span class=&quot;cmp-em&quot;>🐱</span>\'">' : '<span class="cmp-em">'+(p.companion||'🐱')+'</span>';
     var acts = '<div style="display:flex;gap:6px;flex-shrink:0">';
     if(!act) acts += '<button class="btn ghost" data-switch="'+p.id+'" style="font-size:12px;padding:4px 10px">切换</button>';
@@ -766,7 +766,7 @@ function rosterHTML(){
     acts += '</div>';
     h+='<div class="codex-item pet-row" style="align-items:center">'+
       '<div class="em">'+thumb+'</div>'+
-      '<div style="flex:1;min-width:0"><div class="t">'+p.name+(act?' <span style="color:var(--accent)">· 当前</span>':'')+'</div>'+
+      '<div style="flex:1;min-width:0"><div class="t">'+escapeHtml(p.name)+(act?' <span style="color:var(--accent)">· 当前</span>':'')+'</div>'+
       '<div class="s">Lv'+(p.level||1)+' · '+(p.star||0)+' 星屑</div></div>'+
       acts+
       '</div>';
@@ -778,7 +778,7 @@ function rosterHTML(){
 // 改名 / 删宠（P1 打磨）
 function renamePet(id){
   var cur = id===getMeta().activeId ? (S.name||'旅伴') : (loadPet(id).name||'旅伴');
-  var np = (prompt('给这只旅伴起个名字：', cur)||'').trim();
+  var np = normalizePetName(prompt('给这只旅伴起个名字：', cur), '');
   if(!np) return;
   if(id===getMeta().activeId){ S.name=np; save(); }
   else { var d=loadPet(id); d.name=np; savePet(id,d); }
@@ -863,54 +863,54 @@ const CHONGYANG_STAR = 8;                 // 重阳：临时"登高"加成（星
 const LABA_FOOD = 5;                      // 腊八：登录赠送腊八粥（干粮）
 // 二十四节气（按公历区间自然推进，每节气~15 天）。bias 仅作叙事软导向，不硬改掉率。
 const SOLAR_TERMS = [
-  {id:'lichun',art:'猫狗星球_节气美术/lichun.png',  name:'立春', em:'🌱', m:2,  d:4,  bias:'fabric',  flavor:'春天从哪里开始的？它说是一阵风先知道了。',
-    hou:[{id:'lichun_1',name:'东风解冻',em:'🌬️',flavor:'风先知道春天来了。',art:'猫狗星球_候美术/lichun_1.png'},{id:'lichun_2',name:'蛰虫始振',em:'🐛',flavor:'土里的虫，伸了第一个懒腰。',art:'猫狗星球_候美术/lichun_2.png'},{id:'lichun_3',name:'鱼陟负冰',em:'🐟',flavor:'鱼贴着薄冰，往上探了探。',art:'猫狗星球_候美术/lichun_3.png'}]},
-  {id:'yushui',art:'猫狗星球_节气美术/yushui.png',  name:'雨水', em:'💧', m:2,  d:19, bias:'ceramic', flavor:'湖面蒙了一层水汽，它假装自己是雾。',
-    hou:[{id:'yushui_1',name:'獭祭鱼',em:'🦦',flavor:'水獭把鱼摆成一排，像在数算。',art:'猫狗星球_候美术/yushui_1.png'},{id:'yushui_2',name:'候雁北',em:'🪿',flavor:'大雁掉头，往北边去了。',art:'猫狗星球_候美术/yushui_2.png'},{id:'yushui_3',name:'草木萌动',em:'🌱',flavor:'泥土里，有什么要冒头了。',art:'猫狗星球_候美术/yushui_3.png'}]},
-  {id:'jingzhe',art:'猫狗星球_节气美术/jingzhe.png', name:'惊蛰', em:'⚡', m:3,  d:6,  bias:'primor',  flavor:'第一声雷的时候，它竖起了耳朵。',
-    hou:[{id:'jingzhe_1',name:'桃始华',em:'🌸',flavor:'第一朵桃花，先开了。',art:'猫狗星球_候美术/jingzhe_1.png'},{id:'jingzhe_2',name:'仓庚鸣',em:'🐦',flavor:'黄鹂叫得比昨天更响。',art:'猫狗星球_候美术/jingzhe_2.png'},{id:'jingzhe_3',name:'鹰化为鸠',em:'🕊️',flavor:'老鹰不见了，布谷鸟来了。',art:'猫狗星球_候美术/jingzhe_3.png'}]},
-  {id:'chunfen',art:'猫狗星球_节气美术/chunfen.png', name:'春分', em:'🌗', m:3,  d:21, bias:null,     flavor:'今天白天和黑夜一样长，它走了刚好一半的路。',
-    hou:[{id:'chunfen_1',name:'玄鸟至',em:'🐦',flavor:'燕子剪着风回来了。',art:'猫狗星球_候美术/chunfen_1.png'},{id:'chunfen_2',name:'雷乃发声',em:'⚡',flavor:'天边闷闷的，第一声雷。',art:'猫狗星球_候美术/chunfen_2.png'},{id:'chunfen_3',name:'始电',em:'🌩️',flavor:'闪电在云后，眨了一下。',art:'猫狗星球_候美术/chunfen_3.png'}]},
-  {id:'qingming',art:'猫狗星球_节气美术/qingming.png',name:'清明', em:'🌿', m:4,  d:5,  bias:'ceramic', flavor:'它在一座桥头停下来，像是等什么人。',
-    hou:[{id:'qingming_1',name:'桐始华',em:'🌳',flavor:'桐花开得安静又白。',art:'猫狗星球_候美术/qingming_1.png'},{id:'qingming_2',name:'田鼠化为鴽',em:'🐭',flavor:'田鼠躲了，鹌鹑出来了。',art:'猫狗星球_候美术/qingming_2.png'},{id:'qingming_3',name:'虹始见',em:'🌈',flavor:'雨刚停，天上挂了半道弓。',art:'猫狗星球_候美术/qingming_3.png'}]},
-  {id:'guyu',art:'猫狗星球_节气美术/guyu.png',    name:'谷雨', em:'🌾', m:4,  d:20, bias:'fabric',  flavor:'雨打在叶子上，它说那是谷子在说话。',
-    hou:[{id:'guyu_1',name:'萍始生',em:'🍃',flavor:'水面的浮萍，一夜铺开。',art:'猫狗星球_候美术/guyu_1.png'},{id:'guyu_2',name:'鸣鸠拂其羽',em:'🐦',flavor:'斑鸠梳着羽毛，要下雨了。',art:'猫狗星球_候美术/guyu_2.png'},{id:'guyu_3',name:'戴胜降于桑',em:'🐦',flavor:'戴胜落在桑枝上，像簪了朵花。',art:'猫狗星球_候美术/guyu_3.png'}]},
-  {id:'lixia',art:'猫狗星球_节气美术/lixia.png',   name:'立夏', em:'🌞', m:5,  d:6,  bias:'primor',  flavor:'夏天突然就到了，它的影子变短了。',
-    hou:[{id:'lixia_1',name:'蝼蝈鸣',em:'🦗',flavor:'蝼蛄在墙根，唱得欢。',art:'猫狗星球_候美术/lixia_1.png'},{id:'lixia_2',name:'蚯蚓出',em:'🪱',flavor:'蚯蚓翻出湿泥，空气潮潮的。',art:'猫狗星球_候美术/lixia_2.png'},{id:'lixia_3',name:'王瓜生',em:'🥒',flavor:'王瓜的藤，悄悄爬上了架。',art:'猫狗星球_候美术/lixia_3.png'}]},
-  {id:'xiaoman',art:'猫狗星球_节气美术/xiaoman.png', name:'小满', em:'🌾', m:5,  d:21, bias:null,     flavor:'麦穗刚开始饱满，它偷偷尝了一颗。',
-    hou:[{id:'xiaoman_1',name:'苦菜秀',em:'🌿',flavor:'苦菜开着小黄花，不张扬。',art:'猫狗星球_候美术/xiaoman_1.png'},{id:'xiaoman_2',name:'靡草死',em:'🥀',flavor:'软弱的草，先撑不住了。',art:'猫狗星球_候美术/xiaoman_2.png'},{id:'xiaoman_3',name:'麦秋至',em:'🌾',flavor:'麦子黄了尖，像提前入了秋。',art:'猫狗星球_候美术/xiaoman_3.png'}]},
-  {id:'mangzhong',art:'猫狗星球_节气美术/mangzhong.png',name:'芒种',em:'🌱', m:6,  d:6,  bias:'ceramic', flavor:'田里有人在忙碌，它坐在田埂上看了一下午。',
-    hou:[{id:'mangzhong_1',name:'螳螂生',em:'🦗',flavor:'螳螂破卵，举起小镰。',art:'猫狗星球_候美术/mangzhong_1.png'},{id:'mangzhong_2',name:'鵙始鸣',em:'🐦',flavor:'伯劳站在最高的枝上叫。',art:'猫狗星球_候美术/mangzhong_2.png'},{id:'mangzhong_3',name:'反舌无声',em:'🤫',flavor:'反舌鸟不学了，安静下来。',art:'猫狗星球_候美术/mangzhong_3.png'}]},
-  {id:'xiazhi',art:'猫狗星球_节气美术/xiazhi.png',  name:'夏至', em:'☀️', m:6,  d:21, bias:'primor',  flavor:'今天是一年中最长的一天，它走了最远的路。',
-    hou:[{id:'xiazhi_1',name:'鹿角解',em:'🦌',flavor:'鹿角脱落，像卸下旧冠。',art:'猫狗星球_候美术/xiazhi_1.png'},{id:'xiazhi_2',name:'蜩始鸣',em:'🪲',flavor:'知了拉开长嗓，夏天正午。',art:'猫狗星球_候美术/xiazhi_2.png'},{id:'xiazhi_3',name:'半夏生',em:'🌿',flavor:'半夏在荫处，悄悄长了出来。',art:'猫狗星球_候美术/xiazhi_3.png'}]},
-  {id:'xiaoshu',art:'猫狗星球_节气美术/xiaoshu.png', name:'小暑', em:'🔥', m:7,  d:7,  bias:null,     flavor:'它在树荫下趴着，连尾巴都不想动。',
-    hou:[{id:'xiaoshu_1',name:'温风至',em:'🍃',flavor:'风是热的，贴着脸。',art:'猫狗星球_候美术/xiaoshu_1.png'},{id:'xiaoshu_2',name:'蟋蟀居壁',em:'🦗',flavor:'蟋蟀躲到墙角，怕晒。',art:'猫狗星球_候美术/xiaoshu_2.png'},{id:'xiaoshu_3',name:'鹰始鸷',em:'🦅',flavor:'小鹰学着眼神变利。',art:'猫狗星球_候美术/xiaoshu_3.png'}]},
-  {id:'dashu',art:'猫狗星球_节气美术/dashu.png',   name:'大暑', em:'🌡️', m:7,  d:23, bias:'fabric',  flavor:'热得连石板都烫脚，它跳着走完了全程。',
-    hou:[{id:'dashu_1',name:'腐草为萤',em:'🪰',flavor:'腐草里飞出第一点流萤。',art:'猫狗星球_候美术/dashu_1.png'},{id:'dashu_2',name:'土润溽暑',em:'💧',flavor:'泥土发烫，湿气往上蒸。',art:'猫狗星球_候美术/dashu_2.png'},{id:'dashu_3',name:'大雨时行',em:'🌧️',flavor:'雷雨说来就来，酣畅。',art:'猫狗星球_候美术/dashu_3.png'}]},
-  {id:'liqiu',art:'猫狗星球_节气美术/liqiu.png',   name:'立秋', em:'🍂', m:8,  d:7,  bias:'ceramic', flavor:'第一片叶子落下来的时候，它刚好接住了。',
-    hou:[{id:'liqiu_1',name:'凉风至',em:'🍂',flavor:'风里，有了秋天的凉。',art:'猫狗星球_候美术/liqiu_1.png'},{id:'liqiu_2',name:'白露降',em:'💧',flavor:'夜里草尖，凝了第一滴露。',art:'猫狗星球_候美术/liqiu_2.png'},{id:'liqiu_3',name:'寒蝉鸣',em:'🦗',flavor:'寒蝉叫得，有点惜别。',art:'猫狗星球_候美术/liqiu_3.png'}]},
-  {id:'chushu',art:'猫狗星球_节气美术/chushu.png',  name:'处暑', em:'🌤️', m:8,  d:23, bias:null,     flavor:'暑气终于散了，它伸了一个很长的懒腰。',
-    hou:[{id:'chushu_1',name:'鹰乃祭鸟',em:'🦅',flavor:'鹰把猎物排开，像在谢天。',art:'猫狗星球_候美术/chushu_1.png'},{id:'chushu_2',name:'天地始肃',em:'🌫️',flavor:'天地收起喧闹，安静了。',art:'猫狗星球_候美术/chushu_2.png'},{id:'chushu_3',name:'禾乃登',em:'🌾',flavor:'稻穗低头，是成熟的样子。',art:'猫狗星球_候美术/chushu_3.png'}]},
-  {id:'bailu',art:'猫狗星球_节气美术/bailu.png',   name:'白露', em:'💦', m:9,  d:8,  bias:'primor',  flavor:'早上草叶上有露水，它的爪尖沾湿了。',
-    hou:[{id:'bailu_1',name:'鸿雁来',em:'🪿',flavor:'大雁排成人字，往南。',art:'猫狗星球_候美术/bailu_1.png'},{id:'bailu_2',name:'玄鸟归',em:'🐦',flavor:'燕子走了，梁上空了。',art:'猫狗星球_候美术/bailu_2.png'},{id:'bailu_3',name:'群鸟养羞',em:'🐦',flavor:'鸟儿藏起粮食，备着冬。',art:'猫狗星球_候美术/bailu_3.png'}]},
-  {id:'qiufen',art:'猫狗星球_节气美术/qiufen.png', name:'秋分', em:'🌕', m:9,  d:23, bias:'ceramic', flavor:'今晚月光很淡，它说像谁没说完的话。',
-    hou:[{id:'qiufen_1',name:'雷始收声',em:'🔇',flavor:'雷收了声，天高气爽。',art:'猫狗星球_候美术/qiufen_1.png'},{id:'qiufen_2',name:'蛰虫坯户',em:'🐛',flavor:'虫儿封了洞口，准备眠。',art:'猫狗星球_候美术/qiufen_2.png'},{id:'qiufen_3',name:'水始涸',em:'💧',flavor:'池塘浅了，倒映更清。',art:'猫狗星球_候美术/qiufen_3.png'}]},
-  {id:'hanlu',art:'猫狗星球_节气美术/hanlu.png',   name:'寒露', em:'🍁', m:10, d:8,  bias:'fabric',  flavor:'露水变冷了，它开始怀念夏天的阳光。',
-    hou:[{id:'hanlu_1',name:'鸿雁来宾',em:'🪿',flavor:'最后一批雁，也走了。',art:'猫狗星球_候美术/hanlu_1.png'},{id:'hanlu_2',name:'雀入大水为蛤',em:'🐦',flavor:'小鸟不见了，海边多了蛤。',art:'猫狗星球_候美术/hanlu_2.png'},{id:'hanlu_3',name:'菊有黄华',em:'🌼',flavor:'菊花偏在冷里，开得烈。',art:'猫狗星球_候美术/hanlu_3.png'}]},
-  {id:'shuangjiang',art:'猫狗星球_节气美术/shuangjiang.png',name:'霜降',em:'❄️', m:10, d:23, bias:null,     flavor:'第一次看见霜，它以为是谁撒的糖。',
-    hou:[{id:'shuangjiang_1',name:'豺乃祭兽',em:'🐺',flavor:'豺把猎物摆好，像在计数。',art:'猫狗星球_候美术/shuangjiang_1.png'},{id:'shuangjiang_2',name:'草木黄落',em:'🍁',flavor:'叶子黄了，一片片落。',art:'猫狗星球_候美术/shuangjiang_2.png'},{id:'shuangjiang_3',name:'蛰虫咸俯',em:'🐛',flavor:'虫儿都俯身，藏进土里。',art:'猫狗星球_候美术/shuangjiang_3.png'}]},
-  {id:'lidong',art:'猫狗星球_节气美术/lidong.png',  name:'立冬', em:'🍂', m:11, d:7,  bias:'primor',  flavor:'冬天到了，它开始囤积干粮和故事。',
-    hou:[{id:'lidong_1',name:'水始冰',em:'🧊',flavor:'水面结了薄薄一层。',art:'猫狗星球_候美术/lidong_1.png'},{id:'lidong_2',name:'地始冻',em:'❄️',flavor:'地硬了，踩上去脆。',art:'猫狗星球_候美术/lidong_2.png'},{id:'lidong_3',name:'雉入大水为蜃',em:'🐔',flavor:'野鸡少了，海边现了蜃。',art:'猫狗星球_候美术/lidong_3.png'}]},
-  {id:'xiaoxue',art:'猫狗星球_节气美术/xiaoxue.png', name:'小雪', em:'🌨️', m:11, d:22, bias:'ceramic', flavor:'第一片雪花落在它鼻尖上，它打了个喷嚏。',
-    hou:[{id:'xiaoxue_1',name:'虹藏不见',em:'🌫️',flavor:'天冷了，虹也藏起来。',art:'猫狗星球_候美术/xiaoxue_1.png'},{id:'xiaoxue_2',name:'天气上升地气下降',em:'🌪️',flavor:'天清地浊，各归各处。',art:'猫狗星球_候美术/xiaoxue_2.png'},{id:'xiaoxue_3',name:'闭塞而成冬',em:'🚪',flavor:'万物收口，冬天真的来了。',art:'猫狗星球_候美术/xiaoxue_3.png'}]},
-  {id:'daxue',art:'猫狗星球_节气美术/daxue.png',   name:'大雪', em:'⛄', m:12, d:7,  bias:'fabric',  flavor:'雪没过它的爪子，它在雪地里踩了一串梅花。',
-    hou:[{id:'daxue_1',name:'鹖鴠不鸣',em:'🐦',flavor:'寒号鸟不叫了，太冷。',art:'猫狗星球_候美术/daxue_1.png'},{id:'daxue_2',name:'虎始交',em:'🐯',flavor:'老虎在雪里，开始求偶。',art:'猫狗星球_候美术/daxue_2.png'},{id:'daxue_3',name:'荔挺出',em:'🌿',flavor:'荔挺顶着寒，抽出细叶。',art:'猫狗星球_候美术/daxue_3.png'}]},
-  {id:'dongzhi',art:'猫狗星球_节气美术/dongzhi.png', name:'冬至', em:'🌑', m:12, d:21, bias:null,     flavor:'今天是最长的一夜，它和影子做游戏。',
-    hou:[{id:'dongzhi_1',name:'蚯蚓结',em:'🪱',flavor:'蚯蚓蜷成结，躲在土里。',art:'猫狗星球_候美术/dongzhi_1.png'},{id:'dongzhi_2',name:'麋角解',em:'🦌',flavor:'麋鹿卸角，像卸下旧饰。',art:'猫狗星球_候美术/dongzhi_2.png'},{id:'dongzhi_3',name:'水泉动',em:'💧',flavor:'泉眼底下，还温着。',art:'猫狗星球_候美术/dongzhi_3.png'}]},
-  {id:'xiaohan',art:'猫狗星球_节气美术/xiaohan.png', name:'小寒', em:'🥶', m:1,  d:6,  bias:'primor',  flavor:'冷得不想出门，但它说"正因为冷才要出发"。',
-    hou:[{id:'xiaohan_1',name:'雁北乡',em:'🪿',flavor:'大雁望向北，心先回了。',art:'猫狗星球_候美术/xiaohan_1.png'},{id:'xiaohan_2',name:'鹊始巢',em:'🐦',flavor:'喜鹊衔枝，开始筑巢。',art:'猫狗星球_候美术/xiaohan_2.png'},{id:'xiaohan_3',name:'雉始雊',em:'🐔',flavor:'野鸡在晨雾里，第一次叫。',art:'猫狗星球_候美术/xiaohan_3.png'}]},
-  {id:'dahan',art:'猫狗星球_节气美术/dahan.png',   name:'大寒', em:'🧊', m:1,  d:20, bias:'ceramic', flavor:'一年中最冷的一天，它带回来一团雪。',
-    hou:[{id:'dahan_1',name:'鸡始乳',em:'🐔',flavor:'母鸡抱窝，要孵春了。',art:'猫狗星球_候美术/dahan_1.png'},{id:'dahan_2',name:'征鸟厉疾',em:'🦅',flavor:'鹰飞得又高又急。',art:'猫狗星球_候美术/dahan_2.png'},{id:'dahan_3',name:'水泽腹坚',em:'🧊',flavor:'湖心冻得最厚，能走人。',art:'猫狗星球_候美术/dahan_3.png'}]},
+  {id:'lichun',art:'猫狗星球_节气美术/lichun.webp',  name:'立春', em:'🌱', m:2,  d:4,  bias:'fabric',  flavor:'春天从哪里开始的？它说是一阵风先知道了。',
+    hou:[{id:'lichun_1',name:'东风解冻',em:'🌬️',flavor:'风先知道春天来了。',art:'猫狗星球_候美术/lichun_1.webp'},{id:'lichun_2',name:'蛰虫始振',em:'🐛',flavor:'土里的虫，伸了第一个懒腰。',art:'猫狗星球_候美术/lichun_2.webp'},{id:'lichun_3',name:'鱼陟负冰',em:'🐟',flavor:'鱼贴着薄冰，往上探了探。',art:'猫狗星球_候美术/lichun_3.webp'}]},
+  {id:'yushui',art:'猫狗星球_节气美术/yushui.webp',  name:'雨水', em:'💧', m:2,  d:19, bias:'ceramic', flavor:'湖面蒙了一层水汽，它假装自己是雾。',
+    hou:[{id:'yushui_1',name:'獭祭鱼',em:'🦦',flavor:'水獭把鱼摆成一排，像在数算。',art:'猫狗星球_候美术/yushui_1.webp'},{id:'yushui_2',name:'候雁北',em:'🪿',flavor:'大雁掉头，往北边去了。',art:'猫狗星球_候美术/yushui_2.webp'},{id:'yushui_3',name:'草木萌动',em:'🌱',flavor:'泥土里，有什么要冒头了。',art:'猫狗星球_候美术/yushui_3.webp'}]},
+  {id:'jingzhe',art:'猫狗星球_节气美术/jingzhe.webp', name:'惊蛰', em:'⚡', m:3,  d:6,  bias:'primor',  flavor:'第一声雷的时候，它竖起了耳朵。',
+    hou:[{id:'jingzhe_1',name:'桃始华',em:'🌸',flavor:'第一朵桃花，先开了。',art:'猫狗星球_候美术/jingzhe_1.webp'},{id:'jingzhe_2',name:'仓庚鸣',em:'🐦',flavor:'黄鹂叫得比昨天更响。',art:'猫狗星球_候美术/jingzhe_2.webp'},{id:'jingzhe_3',name:'鹰化为鸠',em:'🕊️',flavor:'老鹰不见了，布谷鸟来了。',art:'猫狗星球_候美术/jingzhe_3.webp'}]},
+  {id:'chunfen',art:'猫狗星球_节气美术/chunfen.webp', name:'春分', em:'🌗', m:3,  d:21, bias:null,     flavor:'今天白天和黑夜一样长，它走了刚好一半的路。',
+    hou:[{id:'chunfen_1',name:'玄鸟至',em:'🐦',flavor:'燕子剪着风回来了。',art:'猫狗星球_候美术/chunfen_1.webp'},{id:'chunfen_2',name:'雷乃发声',em:'⚡',flavor:'天边闷闷的，第一声雷。',art:'猫狗星球_候美术/chunfen_2.webp'},{id:'chunfen_3',name:'始电',em:'🌩️',flavor:'闪电在云后，眨了一下。',art:'猫狗星球_候美术/chunfen_3.webp'}]},
+  {id:'qingming',art:'猫狗星球_节气美术/qingming.webp',name:'清明', em:'🌿', m:4,  d:5,  bias:'ceramic', flavor:'它在一座桥头停下来，像是等什么人。',
+    hou:[{id:'qingming_1',name:'桐始华',em:'🌳',flavor:'桐花开得安静又白。',art:'猫狗星球_候美术/qingming_1.webp'},{id:'qingming_2',name:'田鼠化为鴽',em:'🐭',flavor:'田鼠躲了，鹌鹑出来了。',art:'猫狗星球_候美术/qingming_2.webp'},{id:'qingming_3',name:'虹始见',em:'🌈',flavor:'雨刚停，天上挂了半道弓。',art:'猫狗星球_候美术/qingming_3.webp'}]},
+  {id:'guyu',art:'猫狗星球_节气美术/guyu.webp',    name:'谷雨', em:'🌾', m:4,  d:20, bias:'fabric',  flavor:'雨打在叶子上，它说那是谷子在说话。',
+    hou:[{id:'guyu_1',name:'萍始生',em:'🍃',flavor:'水面的浮萍，一夜铺开。',art:'猫狗星球_候美术/guyu_1.webp'},{id:'guyu_2',name:'鸣鸠拂其羽',em:'🐦',flavor:'斑鸠梳着羽毛，要下雨了。',art:'猫狗星球_候美术/guyu_2.webp'},{id:'guyu_3',name:'戴胜降于桑',em:'🐦',flavor:'戴胜落在桑枝上，像簪了朵花。',art:'猫狗星球_候美术/guyu_3.webp'}]},
+  {id:'lixia',art:'猫狗星球_节气美术/lixia.webp',   name:'立夏', em:'🌞', m:5,  d:6,  bias:'primor',  flavor:'夏天突然就到了，它的影子变短了。',
+    hou:[{id:'lixia_1',name:'蝼蝈鸣',em:'🦗',flavor:'蝼蛄在墙根，唱得欢。',art:'猫狗星球_候美术/lixia_1.webp'},{id:'lixia_2',name:'蚯蚓出',em:'🪱',flavor:'蚯蚓翻出湿泥，空气潮潮的。',art:'猫狗星球_候美术/lixia_2.webp'},{id:'lixia_3',name:'王瓜生',em:'🥒',flavor:'王瓜的藤，悄悄爬上了架。',art:'猫狗星球_候美术/lixia_3.webp'}]},
+  {id:'xiaoman',art:'猫狗星球_节气美术/xiaoman.webp', name:'小满', em:'🌾', m:5,  d:21, bias:null,     flavor:'麦穗刚开始饱满，它偷偷尝了一颗。',
+    hou:[{id:'xiaoman_1',name:'苦菜秀',em:'🌿',flavor:'苦菜开着小黄花，不张扬。',art:'猫狗星球_候美术/xiaoman_1.webp'},{id:'xiaoman_2',name:'靡草死',em:'🥀',flavor:'软弱的草，先撑不住了。',art:'猫狗星球_候美术/xiaoman_2.webp'},{id:'xiaoman_3',name:'麦秋至',em:'🌾',flavor:'麦子黄了尖，像提前入了秋。',art:'猫狗星球_候美术/xiaoman_3.webp'}]},
+  {id:'mangzhong',art:'猫狗星球_节气美术/mangzhong.webp',name:'芒种',em:'🌱', m:6,  d:6,  bias:'ceramic', flavor:'田里有人在忙碌，它坐在田埂上看了一下午。',
+    hou:[{id:'mangzhong_1',name:'螳螂生',em:'🦗',flavor:'螳螂破卵，举起小镰。',art:'猫狗星球_候美术/mangzhong_1.webp'},{id:'mangzhong_2',name:'鵙始鸣',em:'🐦',flavor:'伯劳站在最高的枝上叫。',art:'猫狗星球_候美术/mangzhong_2.webp'},{id:'mangzhong_3',name:'反舌无声',em:'🤫',flavor:'反舌鸟不学了，安静下来。',art:'猫狗星球_候美术/mangzhong_3.webp'}]},
+  {id:'xiazhi',art:'猫狗星球_节气美术/xiazhi.webp',  name:'夏至', em:'☀️', m:6,  d:21, bias:'primor',  flavor:'今天是一年中最长的一天，它走了最远的路。',
+    hou:[{id:'xiazhi_1',name:'鹿角解',em:'🦌',flavor:'鹿角脱落，像卸下旧冠。',art:'猫狗星球_候美术/xiazhi_1.webp'},{id:'xiazhi_2',name:'蜩始鸣',em:'🪲',flavor:'知了拉开长嗓，夏天正午。',art:'猫狗星球_候美术/xiazhi_2.webp'},{id:'xiazhi_3',name:'半夏生',em:'🌿',flavor:'半夏在荫处，悄悄长了出来。',art:'猫狗星球_候美术/xiazhi_3.webp'}]},
+  {id:'xiaoshu',art:'猫狗星球_节气美术/xiaoshu.webp', name:'小暑', em:'🔥', m:7,  d:7,  bias:null,     flavor:'它在树荫下趴着，连尾巴都不想动。',
+    hou:[{id:'xiaoshu_1',name:'温风至',em:'🍃',flavor:'风是热的，贴着脸。',art:'猫狗星球_候美术/xiaoshu_1.webp'},{id:'xiaoshu_2',name:'蟋蟀居壁',em:'🦗',flavor:'蟋蟀躲到墙角，怕晒。',art:'猫狗星球_候美术/xiaoshu_2.webp'},{id:'xiaoshu_3',name:'鹰始鸷',em:'🦅',flavor:'小鹰学着眼神变利。',art:'猫狗星球_候美术/xiaoshu_3.webp'}]},
+  {id:'dashu',art:'猫狗星球_节气美术/dashu.webp',   name:'大暑', em:'🌡️', m:7,  d:23, bias:'fabric',  flavor:'热得连石板都烫脚，它跳着走完了全程。',
+    hou:[{id:'dashu_1',name:'腐草为萤',em:'🪰',flavor:'腐草里飞出第一点流萤。',art:'猫狗星球_候美术/dashu_1.webp'},{id:'dashu_2',name:'土润溽暑',em:'💧',flavor:'泥土发烫，湿气往上蒸。',art:'猫狗星球_候美术/dashu_2.webp'},{id:'dashu_3',name:'大雨时行',em:'🌧️',flavor:'雷雨说来就来，酣畅。',art:'猫狗星球_候美术/dashu_3.webp'}]},
+  {id:'liqiu',art:'猫狗星球_节气美术/liqiu.webp',   name:'立秋', em:'🍂', m:8,  d:7,  bias:'ceramic', flavor:'第一片叶子落下来的时候，它刚好接住了。',
+    hou:[{id:'liqiu_1',name:'凉风至',em:'🍂',flavor:'风里，有了秋天的凉。',art:'猫狗星球_候美术/liqiu_1.webp'},{id:'liqiu_2',name:'白露降',em:'💧',flavor:'夜里草尖，凝了第一滴露。',art:'猫狗星球_候美术/liqiu_2.webp'},{id:'liqiu_3',name:'寒蝉鸣',em:'🦗',flavor:'寒蝉叫得，有点惜别。',art:'猫狗星球_候美术/liqiu_3.webp'}]},
+  {id:'chushu',art:'猫狗星球_节气美术/chushu.webp',  name:'处暑', em:'🌤️', m:8,  d:23, bias:null,     flavor:'暑气终于散了，它伸了一个很长的懒腰。',
+    hou:[{id:'chushu_1',name:'鹰乃祭鸟',em:'🦅',flavor:'鹰把猎物排开，像在谢天。',art:'猫狗星球_候美术/chushu_1.webp'},{id:'chushu_2',name:'天地始肃',em:'🌫️',flavor:'天地收起喧闹，安静了。',art:'猫狗星球_候美术/chushu_2.webp'},{id:'chushu_3',name:'禾乃登',em:'🌾',flavor:'稻穗低头，是成熟的样子。',art:'猫狗星球_候美术/chushu_3.webp'}]},
+  {id:'bailu',art:'猫狗星球_节气美术/bailu.webp',   name:'白露', em:'💦', m:9,  d:8,  bias:'primor',  flavor:'早上草叶上有露水，它的爪尖沾湿了。',
+    hou:[{id:'bailu_1',name:'鸿雁来',em:'🪿',flavor:'大雁排成人字，往南。',art:'猫狗星球_候美术/bailu_1.webp'},{id:'bailu_2',name:'玄鸟归',em:'🐦',flavor:'燕子走了，梁上空了。',art:'猫狗星球_候美术/bailu_2.webp'},{id:'bailu_3',name:'群鸟养羞',em:'🐦',flavor:'鸟儿藏起粮食，备着冬。',art:'猫狗星球_候美术/bailu_3.webp'}]},
+  {id:'qiufen',art:'猫狗星球_节气美术/qiufen.webp', name:'秋分', em:'🌕', m:9,  d:23, bias:'ceramic', flavor:'今晚月光很淡，它说像谁没说完的话。',
+    hou:[{id:'qiufen_1',name:'雷始收声',em:'🔇',flavor:'雷收了声，天高气爽。',art:'猫狗星球_候美术/qiufen_1.webp'},{id:'qiufen_2',name:'蛰虫坯户',em:'🐛',flavor:'虫儿封了洞口，准备眠。',art:'猫狗星球_候美术/qiufen_2.webp'},{id:'qiufen_3',name:'水始涸',em:'💧',flavor:'池塘浅了，倒映更清。',art:'猫狗星球_候美术/qiufen_3.webp'}]},
+  {id:'hanlu',art:'猫狗星球_节气美术/hanlu.webp',   name:'寒露', em:'🍁', m:10, d:8,  bias:'fabric',  flavor:'露水变冷了，它开始怀念夏天的阳光。',
+    hou:[{id:'hanlu_1',name:'鸿雁来宾',em:'🪿',flavor:'最后一批雁，也走了。',art:'猫狗星球_候美术/hanlu_1.webp'},{id:'hanlu_2',name:'雀入大水为蛤',em:'🐦',flavor:'小鸟不见了，海边多了蛤。',art:'猫狗星球_候美术/hanlu_2.webp'},{id:'hanlu_3',name:'菊有黄华',em:'🌼',flavor:'菊花偏在冷里，开得烈。',art:'猫狗星球_候美术/hanlu_3.webp'}]},
+  {id:'shuangjiang',art:'猫狗星球_节气美术/shuangjiang.webp',name:'霜降',em:'❄️', m:10, d:23, bias:null,     flavor:'第一次看见霜，它以为是谁撒的糖。',
+    hou:[{id:'shuangjiang_1',name:'豺乃祭兽',em:'🐺',flavor:'豺把猎物摆好，像在计数。',art:'猫狗星球_候美术/shuangjiang_1.webp'},{id:'shuangjiang_2',name:'草木黄落',em:'🍁',flavor:'叶子黄了，一片片落。',art:'猫狗星球_候美术/shuangjiang_2.webp'},{id:'shuangjiang_3',name:'蛰虫咸俯',em:'🐛',flavor:'虫儿都俯身，藏进土里。',art:'猫狗星球_候美术/shuangjiang_3.webp'}]},
+  {id:'lidong',art:'猫狗星球_节气美术/lidong.webp',  name:'立冬', em:'🍂', m:11, d:7,  bias:'primor',  flavor:'冬天到了，它开始囤积干粮和故事。',
+    hou:[{id:'lidong_1',name:'水始冰',em:'🧊',flavor:'水面结了薄薄一层。',art:'猫狗星球_候美术/lidong_1.webp'},{id:'lidong_2',name:'地始冻',em:'❄️',flavor:'地硬了，踩上去脆。',art:'猫狗星球_候美术/lidong_2.webp'},{id:'lidong_3',name:'雉入大水为蜃',em:'🐔',flavor:'野鸡少了，海边现了蜃。',art:'猫狗星球_候美术/lidong_3.webp'}]},
+  {id:'xiaoxue',art:'猫狗星球_节气美术/xiaoxue.webp', name:'小雪', em:'🌨️', m:11, d:22, bias:'ceramic', flavor:'第一片雪花落在它鼻尖上，它打了个喷嚏。',
+    hou:[{id:'xiaoxue_1',name:'虹藏不见',em:'🌫️',flavor:'天冷了，虹也藏起来。',art:'猫狗星球_候美术/xiaoxue_1.webp'},{id:'xiaoxue_2',name:'天气上升地气下降',em:'🌪️',flavor:'天清地浊，各归各处。',art:'猫狗星球_候美术/xiaoxue_2.webp'},{id:'xiaoxue_3',name:'闭塞而成冬',em:'🚪',flavor:'万物收口，冬天真的来了。',art:'猫狗星球_候美术/xiaoxue_3.webp'}]},
+  {id:'daxue',art:'猫狗星球_节气美术/daxue.webp',   name:'大雪', em:'⛄', m:12, d:7,  bias:'fabric',  flavor:'雪没过它的爪子，它在雪地里踩了一串梅花。',
+    hou:[{id:'daxue_1',name:'鹖鴠不鸣',em:'🐦',flavor:'寒号鸟不叫了，太冷。',art:'猫狗星球_候美术/daxue_1.webp'},{id:'daxue_2',name:'虎始交',em:'🐯',flavor:'老虎在雪里，开始求偶。',art:'猫狗星球_候美术/daxue_2.webp'},{id:'daxue_3',name:'荔挺出',em:'🌿',flavor:'荔挺顶着寒，抽出细叶。',art:'猫狗星球_候美术/daxue_3.webp'}]},
+  {id:'dongzhi',art:'猫狗星球_节气美术/dongzhi.webp', name:'冬至', em:'🌑', m:12, d:21, bias:null,     flavor:'今天是最长的一夜，它和影子做游戏。',
+    hou:[{id:'dongzhi_1',name:'蚯蚓结',em:'🪱',flavor:'蚯蚓蜷成结，躲在土里。',art:'猫狗星球_候美术/dongzhi_1.webp'},{id:'dongzhi_2',name:'麋角解',em:'🦌',flavor:'麋鹿卸角，像卸下旧饰。',art:'猫狗星球_候美术/dongzhi_2.webp'},{id:'dongzhi_3',name:'水泉动',em:'💧',flavor:'泉眼底下，还温着。',art:'猫狗星球_候美术/dongzhi_3.webp'}]},
+  {id:'xiaohan',art:'猫狗星球_节气美术/xiaohan.webp', name:'小寒', em:'🥶', m:1,  d:6,  bias:'primor',  flavor:'冷得不想出门，但它说"正因为冷才要出发"。',
+    hou:[{id:'xiaohan_1',name:'雁北乡',em:'🪿',flavor:'大雁望向北，心先回了。',art:'猫狗星球_候美术/xiaohan_1.webp'},{id:'xiaohan_2',name:'鹊始巢',em:'🐦',flavor:'喜鹊衔枝，开始筑巢。',art:'猫狗星球_候美术/xiaohan_2.webp'},{id:'xiaohan_3',name:'雉始雊',em:'🐔',flavor:'野鸡在晨雾里，第一次叫。',art:'猫狗星球_候美术/xiaohan_3.webp'}]},
+  {id:'dahan',art:'猫狗星球_节气美术/dahan.webp',   name:'大寒', em:'🧊', m:1,  d:20, bias:'ceramic', flavor:'一年中最冷的一天，它带回来一团雪。',
+    hou:[{id:'dahan_1',name:'鸡始乳',em:'🐔',flavor:'母鸡抱窝，要孵春了。',art:'猫狗星球_候美术/dahan_1.webp'},{id:'dahan_2',name:'征鸟厉疾',em:'🦅',flavor:'鹰飞得又高又急。',art:'猫狗星球_候美术/dahan_2.webp'},{id:'dahan_3',name:'水泽腹坚',em:'🧊',flavor:'湖心冻得最厚，能走人。',art:'猫狗星球_候美术/dahan_3.webp'}]},
 ];
 // 传统节日（短期活动，公历近似区间；真实版应接农历，原型以可持续供给为先）。effect 在 finishTrip/rollover 注入。
 const FESTIVALS = [
@@ -929,33 +929,33 @@ const FESTIVALS = [
 const ENCOUNTER_P = 0.12;   // [可调] 单次出游偶遇事件概率（被动惊喜，不增肝度）
 // 稀客：登录偶发来访，概率随繁荣度提升（rollover 已计星屑），此处仅定义卡面
 const RARE_VISITORS = [
-  {em:'🕊️', name:'信差鸽',   gift:8,  word:'捎来一封远方旅友的信', art:'猫狗星球_稀客美术/pigeon.png'},
-  {em:'🎻', name:'流浪乐手', gift:12, word:'在窗台拉了一支温柔的小曲',   art:'猫狗星球_稀客美术/musician.png'},
-  {em:'⚓', name:'老船长',   gift:15, word:'讲了一段海上的旧事',         art:'猫狗星球_稀客美术/captain.png'},
-  {em:'📮', name:'邮筒猫',   gift:10, word:'送来你寄出明信片的回音',     art:'猫狗星球_稀客美术/mailboxcat.png'},
-  {em:'🌟', name:'拾光童',   gift:18, word:'把一捧星光留在了窗台',       art:'猫狗星球_稀客美术/lightchild.png'},
+  {em:'🕊️', name:'信差鸽',   gift:8,  word:'捎来一封远方旅友的信', art:'猫狗星球_稀客美术/pigeon.webp'},
+  {em:'🎻', name:'流浪乐手', gift:12, word:'在窗台拉了一支温柔的小曲',   art:'猫狗星球_稀客美术/musician.webp'},
+  {em:'⚓', name:'老船长',   gift:15, word:'讲了一段海上的旧事',         art:'猫狗星球_稀客美术/captain.webp'},
+  {em:'📮', name:'邮筒猫',   gift:10, word:'送来你寄出明信片的回音',     art:'猫狗星球_稀客美术/mailboxcat.webp'},
+  {em:'🌟', name:'拾光童',   gift:18, word:'把一捧星光留在了窗台',       art:'猫狗星球_稀客美术/lightchild.webp'},
 ];
 // 装扮（单宠·纯表达，非任务）：来源=偶遇(enc)/节庆(fest)/成就(ach)
 const COSMETICS = [
-  {id:'scarf',name:'旅人围巾',em:'🧣',desc:'风雪路上偶遇的旅人相赠',src:'偶遇·雪原驿站',acquire:'encounter',art:'猫狗星球_装扮美术/scarf.png',story:'旅人说，围巾要留给还愿意继续走路的伙伴。'},
-  {id:'hat',name:'探险帽',em:'🎩',desc:'林间旧友落下的草帽',src:'偶遇·林间旧友',acquire:'encounter',art:'猫狗星球_装扮美术/hat.png',story:'帽檐压住的是阳光，也压住了第一次迷路的慌张。'},
-  {id:'glasses',name:'星夜眼镜',em:'🕶️',desc:'都市夜游时拾得',src:'偶遇·城市夜游',acquire:'encounter',art:'猫狗星球_装扮美术/glasses.png',story:'戴上它，连街角的灯都像远处的星。'},
-  {id:'flower',name:'花环',em:'🌸',desc:'春日出游偶得的野花',src:'偶遇·春日野径',acquire:'encounter',art:'猫狗星球_装扮美术/flower-v2.png',story:'花会谢，但被认真记住的春天不会。'},
-  {id:'lantern',name:'小灯笼',em:'🏮',desc:'元宵灯会所得',src:'节庆·元宵',acquire:'festival',art:'猫狗星球_装扮美术/lantern.png',story:'灯会散场后，它还替你把回家的路照亮。'},
-  {id:'crown',name:'草编皇冠',em:'👑',desc:'万象图鉴达成之礼',src:'成就·万象图鉴',acquire:'achievement',art:'猫狗星球_装扮美术/crown.png',story:'这不是奖赏，而是每一段旅程共同编成的冠冕。'},
-  {id:'compass_pendant',name:'星航罗盘坠',em:'🧭',desc:'首场秘境深潜的方向信物',src:'秘境·首场深潜',acquire:'encounter',unlock:()=>S.secretTrips>=1,art:'猫狗星球_装扮美术/compass_pendant.png',story:'它指向的不是北方，而是下一段值得出发的路。'},
-  {id:'ginkgo_cape',name:'银杏叶斗篷',em:'🍂',desc:'秋日山径的落叶裁成',src:'偶遇·秋日山径',acquire:'encounter',unlock:()=>S.trips>=6,art:'猫狗星球_装扮美术/ginkgo_cape.png',story:'每一片叶脉里，都藏着一阵轻轻推你前行的山风。'},
-  {id:'wind_bell',name:'山风铃铛',em:'🔔',desc:'高原风口的清脆回声',src:'偶遇·高原风口',acquire:'encounter',unlock:()=>S.trips>=10,art:'猫狗星球_装扮美术/wind_bell.png',story:'风穿过铃铛时，远方会回答一声“我在”。'},
-  {id:'shell_collar',name:'海盐贝壳项圈',em:'🐚',desc:'海岸退潮时拾得',src:'偶遇·海岸拾光',acquire:'encounter',unlock:()=>S.trips>=12,art:'猫狗星球_装扮美术/shell_collar.png',story:'贝壳里装着一小段潮声，想家的时候听一听。'},
-  {id:'ticket_clip',name:'夜行车票发夹',em:'🎫',desc:'随机出游的夜车纪念',src:'偶遇·夜行列车',acquire:'encounter',unlock:()=>S.randomTrips>=3,art:'猫狗星球_装扮美术/ticket_clip.png',story:'那张没有终点的车票，后来夹住了一晚的星光。'},
-  {id:'post_satchel',name:'信使小挎包',em:'📮',desc:'寄出心意后收到的回信',src:'互送·旅友回信',acquire:'encounter',unlock:()=>S.giftStreak>=2||S.trips>=18,art:'猫狗星球_装扮美术/post_satchel.png',story:'它不装贵重的东西，只装“我也想起你了”。'},
-  {id:'candy_glasses',name:'糖玻璃眼镜',em:'🍬',desc:'城市橱窗里折出的颜色',src:'偶遇·城市漫游',acquire:'encounter',unlock:()=>S.trips>=16,art:'猫狗星球_装扮美术/candy_glasses.png',story:'隔着琥珀色镜片，连普通的一天也甜了一点。'},
-  {id:'bamboo_cuff',name:'竹编护腕',em:'🎋',desc:'跟着节气收下的手作礼',src:'节气·候礼',acquire:'encounter',unlock:()=>S.solarTerms.length>=3,art:'猫狗星球_装扮美术/bamboo_cuff.png',story:'细细的竹篾记得雨声，也记得手心的温度。'},
-  {id:'glazed_gourd',name:'琉璃小葫芦',em:'🏺',desc:'秘境石门旁的蓝釉小物',src:'秘境·三次深潜',acquire:'encounter',unlock:()=>S.secretTrips>=3,art:'猫狗星球_装扮美术/glazed_gourd.png',story:'晃一晃，像有一片安静的蓝天在里面。'},
-  {id:'star_map_shawl',name:'星图披肩',em:'🌌',desc:'藏宝图拼合后显出的夜色',src:'藏宝图·初次合成',acquire:'encounter',unlock:()=>S.tmap>=1,art:'猫狗星球_装扮美术/star_map_shawl.png',story:'它把走过的夜路绣成星图，披在肩上也不会迷路。'},
-  {id:'moon_rabbit_hood',name:'月兔耳朵帽',em:'🐰',desc:'中秋夜的月光裁成',src:'节庆·中秋',acquire:'festival',art:'猫狗星球_装扮美术/moon_rabbit_hood.png',story:'月亮升起来时，帽尖会悄悄朝着团圆的方向。'},
-  {id:'winter_lights',name:'冬夜灯串项圈',em:'❄️',desc:'冬至夜市留下的暖光',src:'节庆·冬至',acquire:'festival',art:'猫狗星球_装扮美术/winter_lights.png',story:'最冷的夜里，也有一串小灯替你留住温暖。'},
-  {id:'comet_charm',name:'流星尾灯',em:'☄️',desc:'长途旅行后收到的夜行护符',src:'偶遇·三十次远行',acquire:'encounter',unlock:()=>S.trips>=30,art:'猫狗星球_装扮美术/comet_charm.png',story:'跑起来时，它会在身后拖出一颗很小的流星。'},
+  {id:'scarf',name:'旅人围巾',em:'🧣',desc:'风雪路上偶遇的旅人相赠',src:'偶遇·雪原驿站',acquire:'encounter',art:'猫狗星球_装扮美术/scarf.webp',story:'旅人说，围巾要留给还愿意继续走路的伙伴。'},
+  {id:'hat',name:'探险帽',em:'🎩',desc:'林间旧友落下的草帽',src:'偶遇·林间旧友',acquire:'encounter',art:'猫狗星球_装扮美术/hat.webp',story:'帽檐压住的是阳光，也压住了第一次迷路的慌张。'},
+  {id:'glasses',name:'星夜眼镜',em:'🕶️',desc:'都市夜游时拾得',src:'偶遇·城市夜游',acquire:'encounter',art:'猫狗星球_装扮美术/glasses.webp',story:'戴上它，连街角的灯都像远处的星。'},
+  {id:'flower',name:'花环',em:'🌸',desc:'春日出游偶得的野花',src:'偶遇·春日野径',acquire:'encounter',art:'猫狗星球_装扮美术/flower-v2.webp',story:'花会谢，但被认真记住的春天不会。'},
+  {id:'lantern',name:'小灯笼',em:'🏮',desc:'元宵灯会所得',src:'节庆·元宵',acquire:'festival',art:'猫狗星球_装扮美术/lantern.webp',story:'灯会散场后，它还替你把回家的路照亮。'},
+  {id:'crown',name:'草编皇冠',em:'👑',desc:'万象图鉴达成之礼',src:'成就·万象图鉴',acquire:'achievement',art:'猫狗星球_装扮美术/crown.webp',story:'这不是奖赏，而是每一段旅程共同编成的冠冕。'},
+  {id:'compass_pendant',name:'星航罗盘坠',em:'🧭',desc:'首场秘境深潜的方向信物',src:'秘境·首场深潜',acquire:'encounter',unlock:()=>S.secretTrips>=1,art:'猫狗星球_装扮美术/compass_pendant.webp',story:'它指向的不是北方，而是下一段值得出发的路。'},
+  {id:'ginkgo_cape',name:'银杏叶斗篷',em:'🍂',desc:'秋日山径的落叶裁成',src:'偶遇·秋日山径',acquire:'encounter',unlock:()=>S.trips>=6,art:'猫狗星球_装扮美术/ginkgo_cape.webp',story:'每一片叶脉里，都藏着一阵轻轻推你前行的山风。'},
+  {id:'wind_bell',name:'山风铃铛',em:'🔔',desc:'高原风口的清脆回声',src:'偶遇·高原风口',acquire:'encounter',unlock:()=>S.trips>=10,art:'猫狗星球_装扮美术/wind_bell.webp',story:'风穿过铃铛时，远方会回答一声“我在”。'},
+  {id:'shell_collar',name:'海盐贝壳项圈',em:'🐚',desc:'海岸退潮时拾得',src:'偶遇·海岸拾光',acquire:'encounter',unlock:()=>S.trips>=12,art:'猫狗星球_装扮美术/shell_collar.webp',story:'贝壳里装着一小段潮声，想家的时候听一听。'},
+  {id:'ticket_clip',name:'夜行车票发夹',em:'🎫',desc:'随机出游的夜车纪念',src:'偶遇·夜行列车',acquire:'encounter',unlock:()=>S.randomTrips>=3,art:'猫狗星球_装扮美术/ticket_clip.webp',story:'那张没有终点的车票，后来夹住了一晚的星光。'},
+  {id:'post_satchel',name:'信使小挎包',em:'📮',desc:'寄出心意后收到的回信',src:'互送·旅友回信',acquire:'encounter',unlock:()=>S.giftStreak>=2||S.trips>=18,art:'猫狗星球_装扮美术/post_satchel.webp',story:'它不装贵重的东西，只装“我也想起你了”。'},
+  {id:'candy_glasses',name:'糖玻璃眼镜',em:'🍬',desc:'城市橱窗里折出的颜色',src:'偶遇·城市漫游',acquire:'encounter',unlock:()=>S.trips>=16,art:'猫狗星球_装扮美术/candy_glasses.webp',story:'隔着琥珀色镜片，连普通的一天也甜了一点。'},
+  {id:'bamboo_cuff',name:'竹编护腕',em:'🎋',desc:'跟着节气收下的手作礼',src:'节气·候礼',acquire:'encounter',unlock:()=>S.solarTerms.length>=3,art:'猫狗星球_装扮美术/bamboo_cuff.webp',story:'细细的竹篾记得雨声，也记得手心的温度。'},
+  {id:'glazed_gourd',name:'琉璃小葫芦',em:'🏺',desc:'秘境石门旁的蓝釉小物',src:'秘境·三次深潜',acquire:'encounter',unlock:()=>S.secretTrips>=3,art:'猫狗星球_装扮美术/glazed_gourd.webp',story:'晃一晃，像有一片安静的蓝天在里面。'},
+  {id:'star_map_shawl',name:'星图披肩',em:'🌌',desc:'藏宝图拼合后显出的夜色',src:'藏宝图·初次合成',acquire:'encounter',unlock:()=>S.tmap>=1,art:'猫狗星球_装扮美术/star_map_shawl.webp',story:'它把走过的夜路绣成星图，披在肩上也不会迷路。'},
+  {id:'moon_rabbit_hood',name:'月兔耳朵帽',em:'🐰',desc:'中秋夜的月光裁成',src:'节庆·中秋',acquire:'festival',art:'猫狗星球_装扮美术/moon_rabbit_hood.webp',story:'月亮升起来时，帽尖会悄悄朝着团圆的方向。'},
+  {id:'winter_lights',name:'冬夜灯串项圈',em:'❄️',desc:'冬至夜市留下的暖光',src:'节庆·冬至',acquire:'festival',art:'猫狗星球_装扮美术/winter_lights.webp',story:'最冷的夜里，也有一串小灯替你留住温暖。'},
+  {id:'comet_charm',name:'流星尾灯',em:'☄️',desc:'长途旅行后收到的夜行护符',src:'偶遇·三十次远行',acquire:'encounter',unlock:()=>S.trips>=30,art:'猫狗星球_装扮美术/comet_charm.webp',story:'跑起来时，它会在身后拖出一颗很小的流星。'},
 ];
 const FESTIVAL_COSMETICS={yuanxiao:'lantern',zhongqiu:'moon_rabbit_hood',dongzhi:'winter_lights'};
 const MAX_HOME_DECOR=8;
@@ -973,12 +973,12 @@ const JOURNAL_FRAME_COST=15;
 function availableEncounterCosmetics(owned){ return COSMETICS.filter(c=>owned.indexOf(c.id)<0&&c.acquire==='encounter'&&(!c.unlock||c.unlock())); }
 // 偶遇事件（L6：出游被动触发，给惊喜与装扮来源）
 const ENCOUNTERS = [
-  {em:'🐾', name:'迷路的小猫', text:'它在巷口遇见一只同样迷路的小猫，互相蹭了蹭鼻子。', reward:'cos', art:'猫狗星球_偶遇美术/kitten.png'},
-  {em:'🍂', name:'落叶信使',   text:'一片写着字的落叶飘到它脚边，风替它读完了。',     reward:'star', art:'猫狗星球_偶遇美术/leaf.png'},
-  {em:'🕯️', name:'守夜人',     text:'深夜的驿站里，守夜人分了它半截蜡烛。',         reward:'cos', art:'猫狗星球_偶遇美术/watchman.png'},
-  {em:'🐚', name:'海螺歌者',   text:'它把耳朵贴上贝壳，听见了去年夏天的歌。',       reward:'star', art:'猫狗星球_偶遇美术/conch.png'},
-  {em:'📜', name:'旧书摊主',   text:'旧书摊主送它一张泛黄的地图碎片。',             reward:'cos', art:'猫狗星球_偶遇美术/bookstall.png'},
-  {em:'🌌', name:'梦境旅人',   text:'它梦见自己也成了一颗流星，划过别人的窗。',     reward:'star', art:'猫狗星球_偶遇美术/dream.png'},
+  {em:'🐾', name:'迷路的小猫', text:'它在巷口遇见一只同样迷路的小猫，互相蹭了蹭鼻子。', reward:'cos', art:'猫狗星球_偶遇美术/kitten.webp'},
+  {em:'🍂', name:'落叶信使',   text:'一片写着字的落叶飘到它脚边，风替它读完了。',     reward:'star', art:'猫狗星球_偶遇美术/leaf.webp'},
+  {em:'🕯️', name:'守夜人',     text:'深夜的驿站里，守夜人分了它半截蜡烛。',         reward:'cos', art:'猫狗星球_偶遇美术/watchman.webp'},
+  {em:'🐚', name:'海螺歌者',   text:'它把耳朵贴上贝壳，听见了去年夏天的歌。',       reward:'star', art:'猫狗星球_偶遇美术/conch.webp'},
+  {em:'📜', name:'旧书摊主',   text:'旧书摊主送它一张泛黄的地图碎片。',             reward:'cos', art:'猫狗星球_偶遇美术/bookstall.webp'},
+  {em:'🌌', name:'梦境旅人',   text:'它梦见自己也成了一颗流星，划过别人的窗。',     reward:'star', art:'猫狗星球_偶遇美术/dream.webp'},
 ];
 // 世界观（L9：收集深度解锁的剧情碎片，纯阅读，复用 fn 条件）
 const LORE = [
@@ -1000,20 +1000,20 @@ const MEET_P = 0.015;   // [可调] 遇友概率：先掷骰决定本次是否�
 // 合成快照填充：原型无服务端，按当前目的地 D 生成 synthetic 共游者 = 后端 synthetic 填充的本地等价物（保证每次都有共游者）
 const MEET_NAMES = ['阿岩','小满','豆泥','糯米','灯笼客','云朵','石头','栗子','布丁','年糕','芝麻','柚子','三七','阿橘'];
 const MEET_COMPANIONS = [
-  {id:'dog',em:'🐶',art:'猫狗星球_遇友美术/dog.png'},
-  {id:'rabbit',em:'🐰',art:'猫狗星球_遇友美术/rabbit.png'},
-  {id:'bear',em:'🐻',art:'猫狗星球_遇友美术/bear.png'},
-  {id:'fox',em:'🦊',art:'猫狗星球_遇友美术/fox.png'},
-  {id:'tiger',em:'🐯',art:'猫狗星球_遇友美术/tiger.png'},
-  {id:'koala',em:'🐨',art:'猫狗星球_遇友美术/koala.png'},
-  {id:'panda',em:'🐼',art:'猫狗星球_遇友美术/panda.png'},
-  {id:'hamster',em:'🐹',art:'猫狗星球_遇友美术/hamster.png'},
-  {id:'penguin',em:'🐧',art:'猫狗星球_遇友美术/penguin.png'},
-  {id:'frog',em:'🐸',art:'猫狗星球_遇友美术/frog.png'},
-  {id:'octopus',em:'🐙',art:'猫狗星球_遇友美术/octopus.png'},
-  {id:'cow',em:'🐮',art:'猫狗星球_遇友美术/cow.png'},
-  {id:'rooster',em:'🐔',art:'猫狗星球_遇友美术/rooster.png'},
-  {id:'mouse',em:'🐭',art:'猫狗星球_遇友美术/mouse.png'},
+  {id:'dog',em:'🐶',art:'猫狗星球_遇友美术/dog.webp'},
+  {id:'rabbit',em:'🐰',art:'猫狗星球_遇友美术/rabbit.webp'},
+  {id:'bear',em:'🐻',art:'猫狗星球_遇友美术/bear.webp'},
+  {id:'fox',em:'🦊',art:'猫狗星球_遇友美术/fox.webp'},
+  {id:'tiger',em:'🐯',art:'猫狗星球_遇友美术/tiger.webp'},
+  {id:'koala',em:'🐨',art:'猫狗星球_遇友美术/koala.webp'},
+  {id:'panda',em:'🐼',art:'猫狗星球_遇友美术/panda.webp'},
+  {id:'hamster',em:'🐹',art:'猫狗星球_遇友美术/hamster.webp'},
+  {id:'penguin',em:'🐧',art:'猫狗星球_遇友美术/penguin.webp'},
+  {id:'frog',em:'🐸',art:'猫狗星球_遇友美术/frog.webp'},
+  {id:'octopus',em:'🐙',art:'猫狗星球_遇友美术/octopus.webp'},
+  {id:'cow',em:'🐮',art:'猫狗星球_遇友美术/cow.webp'},
+  {id:'rooster',em:'🐔',art:'猫狗星球_遇友美术/rooster.webp'},
+  {id:'mouse',em:'🐭',art:'猫狗星球_遇友美术/mouse.webp'},
 ];
 // 双人相遇故事模板（m=对方旅友对象，含 name/companion；dest=目的地）
 const MEET_STORIES = [
@@ -1065,33 +1065,46 @@ function activeFestivals(){ return FESTIVALS.filter(f=>isFestival(f.id)).map(f=>
 // 品种清单与《猫狗星球_内容资产表.md》§1 保持一致（权威来源）
 const PETS = [
   // 猫 cat（9）—— art 为 v3 CG 高保真立绘（守 ADR-1：纯外观、零数值影响），无图时回退 em
-  {id:'c_orange',  kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_orange.png',  name:'橘猫',     desc:'贪吃又慵懒，晒太阳是毕生事业。'},
-  {id:'c_british', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_british.png', name:'英国短毛猫', desc:'英伦绅士，沉稳慵懒，瘫着也优雅。'},
-  {id:'c_ragdoll', kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_ragdoll.png', name:'布偶猫',   desc:'软萌佛系，被抱也乖乖的。'},
-  {id:'c_siamese', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_siamese.png', name:'暹罗猫',   desc:'话多爱叫，看法都要唠叨两句。'},
-  {id:'c_lihua',   kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_lihua.png',   name:'狸花猫',   desc:'机敏野性，抓虫小能手。'},
-  {id:'c_calico',  kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_calico.png',  name:'三花猫',   desc:'温柔黏人，认定你就赖着不走。'},
-  {id:'c_persian', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_persian.png', name:'波斯猫',   desc:'高贵安静，像从古波斯壁画里走出来。'},
-  {id:'c_american',kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_american.png',name:'美国短毛猫', desc:'健壮友善，邻家全能好伙伴。'},
-  {id:'c_bombay',  kind:'cat', em:'🐈‍⬛', art:'猫狗星球_宠物美术/c_bombay.png',  name:'孟买猫',   desc:'神秘灵动，黑曜石般的小影子。'},
+  {id:'c_orange',  kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_orange.webp',  name:'橘猫',     desc:'贪吃又慵懒，晒太阳是毕生事业。'},
+  {id:'c_british', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_british.webp', name:'英国短毛猫', desc:'英伦绅士，沉稳慵懒，瘫着也优雅。'},
+  {id:'c_ragdoll', kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_ragdoll.webp', name:'布偶猫',   desc:'软萌佛系，被抱也乖乖的。'},
+  {id:'c_siamese', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_siamese.webp', name:'暹罗猫',   desc:'话多爱叫，看法都要唠叨两句。'},
+  {id:'c_lihua',   kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_lihua.webp',   name:'狸花猫',   desc:'机敏野性，抓虫小能手。'},
+  {id:'c_calico',  kind:'cat', em:'🐱',  art:'猫狗星球_宠物美术/c_calico.webp',  name:'三花猫',   desc:'温柔黏人，认定你就赖着不走。'},
+  {id:'c_persian', kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_persian.webp', name:'波斯猫',   desc:'高贵安静，像从古波斯壁画里走出来。'},
+  {id:'c_american',kind:'cat', em:'🐈',  art:'猫狗星球_宠物美术/c_american.webp',name:'美国短毛猫', desc:'健壮友善，邻家全能好伙伴。'},
+  {id:'c_bombay',  kind:'cat', em:'🐈‍⬛', art:'猫狗星球_宠物美术/c_bombay.webp',  name:'孟买猫',   desc:'神秘灵动，黑曜石般的小影子。'},
   // 狗 dog（9）
-  {id:'d_native',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_native.png',  name:'中华田园犬', desc:'忠诚乡土，看家护院的老黄牛。'},
-  {id:'d_golden',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_golden.png',  name:'金毛',     desc:'阳光暖男，谁都愿意摇尾巴。'},
-  {id:'d_corgi',   kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_corgi.png',   name:'柯基',     desc:'短腿电臀，跑起来像小马达。'},
-  {id:'d_poodle',  kind:'dog', em:'🐩',  art:'猫狗星球_宠物美术/d_poodle.png',  name:'泰迪',     desc:'卷毛精致，出门必梳妆。'},
-  {id:'d_husky',   kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_husky.png',   name:'哈士奇',   desc:'拆家戏精，眼神里写满无辜。'},
-  {id:'d_french',  kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_french.png',  name:'法国斗牛犬', desc:'呆萌温和，皱眉都在卖萌。'},
-  {id:'d_bichon',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_bichon.png',  name:'比熊',     desc:'棉花糖甜，软乎乎一团。'},
-  {id:'d_shiba',   kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_shiba.png',   name:'柴犬',     desc:'倔强表情包，内心戏十足。'},
-  {id:'d_samoyed', kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_samoyed.png', name:'萨摩耶',   desc:'微笑天使，毛白得像云。'},
+  {id:'d_native',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_native.webp',  name:'中华田园犬', desc:'忠诚乡土，看家护院的老黄牛。'},
+  {id:'d_golden',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_golden.webp',  name:'金毛',     desc:'阳光暖男，谁都愿意摇尾巴。'},
+  {id:'d_corgi',   kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_corgi.webp',   name:'柯基',     desc:'短腿电臀，跑起来像小马达。'},
+  {id:'d_poodle',  kind:'dog', em:'🐩',  art:'猫狗星球_宠物美术/d_poodle.webp',  name:'泰迪',     desc:'卷毛精致，出门必梳妆。'},
+  {id:'d_husky',   kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_husky.webp',   name:'哈士奇',   desc:'拆家戏精，眼神里写满无辜。'},
+  {id:'d_french',  kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_french.webp',  name:'法国斗牛犬', desc:'呆萌温和，皱眉都在卖萌。'},
+  {id:'d_bichon',  kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_bichon.webp',  name:'比熊',     desc:'棉花糖甜，软乎乎一团。'},
+  {id:'d_shiba',   kind:'dog', em:'🐶',  art:'猫狗星球_宠物美术/d_shiba.webp',   name:'柴犬',     desc:'倔强表情包，内心戏十足。'},
+  {id:'d_samoyed', kind:'dog', em:'🐕',  art:'猫狗星球_宠物美术/d_samoyed.webp', name:'萨摩耶',   desc:'微笑天使，毛白得像云。'},
 ];
 // 玩家未选宠时强制进入选宠页；选宠后 companion 可为 emoji 或 data:image 头像
 let pendingPet=null, pendingImg=null;
+const MAX_PET_AVATAR_BYTES=5*1024*1024;
+const PET_AVATAR_EDGE=512;
+function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>'"]/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]; }); }
+function normalizePetName(raw, fallback){
+  const name=String(raw==null?'':raw).replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,8);
+  return name||fallback||'';
+}
+function deliveryArtPath(v){ return typeof v==='string' && v.indexOf('猫狗星球_')===0 ? v.replace(/\.png$/i,'.webp') : v; }
+function migrateArtworkInSave(v){
+  if(Array.isArray(v)){ v.forEach(migrateArtworkInSave); return; }
+  if(!v||typeof v!=='object') return;
+  Object.keys(v).forEach(function(k){ const value=v[k]; if(typeof value==='string') v[k]=deliveryArtPath(value); else if(value&&typeof value==='object') migrateArtworkInSave(value); });
+}
 function equippedCosmetics(){ return [...new Set(S.equipped||[])].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR); }
 function companionHTML(showDecor=true){
   let pet;
   if(typeof S.companion==='string' && S.companion.indexOf('data:image')===0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴">`;
-  else if(typeof S.companion==='string' && S.companion.indexOf('.png')>=0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴" onerror="this.outerHTML='<span class=&quot;cmp-em&quot;>🐱</span>'">`;
+  else if(typeof S.companion==='string' && /\.(?:png|webp)$/i.test(S.companion)) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴" onerror="this.outerHTML='<span class=&quot;cmp-em&quot;>🐱</span>'">`;
   else pet=`<span class="cmp-em">${S.companion||'🐱'}</span>`;
   // L8 单宠装扮：已装备的装扮作为小徽章环绕旅伴（纯表达，非任务）
   const eq=showDecor?equippedCosmetics().map(id=>{ const c=COSMETICS.find(x=>x.id===id); return `<span class="cos-badge" title="${c.name}">${c.art?`<img src="${c.art}" alt="${c.name}">`:c.em}</span>`; }).join(''):'';
@@ -1121,45 +1134,45 @@ function journalDecorHTML(){
   }).join('');
 }
 function journalCompanionHTML(){ return `<span class="journal-pet-stage">${companionHTML(false)}<span class="journal-decoration-layer">${journalDecorHTML()}</span></span>`; }
-// 伴侣/好友头像统一渲染：emoji 字符串、.png CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
-const FRIEND_ART = {'🐶':'猫狗星球_遇友美术/dog.png', '🐰':'猫狗星球_遇友美术/rabbit.png', '🐱':'猫狗星球_宠物美术/c_orange.png'};
+// 伴侣/好友头像统一渲染：emoji 字符串、.webp CG 路径、或偶遇对象{art,em} → 优先 CG 图，否则 emoji 兜底
+const FRIEND_ART = {'🐶':'猫狗星球_遇友美术/dog.webp', '🐰':'猫狗星球_遇友美术/rabbit.webp', '🐱':'猫狗星球_宠物美术/c_orange.webp'};
 function cmp(c){
   if(c && typeof c==='object'){ return c.art?`<img class="cmp-img" src="${c.art}" alt="">`:`<span class="cmp-em">${c.em||'🐱'}</span>`; }
-  if(typeof c==='string' && c.indexOf('.png')>=0) return `<img class="cmp-img" src="${c}" alt="">`;
+  if(typeof c==='string' && /\.(?:png|webp)$/i.test(c)) return `<img class="cmp-img" src="${c}" alt="">`;
   const a=FRIEND_ART[c]; if(a) return `<img class="cmp-img" src="${a}" alt="">`;
   return `<span class="cmp-em">${c||'🐱'}</span>`;
 }
 // 写实 CG 图标（与宠物高保真头像同档渲染；缺失键回退到线描 SVG）
 const CG = {
-  compass:'猫狗星球_图标美术/compass.png',
-  home:'猫狗星球_图标美术/home.png',
-  book:'猫狗星球_图标美术/book.png',
-  social:'猫狗星球_图标美术/social.png',
-  shop:'猫狗星球_图标美术/shop.png',
-  tune:'猫狗星球_图标美术/tune.png',
-  star:'猫狗星球_图标美术/star.png',
-  food:'猫狗星球_图标美术/food.png',
-  crystal:'猫狗星球_图标美术/crystal.png',
-  map:'猫狗星球_图标美术/map.png',
-  backpack:'猫狗星球_图标美术/backpack.png',
-  paw:'猫狗星球_图标美术/paw.png',
-  play:'猫狗星球_图标美术/play.png',
-  pin:'猫狗星球_图标美术/pin.png',
-  dice:'猫狗星球_图标美术/dice.png',
-  minus:'猫狗星球_图标美术/minus.png',
-  plus:'猫狗星球_图标美术/plus.png',
-  plane:'猫狗星球_图标美术/plane.png',
-  x:'猫狗星球_图标美术/x.png',
-  stamp:'猫狗星球_图标美术/stamp.png',
-  lost:'猫狗星球_图标美术/lost.png',
-  gift:'猫狗星球_图标美术/gift.png',
-  journal:'猫狗星球_图标美术/journal.png',
-  wardrobe:'猫狗星球_图标美术/wardrobe.png',
-  leaf:'猫狗星球_图标美术/leaf.png',
-  bell:'猫狗星球_图标美术/bell.png',
-  lantern:'猫狗星球_图标美术/lantern.png',
-  camera:'猫狗星球_图标美术/camera.png',
-  flower:'猫狗星球_图标美术/flower.png'
+  compass:'猫狗星球_图标美术/compass.webp',
+  home:'猫狗星球_图标美术/home.webp',
+  book:'猫狗星球_图标美术/book.webp',
+  social:'猫狗星球_图标美术/social.webp',
+  shop:'猫狗星球_图标美术/shop.webp',
+  tune:'猫狗星球_图标美术/tune.webp',
+  star:'猫狗星球_图标美术/star.webp',
+  food:'猫狗星球_图标美术/food.webp',
+  crystal:'猫狗星球_图标美术/crystal.webp',
+  map:'猫狗星球_图标美术/map.webp',
+  backpack:'猫狗星球_图标美术/backpack.webp',
+  paw:'猫狗星球_图标美术/paw.webp',
+  play:'猫狗星球_图标美术/play.webp',
+  pin:'猫狗星球_图标美术/pin.webp',
+  dice:'猫狗星球_图标美术/dice.webp',
+  minus:'猫狗星球_图标美术/minus.webp',
+  plus:'猫狗星球_图标美术/plus.webp',
+  plane:'猫狗星球_图标美术/plane.webp',
+  x:'猫狗星球_图标美术/x.webp',
+  stamp:'猫狗星球_图标美术/stamp.webp',
+  lost:'猫狗星球_图标美术/lost.webp',
+  gift:'猫狗星球_图标美术/gift.webp',
+  journal:'猫狗星球_图标美术/journal.webp',
+  wardrobe:'猫狗星球_图标美术/wardrobe.webp',
+  leaf:'猫狗星球_图标美术/leaf.webp',
+  bell:'猫狗星球_图标美术/bell.webp',
+  lantern:'猫狗星球_图标美术/lantern.webp',
+  camera:'猫狗星球_图标美术/camera.webp',
+  flower:'猫狗星球_图标美术/flower.webp'
 };
 function ic(n){ return CG[n] ? `<img class="ui-ic" src="${CG[n]}" alt="">` : ''; }
 
@@ -1167,7 +1180,7 @@ function applyCompanion(o){
   if(o.img){ S.companion=o.img; S.petId=null; }
   else if(o.petId){ const p=PETS.find(x=>x.id===o.petId); if(!p) return false; S.companion=p.art||p.em; S.petId=p.id; if(!o.name) o.name=p.name; }
   else { toast('请先选一只旅伴，或上传你家毛孩子的照片'); return false; }
-  S.name = (o.name||'').trim() || '旅伴';
+  S.name = normalizePetName(o.name, '旅伴');
   S.chosen=true; S.onboard=1; save();
   toast(`欢迎 ${S.name} 加入旅程 🐾`);
   pendingPet=null; pendingImg=null; view='home'; render(); return true;
@@ -1409,25 +1422,25 @@ const WORLD_STORIES = {
 function hashStr(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h; }
 // —— 写实纪念品道具立绘（Track B · 方向①）：4 类通用道具按关键词映射到全部 souvenir ——
 const SOUVENIR_ART = {
-  ceramic:'猫狗星球_纪念品美术/ceramic.png',
-  fabric:'猫狗星球_纪念品美术/fabric.png',
-  badge:'猫狗星球_纪念品美术/badge.png',
-  snackbox:'猫狗星球_纪念品美术/snackbox.png',
+  ceramic:'猫狗星球_纪念品美术/ceramic.webp',
+  fabric:'猫狗星球_纪念品美术/fabric.webp',
+  badge:'猫狗星球_纪念品美术/badge.webp',
+  snackbox:'猫狗星球_纪念品美术/snackbox.webp',
 };
 // 小窝精选陈列：每件均有独立 CG 道具图，避免不同故事共用同一张泛化占位图。
 const FEATURED_SOUVENIR_ART = {
-  '西湖团扇':'猫狗星球_纪念品美术/精选陈列/westlake_fan.png',
-  '竹叶书签':'猫狗星球_纪念品美术/精选陈列/bamboo_bookmark.png',
-  '园林窗棂':'猫狗星球_纪念品美术/精选陈列/garden_window.png',
-  '陶土兵俑':'猫狗星球_纪念品美术/精选陈列/terracotta_warrior.png',
-  '飞天壁画':'猫狗星球_纪念品美术/精选陈列/apsara_mural.png',
-  '故宫脊兽':'猫狗星球_纪念品美术/精选陈列/roof_beast.png',
-  '武陵石峰':'猫狗星球_纪念品美术/精选陈列/wuling_peaks.png',
-  '鎏金坛城':'猫狗星球_纪念品美术/精选陈列/gilded_mandala.png',
-  '木鱼':'猫狗星球_纪念品美术/精选陈列/wooden_fish.png',
-  '太极玉牌':'猫狗星球_纪念品美术/精选陈列/taiji_jade.png',
-  '南海潮音贝':'猫狗星球_纪念品美术/精选陈列/tide_shell.png',
-  '唐三彩马':'猫狗星球_纪念品美术/精选陈列/tang_horse.png',
+  '西湖团扇':'猫狗星球_纪念品美术/精选陈列/westlake_fan.webp',
+  '竹叶书签':'猫狗星球_纪念品美术/精选陈列/bamboo_bookmark.webp',
+  '园林窗棂':'猫狗星球_纪念品美术/精选陈列/garden_window.webp',
+  '陶土兵俑':'猫狗星球_纪念品美术/精选陈列/terracotta_warrior.webp',
+  '飞天壁画':'猫狗星球_纪念品美术/精选陈列/apsara_mural.webp',
+  '故宫脊兽':'猫狗星球_纪念品美术/精选陈列/roof_beast.webp',
+  '武陵石峰':'猫狗星球_纪念品美术/精选陈列/wuling_peaks.webp',
+  '鎏金坛城':'猫狗星球_纪念品美术/精选陈列/gilded_mandala.webp',
+  '木鱼':'猫狗星球_纪念品美术/精选陈列/wooden_fish.webp',
+  '太极玉牌':'猫狗星球_纪念品美术/精选陈列/taiji_jade.webp',
+  '南海潮音贝':'猫狗星球_纪念品美术/精选陈列/tide_shell.webp',
+  '唐三彩马':'猫狗星球_纪念品美术/精选陈列/tang_horse.webp',
 };
 const FEATURED_SOUVENIR_NAMES=Object.keys(FEATURED_SOUVENIR_ART);
 // 全图鉴 104 件一物一图；序号与目的地纪念品清单保持固定，便于后续增量补图。
@@ -1437,7 +1450,7 @@ const COMPLETE_SOUVENIR_NAMES=[
   '赵州桥石构件','晋商古币','辽代鎏金马具','渤海国瓦当','金代铜镜','明孝陵石像生','三国铜权','海上丝路罗盘','滕王阁诗文卷','齐鲁竹简','龙门石龛残件','编钟残片','马王堆帛书','南越玉印','南海珊瑚信物','夜郎铜鼓','滇王金印','河西简牍','吐谷浑金饰','红砖厝信物','北魏鎏金佛','骆越铜鼓','鎏金小佛像','西夏文残碑','楼兰织锦','漕运铜砝码','元青花瓷片','钓鱼城弩机','维港灯塔模型','葡式瓷砖','刺桐港罗盘','唐三彩马','北宋汴绣','东巴木牌','黄山松石','泰山经石峪刻石','平遥古钱币','土楼夯土砖','九寨彩石','漓江鸬鹚信物','喀纳斯鹿石','鼓浪屿琴键',
   '圣甲虫护符','黑绘陶罐','罗马金币','平安画卷','铜佛残片','神殿石雕','圣索菲亚马赛克','汉谟拉比法典残片','波斯金杯','翡翠面具','黄金太阳盘','古卷残页','佛牙匣残片','中世纪彩窗','泰姬白玉','琥珀宫残片','巨石阵石楔','城堡铜钥','摩尔彩陶','会安锦灯','大城佛首','鎏金塔刹','新罗金冠','突厥金饰','佩特拉石龛','岩石教堂残件','美泉宫瓷盘','布拉格铜钟残件','蒲甘佛塔砖','浮屠石佛','撒马尔罕釉砖','城堡山铜钥'
 ];
-function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); if(i<0) return null; const n=i+1; const tuned=[6,10,11].includes(n)?'?visual-center=2':''; return `猫狗星球_纪念品美术/全图鉴_居中/s${String(n).padStart(3,'0')}.png${tuned}`; }
+function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); if(i<0) return null; const n=i+1; const tuned=[6,10,11].includes(n)?'?visual-center=2':''; return `猫狗星球_纪念品美术/全图鉴_居中/s${String(n).padStart(3,'0')}.webp${tuned}`; }
 function souvenirArt(s){ return completeSouvenirArt(s)||FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
 const HOME_SHOWCASE_LIMIT=14;
 const HOME_SHOWCASE_DEFAULT=['西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝','唐三彩马','星屑瓶','古境徽记'];
@@ -1562,7 +1575,7 @@ const HIDDEN = [
     souvenir:{em:'🧭', name:'迷宫星盘', story:'从迷宫带出的星盘，指针永远指向"出口"，也指向"回家"。'}},
   {id:'sanctum', name:'信物圣殿', em:'🪬', depth:6, tag:'隐藏地点·祭祀', cat:'secret', era:'古之章', secret:true,
     drop:{cl:'primor',min:'epic'},
-    special:{cl:'primor',item:{id:'先民信物',art:'猫狗星球_整件美术/primor_relic.png',em:'🪬',name:'先民信物',story:'圣殿深处的信物，传说握着它的人会被先民温柔地记住。'},p:0.2},
+    special:{cl:'primor',item:{id:'先民信物',art:'猫狗星球_整件美术/primor_relic.webp',em:'🪬',name:'先民信物',story:'圣殿深处的信物，传说握着它的人会被先民温柔地记住。'},p:0.2},
     stories:['圣殿无人，却处处是供奉的痕迹，它放下一朵野花，算作回礼。','它在祭台前听见古老的低语，说的是：你来了，真好。'],
     souvenir:{em:'🪬', name:'圣殿符牌', story:'符牌上刻着问候的纹路，是它从信物圣殿带回的善意。'}},
   {id:'station', name:'银河驿站', em:'🌌', depth:6, tag:'隐藏地点·星际', cat:'secret', era:'星穹', secret:true,
@@ -1587,7 +1600,7 @@ const HIDDEN = [
     drop:{cl:'time',min:'epic'},
     stories:['湖面把过去的它和现在的它对在一起，两只隔着水悄悄挥手。','它往湖里丢一粒石子，涟漪把倒影里的童年推得更近了些。'],
     souvenir:{em:'⏳', name:'镜湖沙', story:'一捧从镜湖底捞起的沙，握紧时，想念的人离你近了一寸。'}},
-  // —— 方向③ 内容扩展：增 6 个 depth6 秘境（ImageGen+rembg 流水线已跑，6 张 realm_*.png 已落位）——
+  // —— 方向③ 内容扩展：增 6 个 depth6 秘境（ImageGen+rembg 流水线已跑，6 张 realm_*.webp 已落位）——
   {id:'stardream', name:'星梦原野', em:'🌌', depth:6, tag:'隐藏地点·星海', cat:'secret', era:'星穹', secret:true,
     drop:{cl:'stardust',min:'rare'},
     stories:['原野上的星尘随着脚步飘起，每走一步就像在画一条新的银河。','它躺在草地上一整晚，直到自己也被草间的星光染亮。'],
@@ -1618,50 +1631,50 @@ const HIDDEN = [
 const SEASONS = [
   // 6 微赛季（贴合节气节奏，每季 2 个月）
   {id:'frost', name:'霜序', months:[1,2], em:'❄️',
-   secrets:['star','station','stardream'], desc:'霜雪覆地，星尘在冰面上格外明亮', flavor:'霜把世界裹进安静的壳里，星星的声音就变得清楚了。', scene:'猫狗星球_秘境美术/scene_frost.png', featured:['r_jilin','r_heilongjiang'], skin:{c1:'#e6ecfb',c2:'#d4def7',border:'#7b9fe0'}},
+   secrets:['star','station','stardream'], desc:'霜雪覆地，星尘在冰面上格外明亮', flavor:'霜把世界裹进安静的壳里，星星的声音就变得清楚了。', scene:'猫狗星球_秘境美术/scene_frost.webp', featured:['r_jilin','r_heilongjiang'], skin:{c1:'#e6ecfb',c2:'#d4def7',border:'#7b9fe0'}},
   {id:'thaw', name:'融春', months:[3,4], em:'🌸',
-   secrets:['isle','mao','worldtree','ruin'], desc:'冻土初融，古境与树海在暖风中醒来', flavor:'冻土化了，第一朵花替整座山醒了过来。', scene:'猫狗星球_秘境美术/scene_thaw.png', featured:['r_beijing','r_zhejiang'], skin:{c1:'#f8eedd',c2:'#efdcbb',border:'#c89b5a'}},
+   secrets:['isle','mao','worldtree','ruin'], desc:'冻土初融，古境与树海在暖风中醒来', flavor:'冻土化了，第一朵花替整座山醒了过来。', scene:'猫狗星球_秘境美术/scene_thaw.webp', featured:['r_beijing','r_zhejiang'], skin:{c1:'#f8eedd',c2:'#efdcbb',border:'#c89b5a'}},
   {id:'bloom', name:'花月', months:[5,6], em:'🌺',
-   secrets:['mirrorlake','trench'], desc:'花满枝头，镜湖水暖、海渊初醒', flavor:'花开到第七层的时候，风里满是甜味和泡泡。', scene:'猫狗星球_秘境美术/scene_bloom.png', featured:['r_jiangsu','r_hubei'], skin:{c1:'#eaf6e7',c2:'#d6efd8',border:'#7fae8c'}},
+   secrets:['mirrorlake','trench'], desc:'花满枝头，镜湖水暖、海渊初醒', flavor:'花开到第七层的时候，风里满是甜味和泡泡。', scene:'猫狗星球_秘境美术/scene_bloom.webp', featured:['r_jiangsu','r_hubei'], skin:{c1:'#eaf6e7',c2:'#d6efd8',border:'#7fae8c'}},
   {id:'scorch', name:'炎夏', months:[7,8], em:'☀️',
-   secrets:['belltower','deepsea','clock'], desc:'烈日炎炎，适合深潜探索海底与时间秘境', flavor:'海面平静得像块玻璃，底下却闹得欢。', scene:'猫狗星球_秘境美术/scene_scorch.png', featured:['r_hainan','r_guangdong'], skin:{c1:'#dcf0f3',c2:'#bfe3ea',border:'#5ba6b8'}},
+   secrets:['belltower','deepsea','clock'], desc:'烈日炎炎，适合深潜探索海底与时间秘境', flavor:'海面平静得像块玻璃，底下却闹得欢。', scene:'猫狗星球_秘境美术/scene_scorch.webp', featured:['r_hainan','r_guangdong'], skin:{c1:'#dcf0f3',c2:'#bfe3ea',border:'#5ba6b8'}},
   {id:'harvest', name:'金秋', months:[9,10], em:'🍂',
-   secrets:['mirror','corridor','prism'], desc:'秋叶金黄，棱镜与幻境之门缓缓打开', flavor:'叶子落尽之后，树干上的时间纹路终于能被看清了。', scene:'猫狗星球_秘境美术/scene_harvest.png', featured:['r_shandong','r_shaanxi'], skin:{c1:'#fbf0dd',c2:'#f5e6cf',border:'#d0a55a'}},
+   secrets:['mirror','corridor','prism'], desc:'秋叶金黄，棱镜与幻境之门缓缓打开', flavor:'叶子落尽之后，树干上的时间纹路终于能被看清了。', scene:'猫狗星球_秘境美术/scene_harvest.webp', featured:['r_shandong','r_shaanxi'], skin:{c1:'#fbf0dd',c2:'#f5e6cf',border:'#d0a55a'}},
   {id:'yearend', name:'岁暮', months:[11,12], em:'🎇',
-   secrets:['bellcrypt','maze','sanctum','forge'], desc:'岁末暮深，古章秘境最易在寒夜浮现', flavor:'雾起了，时间的边沿变得毛茸茸的。', scene:'猫狗星球_秘境美术/scene_yearend.png', featured:['r_sichuan','r_anhui'], skin:{c1:'#f4e3d5',c2:'#e6cdb6',border:'#b07f4e'}},
+   secrets:['bellcrypt','maze','sanctum','forge'], desc:'岁末暮深，古章秘境最易在寒夜浮现', flavor:'雾起了，时间的边沿变得毛茸茸的。', scene:'猫狗星球_秘境美术/scene_yearend.webp', featured:['r_sichuan','r_anhui'], skin:{c1:'#f4e3d5',c2:'#e6cdb6',border:'#b07f4e'}},
 ];
 function seasonSkin(s){ return (s&&s.skin)||{c1:'#eef6e9',c2:'#e7f1f6',border:'var(--accent2)'}; }
 // —— 秘境时代元数据（配色 + 图标，统一视觉语言）——
 const ERA_META = {
-  '星穹':{ic:'🌌', art:'猫狗星球_秘境美术/era_cosmos.png', c1:'#e7edff', c2:'#d3deff', bar:'#7b9fe0', txt:'#41568f'},
-  '古境':{ic:'🐾', art:'猫狗星球_秘境美术/era_ancient.png', c1:'#f8eedd', c2:'#efdcbb', bar:'#c89b5a', txt:'#8a6526'},
-  '海底':{ic:'🌊', art:'猫狗星球_秘境美术/era_abyss.png', c1:'#dcf0f3', c2:'#bfe3ea', bar:'#5ba6b8', txt:'#2f6b78'},
-  '时之卷':{ic:'⏳', art:'猫狗星球_秘境美术/era_chrono.png', c1:'#efe6f7', c2:'#e0cdf0', bar:'#a07fc7', txt:'#6a4a8c'},
-  '镜之境':{ic:'🔺', art:'猫狗星球_秘境美术/era_mirror.png', c1:'#fde9f2', c2:'#f6d3e4', bar:'#d77aa8', txt:'#a8457a'},
-  '古之章':{ic:'🏯', art:'猫狗星球_秘境美术/era_relic.png', c1:'#f4e3d5', c2:'#e6cdb6', bar:'#b07f4e', txt:'#8a5a2e'},
+  '星穹':{ic:'🌌', art:'猫狗星球_秘境美术/era_cosmos.webp', c1:'#e7edff', c2:'#d3deff', bar:'#7b9fe0', txt:'#41568f'},
+  '古境':{ic:'🐾', art:'猫狗星球_秘境美术/era_ancient.webp', c1:'#f8eedd', c2:'#efdcbb', bar:'#c89b5a', txt:'#8a6526'},
+  '海底':{ic:'🌊', art:'猫狗星球_秘境美术/era_abyss.webp', c1:'#dcf0f3', c2:'#bfe3ea', bar:'#5ba6b8', txt:'#2f6b78'},
+  '时之卷':{ic:'⏳', art:'猫狗星球_秘境美术/era_chrono.webp', c1:'#efe6f7', c2:'#e0cdf0', bar:'#a07fc7', txt:'#6a4a8c'},
+  '镜之境':{ic:'🔺', art:'猫狗星球_秘境美术/era_mirror.webp', c1:'#fde9f2', c2:'#f6d3e4', bar:'#d77aa8', txt:'#a8457a'},
+  '古之章':{ic:'🏯', art:'猫狗星球_秘境美术/era_relic.webp', c1:'#f4e3d5', c2:'#e6cdb6', bar:'#b07f4e', txt:'#8a5a2e'},
 };
 // 秘境图标：专属 CG 写实图标（ImageGen 生成 + rembg 去背），落位 猫狗星球_秘境美术/
 const REALM_ART = {
-  star:'猫狗星球_秘境美术/realm_star.png',
-  station:'猫狗星球_秘境美术/realm_station.png',
-  isle:'猫狗星球_秘境美术/realm_isle.png',
-  belltower:'猫狗星球_秘境美术/realm_belltower.png',
-  deepsea:'猫狗星球_秘境美术/realm_deepsea.png',
-  mirror:'猫狗星球_秘境美术/realm_mirror.png',
-  corridor:'猫狗星球_秘境美术/realm_corridor.png',
-  mirrorlake:'猫狗星球_秘境美术/realm_mirrorlake.png',
-  bellcrypt:'猫狗星球_秘境美术/realm_bellcrypt.png',
-  maze:'猫狗星球_秘境美术/realm_maze.png',
-  sanctum:'猫狗星球_秘境美术/realm_sanctum.png',
-  mao:'猫狗星球_秘境美术/realm_mao.png',
-  worldtree:'猫狗星球_秘境美术/realm_worldtree.png',
+  star:'猫狗星球_秘境美术/realm_star.webp',
+  station:'猫狗星球_秘境美术/realm_station.webp',
+  isle:'猫狗星球_秘境美术/realm_isle.webp',
+  belltower:'猫狗星球_秘境美术/realm_belltower.webp',
+  deepsea:'猫狗星球_秘境美术/realm_deepsea.webp',
+  mirror:'猫狗星球_秘境美术/realm_mirror.webp',
+  corridor:'猫狗星球_秘境美术/realm_corridor.webp',
+  mirrorlake:'猫狗星球_秘境美术/realm_mirrorlake.webp',
+  bellcrypt:'猫狗星球_秘境美术/realm_bellcrypt.webp',
+  maze:'猫狗星球_秘境美术/realm_maze.webp',
+  sanctum:'猫狗星球_秘境美术/realm_sanctum.webp',
+  mao:'猫狗星球_秘境美术/realm_mao.webp',
+  worldtree:'猫狗星球_秘境美术/realm_worldtree.webp',
   // 方向③ 新增 6 秘境 CG
-  stardream:'猫狗星球_秘境美术/realm_stardream.png',
-  ruin:'猫狗星球_秘境美术/realm_ruin.png',
-  trench:'猫狗星球_秘境美术/realm_trench.png',
-  clock:'猫狗星球_秘境美术/realm_clock.png',
-  prism:'猫狗星球_秘境美术/realm_prism.png',
-  forge:'猫狗星球_秘境美术/realm_forge.png',
+  stardream:'猫狗星球_秘境美术/realm_stardream.webp',
+  ruin:'猫狗星球_秘境美术/realm_ruin.webp',
+  trench:'猫狗星球_秘境美术/realm_trench.webp',
+  clock:'猫狗星球_秘境美术/realm_clock.webp',
+  prism:'猫狗星球_秘境美术/realm_prism.webp',
+  forge:'猫狗星球_秘境美术/realm_forge.webp',
 };
 function eraMeta(e){ return ERA_META[e]||{ic:'🧭',c1:'#f0f0f0',c2:'#e2e2e2',bar:'#bbb',txt:'#777'}; }
 function activeSeason(){
@@ -1691,52 +1704,52 @@ function parseRegionName(spot){
   return tag;
 }
 const REGION_DEFS={
-  '河北':{id:'r_hebei',em:'🏞️',art:'猫狗星球_省区美术/prov_hebei.png',domestic:true},'山西':{id:'r_shanxi',em:'🏯',art:'猫狗星球_省区美术/prov_shanxi.png',domestic:true},
-  '辽宁':{id:'r_liaoning',em:'🐎',art:'猫狗星球_省区美术/prov_liaoning.png',domestic:true},'吉林':{id:'r_jilin',em:'🏺',art:'猫狗星球_省区美术/prov_jilin.png',domestic:true},
-  '黑龙江':{id:'r_heilongjiang',em:'🔔',art:'猫狗星球_省区美术/prov_heilongjiang.png',domestic:true},'江苏':{id:'r_jiangsu',em:'🏡',art:'猫狗星球_省区美术/prov_jiangsu.png',domestic:true},
-  '安徽':{id:'r_anhui',em:'⚖️',art:'猫狗星球_省区美术/prov_anhui.png',domestic:true},'福建':{id:'r_fujian',em:'🧭',art:'猫狗星球_省区美术/prov_fujian.png',domestic:true},
-  '江西':{id:'r_jiangxi',em:'📜',art:'猫狗星球_省区美术/prov_jiangxi.png',domestic:true},'山东':{id:'r_shandong',em:'📜',art:'猫狗星球_省区美术/prov_shandong.png',domestic:true},
-  '河南':{id:'r_henan',em:'🪨',art:'猫狗星球_省区美术/prov_henan.png',domestic:true},'湖北':{id:'r_hubei',em:'🎵',art:'猫狗星球_省区美术/prov_hubei.png',domestic:true},
-  '湖南':{id:'r_hunan',em:'📜', art:'猫狗星球_省区美术/prov_hunan.png', domestic:true},'广东':{id:'r_guangdong',em:'🪨', art:'猫狗星球_省区美术/prov_guangdong.png', domestic:true},
-  '海南':{id:'r_hainan',em:'🐚', art:'猫狗星球_省区美术/prov_hainan.png', domestic:true},'贵州':{id:'r_guizhou',em:'🥁', art:'猫狗星球_省区美术/prov_guizhou.png', domestic:true},
-  '云南':{id:'r_yunnan',em:'🪬', art:'猫狗星球_省区美术/prov_yunnan.png', domestic:true},'甘肃':{id:'r_gansu',em:'🏜️', art:'猫狗星球_省区美术/prov_gansu.png', domestic:true},
-  '青海':{id:'r_qinghai',em:'🪙',art:'猫狗星球_省区美术/prov_qinghai.png',domestic:true},'中国台湾':{id:'r_taiwan',em:'🧱',art:'猫狗星球_省区美术/prov_taiwan.png',domestic:true},
-  '内蒙古':{id:'r_neimenggu',em:'🪙', art:'猫狗星球_省区美术/prov_neimenggu.png', domestic:true},'广西':{id:'r_guangxi',em:'🥁', art:'猫狗星球_省区美术/prov_guangxi.png', domestic:true},
-  '西藏':{id:'r_xizang',em:'🪙', art:'猫狗星球_省区美术/prov_xizang.png', domestic:true},'宁夏':{id:'r_ningxia',em:'🪨', art:'猫狗星球_省区美术/prov_ningxia.png', domestic:true},
-  '新疆':{id:'r_xinjiang',em:'🧵', art:'猫狗星球_省区美术/prov_xinjiang.png', domestic:true},'北京':{id:'r_beijing',em:'🏯', art:'猫狗星球_省区美术/prov_beijing.png', domestic:true},
-  '天津':{id:'r_tianjin',em:'⚖️', art:'猫狗星球_省区美术/prov_tianjin.png', domestic:true},'上海':{id:'r_shanghai',em:'🏺', art:'猫狗星球_省区美术/prov_shanghai.png', domestic:true},
-  '重庆':{id:'r_chongqing',em:'🏹', art:'猫狗星球_省区美术/prov_chongqing.png', domestic:true},'中国香港':{id:'r_hk',em:'🗼', art:'猫狗星球_省区美术/prov_hk.png', domestic:true},
-  '中国澳门':{id:'r_macau',em:'🧱', art:'猫狗星球_省区美术/prov_macau.png', domestic:true},'浙江':{id:'r_zhejiang',em:'🌊', art:'猫狗星球_省区美术/prov_zhejiang.png', domestic:true},
-  '四川':{id:'r_sichuan',em:'🐼',art:'猫狗星球_省区美术/prov_sichuan.png',domestic:true},'陕西':{id:'r_shaanxi',em:'🪔', art:'猫狗星球_省区美术/prov_shaanxi.png', domestic:true},
-  '埃及':{id:'r_egypt',em:'🔺', art:'猫狗星球_省区美术/prov_egypt.png', domestic:false},'希腊':{id:'r_greece',em:'🏛️', art:'猫狗星球_省区美术/prov_greece.png', domestic:false},
-  '意大利':{id:'r_italy',em:'🏛️', art:'猫狗星球_省区美术/prov_italy.png', domestic:false},'日本':{id:'r_japan',em:'🏯', art:'猫狗星球_省区美术/prov_japan.png', domestic:false},
-  '柬埔寨':{id:'r_cambodia',em:'🛕', art:'猫狗星球_省区美术/prov_cambodia.png', domestic:false},'土耳其':{id:'r_turkey',em:'📜', art:'猫狗星球_省区美术/prov_turkey.png', domestic:false},
-  '伊拉克':{id:'r_iraq',em:'📜', art:'猫狗星球_省区美术/prov_iraq.png', domestic:false},'伊朗':{id:'r_iran',em:'🏆', art:'猫狗星球_省区美术/prov_iran.png', domestic:false},
-  '墨西哥':{id:'r_mexico',em:'💎', art:'猫狗星球_省区美术/prov_mexico.png', domestic:false},'秘鲁':{id:'r_peru',em:'☀️', art:'猫狗星球_省区美术/prov_peru.png', domestic:false},
-  '马里':{id:'r_mali',em:'📜', art:'猫狗星球_省区美术/prov_mali.png', domestic:false},'斯里兰卡':{id:'r_srilanka',em:'🪷', art:'猫狗星球_省区美术/prov_srilanka.png', domestic:false},
-  '法国':{id:'r_france',em:'🌈', art:'猫狗星球_省区美术/prov_france.png', domestic:false},
+  '河北':{id:'r_hebei',em:'🏞️',art:'猫狗星球_省区美术/prov_hebei.webp',domestic:true},'山西':{id:'r_shanxi',em:'🏯',art:'猫狗星球_省区美术/prov_shanxi.webp',domestic:true},
+  '辽宁':{id:'r_liaoning',em:'🐎',art:'猫狗星球_省区美术/prov_liaoning.webp',domestic:true},'吉林':{id:'r_jilin',em:'🏺',art:'猫狗星球_省区美术/prov_jilin.webp',domestic:true},
+  '黑龙江':{id:'r_heilongjiang',em:'🔔',art:'猫狗星球_省区美术/prov_heilongjiang.webp',domestic:true},'江苏':{id:'r_jiangsu',em:'🏡',art:'猫狗星球_省区美术/prov_jiangsu.webp',domestic:true},
+  '安徽':{id:'r_anhui',em:'⚖️',art:'猫狗星球_省区美术/prov_anhui.webp',domestic:true},'福建':{id:'r_fujian',em:'🧭',art:'猫狗星球_省区美术/prov_fujian.webp',domestic:true},
+  '江西':{id:'r_jiangxi',em:'📜',art:'猫狗星球_省区美术/prov_jiangxi.webp',domestic:true},'山东':{id:'r_shandong',em:'📜',art:'猫狗星球_省区美术/prov_shandong.webp',domestic:true},
+  '河南':{id:'r_henan',em:'🪨',art:'猫狗星球_省区美术/prov_henan.webp',domestic:true},'湖北':{id:'r_hubei',em:'🎵',art:'猫狗星球_省区美术/prov_hubei.webp',domestic:true},
+  '湖南':{id:'r_hunan',em:'📜', art:'猫狗星球_省区美术/prov_hunan.webp', domestic:true},'广东':{id:'r_guangdong',em:'🪨', art:'猫狗星球_省区美术/prov_guangdong.webp', domestic:true},
+  '海南':{id:'r_hainan',em:'🐚', art:'猫狗星球_省区美术/prov_hainan.webp', domestic:true},'贵州':{id:'r_guizhou',em:'🥁', art:'猫狗星球_省区美术/prov_guizhou.webp', domestic:true},
+  '云南':{id:'r_yunnan',em:'🪬', art:'猫狗星球_省区美术/prov_yunnan.webp', domestic:true},'甘肃':{id:'r_gansu',em:'🏜️', art:'猫狗星球_省区美术/prov_gansu.webp', domestic:true},
+  '青海':{id:'r_qinghai',em:'🪙',art:'猫狗星球_省区美术/prov_qinghai.webp',domestic:true},'中国台湾':{id:'r_taiwan',em:'🧱',art:'猫狗星球_省区美术/prov_taiwan.webp',domestic:true},
+  '内蒙古':{id:'r_neimenggu',em:'🪙', art:'猫狗星球_省区美术/prov_neimenggu.webp', domestic:true},'广西':{id:'r_guangxi',em:'🥁', art:'猫狗星球_省区美术/prov_guangxi.webp', domestic:true},
+  '西藏':{id:'r_xizang',em:'🪙', art:'猫狗星球_省区美术/prov_xizang.webp', domestic:true},'宁夏':{id:'r_ningxia',em:'🪨', art:'猫狗星球_省区美术/prov_ningxia.webp', domestic:true},
+  '新疆':{id:'r_xinjiang',em:'🧵', art:'猫狗星球_省区美术/prov_xinjiang.webp', domestic:true},'北京':{id:'r_beijing',em:'🏯', art:'猫狗星球_省区美术/prov_beijing.webp', domestic:true},
+  '天津':{id:'r_tianjin',em:'⚖️', art:'猫狗星球_省区美术/prov_tianjin.webp', domestic:true},'上海':{id:'r_shanghai',em:'🏺', art:'猫狗星球_省区美术/prov_shanghai.webp', domestic:true},
+  '重庆':{id:'r_chongqing',em:'🏹', art:'猫狗星球_省区美术/prov_chongqing.webp', domestic:true},'中国香港':{id:'r_hk',em:'🗼', art:'猫狗星球_省区美术/prov_hk.webp', domestic:true},
+  '中国澳门':{id:'r_macau',em:'🧱', art:'猫狗星球_省区美术/prov_macau.webp', domestic:true},'浙江':{id:'r_zhejiang',em:'🌊', art:'猫狗星球_省区美术/prov_zhejiang.webp', domestic:true},
+  '四川':{id:'r_sichuan',em:'🐼',art:'猫狗星球_省区美术/prov_sichuan.webp',domestic:true},'陕西':{id:'r_shaanxi',em:'🪔', art:'猫狗星球_省区美术/prov_shaanxi.webp', domestic:true},
+  '埃及':{id:'r_egypt',em:'🔺', art:'猫狗星球_省区美术/prov_egypt.webp', domestic:false},'希腊':{id:'r_greece',em:'🏛️', art:'猫狗星球_省区美术/prov_greece.webp', domestic:false},
+  '意大利':{id:'r_italy',em:'🏛️', art:'猫狗星球_省区美术/prov_italy.webp', domestic:false},'日本':{id:'r_japan',em:'🏯', art:'猫狗星球_省区美术/prov_japan.webp', domestic:false},
+  '柬埔寨':{id:'r_cambodia',em:'🛕', art:'猫狗星球_省区美术/prov_cambodia.webp', domestic:false},'土耳其':{id:'r_turkey',em:'📜', art:'猫狗星球_省区美术/prov_turkey.webp', domestic:false},
+  '伊拉克':{id:'r_iraq',em:'📜', art:'猫狗星球_省区美术/prov_iraq.webp', domestic:false},'伊朗':{id:'r_iran',em:'🏆', art:'猫狗星球_省区美术/prov_iran.webp', domestic:false},
+  '墨西哥':{id:'r_mexico',em:'💎', art:'猫狗星球_省区美术/prov_mexico.webp', domestic:false},'秘鲁':{id:'r_peru',em:'☀️', art:'猫狗星球_省区美术/prov_peru.webp', domestic:false},
+  '马里':{id:'r_mali',em:'📜', art:'猫狗星球_省区美术/prov_mali.webp', domestic:false},'斯里兰卡':{id:'r_srilanka',em:'🪷', art:'猫狗星球_省区美术/prov_srilanka.webp', domestic:false},
+  '法国':{id:'r_france',em:'🌈', art:'猫狗星球_省区美术/prov_france.webp', domestic:false},
   // —— 方向② 内容扩展：新增世界国家（与 WORLD_RAW 同步）——
-  '印度':{id:'r_india',em:'🕌', art:'猫狗星球_省区美术/prov_india.png', domestic:false},'俄罗斯':{id:'r_russia',em:'🏛️', art:'猫狗星球_省区美术/prov_russia.png', domestic:false},
-  '英国':{id:'r_uk',em:'🪨', art:'猫狗星球_省区美术/prov_uk.png', domestic:false},'德国':{id:'r_germany',em:'🏰', art:'猫狗星球_省区美术/prov_germany.png', domestic:false},
-  '西班牙':{id:'r_spain',em:'🕌', art:'猫狗星球_省区美术/prov_spain.png', domestic:false},'越南':{id:'r_vietnam',em:'🏮', art:'猫狗星球_省区美术/prov_vietnam.png', domestic:false},
-  '泰国':{id:'r_thailand',em:'🛕', art:'猫狗星球_省区美术/prov_thailand.png', domestic:false},'尼泊尔':{id:'r_nepal',em:'🛕', art:'猫狗星球_省区美术/prov_nepal.png', domestic:false},
+  '印度':{id:'r_india',em:'🕌', art:'猫狗星球_省区美术/prov_india.webp', domestic:false},'俄罗斯':{id:'r_russia',em:'🏛️', art:'猫狗星球_省区美术/prov_russia.webp', domestic:false},
+  '英国':{id:'r_uk',em:'🪨', art:'猫狗星球_省区美术/prov_uk.webp', domestic:false},'德国':{id:'r_germany',em:'🏰', art:'猫狗星球_省区美术/prov_germany.webp', domestic:false},
+  '西班牙':{id:'r_spain',em:'🕌', art:'猫狗星球_省区美术/prov_spain.webp', domestic:false},'越南':{id:'r_vietnam',em:'🏮', art:'猫狗星球_省区美术/prov_vietnam.webp', domestic:false},
+  '泰国':{id:'r_thailand',em:'🛕', art:'猫狗星球_省区美术/prov_thailand.webp', domestic:false},'尼泊尔':{id:'r_nepal',em:'🛕', art:'猫狗星球_省区美术/prov_nepal.webp', domestic:false},
   // —— 方向② Batch2：新增世界国家（与 WORLD_RAW 同步）——
-  '韩国':{id:'r_korea',em:'🏯', art:'猫狗星球_省区美术/prov_korea.png', domestic:false},'蒙古':{id:'r_mongolia',em:'🐎', art:'猫狗星球_省区美术/prov_mongolia.png', domestic:false},
-  '约旦':{id:'r_jordan',em:'🏜️', art:'猫狗星球_省区美术/prov_jordan.png', domestic:false},'埃塞俄比亚':{id:'r_ethiopia',em:'⛪', art:'猫狗星球_省区美术/prov_ethiopia.png', domestic:false},
-  '奥地利':{id:'r_austria',em:'🏛️', art:'猫狗星球_省区美术/prov_austria.png', domestic:false},'捷克':{id:'r_czech',em:'🏰', art:'猫狗星球_省区美术/prov_czech.png', domestic:false},
-  '缅甸':{id:'r_myanmar',em:'🛕', art:'猫狗星球_省区美术/prov_myanmar.png', domestic:false},'印度尼西亚':{id:'r_indonesia',em:'🛕', art:'猫狗星球_省区美术/prov_indonesia.png', domestic:false},
-  '乌兹别克斯坦':{id:'r_uzbek',em:'🕌', art:'猫狗星球_省区美术/prov_uzbek.png', domestic:false},'匈牙利':{id:'r_hungary',em:'🏰', art:'猫狗星球_省区美术/prov_hungary.png', domestic:false},
+  '韩国':{id:'r_korea',em:'🏯', art:'猫狗星球_省区美术/prov_korea.webp', domestic:false},'蒙古':{id:'r_mongolia',em:'🐎', art:'猫狗星球_省区美术/prov_mongolia.webp', domestic:false},
+  '约旦':{id:'r_jordan',em:'🏜️', art:'猫狗星球_省区美术/prov_jordan.webp', domestic:false},'埃塞俄比亚':{id:'r_ethiopia',em:'⛪', art:'猫狗星球_省区美术/prov_ethiopia.webp', domestic:false},
+  '奥地利':{id:'r_austria',em:'🏛️', art:'猫狗星球_省区美术/prov_austria.webp', domestic:false},'捷克':{id:'r_czech',em:'🏰', art:'猫狗星球_省区美术/prov_czech.webp', domestic:false},
+  '缅甸':{id:'r_myanmar',em:'🛕', art:'猫狗星球_省区美术/prov_myanmar.webp', domestic:false},'印度尼西亚':{id:'r_indonesia',em:'🛕', art:'猫狗星球_省区美术/prov_indonesia.webp', domestic:false},
+  '乌兹别克斯坦':{id:'r_uzbek',em:'🕌', art:'猫狗星球_省区美术/prov_uzbek.webp', domestic:false},'匈牙利':{id:'r_hungary',em:'🏰', art:'猫狗星球_省区美术/prov_hungary.webp', domestic:false},
 };
 // —— 写实地貌立绘（Track B · 方向①）：4 种通用地貌映射到所有省份/国家，统一目的地视觉 ——
 const BIOME_ART = {
-  snow:'猫狗星球_场景美术/snow.png',
-  island:'猫狗星球_场景美术/island.png',
-  town:'猫狗星球_场景美术/town.png',
-  city:'猫狗星球_场景美术/city.png',
-  desert:'猫狗星球_场景美术/desert.png',
-  loess:'猫狗星球_场景美术/loess.png',
-  snowplain:'猫狗星球_场景美术/snowplain.png',
-  grassland:'猫狗星球_场景美术/grassland.png',
+  snow:'猫狗星球_场景美术/snow.webp',
+  island:'猫狗星球_场景美术/island.webp',
+  town:'猫狗星球_场景美术/town.webp',
+  city:'猫狗星球_场景美术/city.webp',
+  desert:'猫狗星球_场景美术/desert.webp',
+  loess:'猫狗星球_场景美术/loess.webp',
+  snowplain:'猫狗星球_场景美术/snowplain.webp',
+  grassland:'猫狗星球_场景美术/grassland.webp',
 };
 const REGION_BIOME = {
   '河北':'snow','山西':'loess','辽宁':'snowplain','吉林':'snowplain','黑龙江':'snowplain','江苏':'town','安徽':'town','福建':'island','江西':'town','山东':'town','河南':'town','湖北':'town','湖南':'town','广东':'island','海南':'island','贵州':'town','云南':'town','甘肃':'loess','青海':'snow','中国台湾':'island','内蒙古':'grassland','广西':'island','西藏':'snow','宁夏':'snow','新疆':'desert','北京':'snow','天津':'snow','上海':'city','重庆':'snow','中国香港':'island','中国澳门':'island','浙江':'town','四川':'town','陕西':'loess',
@@ -1757,7 +1770,7 @@ function biomeThumb(rn, em, cls){
   const bm=biomeOf(name);
   return bm ? `<img class="${cls||'biome-art'}" src="${bm}" alt="${name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">` : `<span class="em">${em}</span>`;
 }
-const JOURNAL_PLACE_ART=Object.fromEntries(['hz','cd','su','xa','dh','bj','zjj','xzp','shaolin','wudang','putuo','sjz','ty','sy','cc','hrb'].map(id=>[id,`猫狗星球_手账地点美术/${id}.png`]));
+const JOURNAL_PLACE_ART=Object.fromEntries(['hz','cd','su','xa','dh','bj','zjj','xzp','shaolin','wudang','putuo','sjz','ty','sy','cc','hrb'].map(id=>[id,`猫狗星球_手账地点美术/${id}.webp`]));
 function journalPlaceThumb(e){
   const regionName=parseRegionName({tag:e.destTag||'',name:e.destName||''});
   const dest=DEST.find(d=>d.id===e.destId);
@@ -1765,10 +1778,10 @@ function journalPlaceThumb(e){
   return art ? `<img class="biome-place" src="${art}" alt="${e.destName||regionName}" onerror="this.style.display='none'">` : biomeThumb(regionName,e.destEm,'biome-place');
 }
 const FRAGMENT_ART={
-  ceramic:'猫狗星球_图标美术/残片CG/ceramic.png', compass:'猫狗星球_图标美术/残片CG/compass.png', bell:'猫狗星球_图标美术/残片CG/bell.png',
-  coin:'猫狗星球_图标美术/残片CG/coin.png', herb:'猫狗星球_图标美术/残片CG/herb.png', fabric:'猫狗星球_图标美术/残片CG/fabric.png',
-  stardust:'猫狗星球_图标美术/残片CG/stardust.png', tide:'猫狗星球_图标美术/残片CG/tide.png', time:'猫狗星球_图标美术/残片CG/time.png',
-  prism:'猫狗星球_图标美术/残片CG/prism.png', primor:'猫狗星球_图标美术/残片CG/primor.png'
+  ceramic:'猫狗星球_图标美术/残片CG/ceramic.webp', compass:'猫狗星球_图标美术/残片CG/compass.webp', bell:'猫狗星球_图标美术/残片CG/bell.webp',
+  coin:'猫狗星球_图标美术/残片CG/coin.webp', herb:'猫狗星球_图标美术/残片CG/herb.webp', fabric:'猫狗星球_图标美术/残片CG/fabric.webp',
+  stardust:'猫狗星球_图标美术/残片CG/stardust.webp', tide:'猫狗星球_图标美术/残片CG/tide.webp', time:'猫狗星球_图标美术/残片CG/time.webp',
+  prism:'猫狗星球_图标美术/残片CG/prism.webp', primor:'猫狗星球_图标美术/残片CG/primor.webp'
 };
 function fragmentIcon(key, cls='fragment-art'){
   const c=CLUSTERS[key]; const art=FRAGMENT_ART[key];
@@ -1801,84 +1814,84 @@ const DURATIONS = {
 const CLUSTERS = {
   // —— 方向② Batch2：每簇 +1~2 整件道具，扩大合成收集池与图鉴丰富度（synth 阈值不变）——
   ceramic:{name:'陶瓷簇',em:'🏺',rarity:'legend',synth:4,items:[
-    {id:'唐三彩',art:'猫狗星球_整件美术/tangsancai.png',em:'🐎',name:'唐三彩',story:'马鬃上还沾着长安的风，它说这匹马认得回家的路。'},
-    {id:'青铜剑',art:'猫狗星球_整件美术/bronze_sword.png',em:'⚔️',name:'青铜剑',story:'剑身映出它出发前的影子，那时候它还不会远行。'},
-    {id:'圣甲虫',art:'猫狗星球_整件美术/scarab.png',em:'🪲',name:'圣甲虫护符',story:'古埃及人相信它推着太阳升起，它推着你的好运来。'},
-    {id:'黑绘陶罐',art:'猫狗星球_整件美术/black_figure_vase.png',em:'🏺',name:'黑绘陶罐',story:'罐上画着一场早已散场的宴席，酒香仿佛还在。'},
-    {id:'秦俑',art:'猫狗星球_整件美术/terracotta_warrior.png',em:'🗿',name:'兵马俑',story:'千人千面，它说自己在队列里找到了一个和它一样爱发呆的。'},
-    {id:'影青',art:'猫狗星球_整件美术/yingqing_bowl.png',em:'🏺',name:'影青瓷盏',story:'盏底还留着一点釉泪，像谁斟过又没喝完。'}]},
+    {id:'唐三彩',art:'猫狗星球_整件美术/tangsancai.webp',em:'🐎',name:'唐三彩',story:'马鬃上还沾着长安的风，它说这匹马认得回家的路。'},
+    {id:'青铜剑',art:'猫狗星球_整件美术/bronze_sword.webp',em:'⚔️',name:'青铜剑',story:'剑身映出它出发前的影子，那时候它还不会远行。'},
+    {id:'圣甲虫',art:'猫狗星球_整件美术/scarab.webp',em:'🪲',name:'圣甲虫护符',story:'古埃及人相信它推着太阳升起，它推着你的好运来。'},
+    {id:'黑绘陶罐',art:'猫狗星球_整件美术/black_figure_vase.webp',em:'🏺',name:'黑绘陶罐',story:'罐上画着一场早已散场的宴席，酒香仿佛还在。'},
+    {id:'秦俑',art:'猫狗星球_整件美术/terracotta_warrior.webp',em:'🗿',name:'兵马俑',story:'千人千面，它说自己在队列里找到了一个和它一样爱发呆的。'},
+    {id:'影青',art:'猫狗星球_整件美术/yingqing_bowl.webp',em:'🏺',name:'影青瓷盏',story:'盏底还留着一点釉泪，像谁斟过又没喝完。'}]},
   compass:{name:'罗盘簇',em:'🧭',rarity:'rare',synth:5,items:[
-    {id:'罗盘',art:'猫狗星球_整件美术/bronze_compass.png',em:'🧭',name:'青铜罗盘',story:'罗盘总指向"家"，无论它在哪片海域。'},
-    {id:'指北星盘',art:'猫狗星球_整件美术/star_dial.png',em:'⭐',name:'指北星盘',story:'星图绣在铜盘上，迷路时抬头便有方向。'},
-    {id:'航海图',art:'猫狗星球_整件美术/sea_chart.png',em:'🗺️',name:'航海星图',story:'图上画着所有去过的港口，连起来是一条温柔的弧线。'}]},
+    {id:'罗盘',art:'猫狗星球_整件美术/bronze_compass.webp',em:'🧭',name:'青铜罗盘',story:'罗盘总指向"家"，无论它在哪片海域。'},
+    {id:'指北星盘',art:'猫狗星球_整件美术/star_dial.webp',em:'⭐',name:'指北星盘',story:'星图绣在铜盘上，迷路时抬头便有方向。'},
+    {id:'航海图',art:'猫狗星球_整件美术/sea_chart.webp',em:'🗺️',name:'航海星图',story:'图上画着所有去过的港口，连起来是一条温柔的弧线。'}]},
   bell:{name:'古钟簇',em:'🔔',rarity:'rare',synth:5,items:[
-    {id:'古钟',art:'猫狗星球_整件美术/courtyard_bell.png',em:'🔔',name:'庭院古钟',story:'钟声不报时，只报平安——它挂在庭院里，替你守着家。'},
-    {id:'铜磬',art:'猫狗星球_整件美术/bronze_qing.png',em:'🛎️',name:'铜磬',story:'轻敲一下，余音里全是它没说出口的惦记。'},
-    {id:'风铎',art:'猫狗星球_整件美术/wind_chime.png',em:'🛎️',name:'檐角风铎',story:'风一过，它就在檐角替整座庙宇报平安。'}]},
+    {id:'古钟',art:'猫狗星球_整件美术/courtyard_bell.webp',em:'🔔',name:'庭院古钟',story:'钟声不报时，只报平安——它挂在庭院里，替你守着家。'},
+    {id:'铜磬',art:'猫狗星球_整件美术/bronze_qing.webp',em:'🛎️',name:'铜磬',story:'轻敲一下，余音里全是它没说出口的惦记。'},
+    {id:'风铎',art:'猫狗星球_整件美术/wind_chime.webp',em:'🛎️',name:'檐角风铎',story:'风一过，它就在檐角替整座庙宇报平安。'}]},
   coin:{name:'古币簇',em:'🪙',rarity:'epic',synth:5,items:[
-    {id:'古币',art:'猫狗星球_整件美术/bronze_coin.png',em:'🪙',name:'古泉铜币',story:'币上字迹模糊，却能买通时间，让某个人多陪你一会儿。'},
-    {id:'罗马金币',art:'猫狗星球_整件美术/roman_gold.png',em:'🥇',name:'罗马金币',story:'背面是位故去的君王，正面是你正想念的人。'},
-    {id:'丝路币',art:'猫狗星球_整件美术/silkroad_coin.png',em:'🥇',name:'丝路金币',story:'币边磨损得厉害，却磨不掉上面的远行脚印。'}]},
+    {id:'古币',art:'猫狗星球_整件美术/bronze_coin.webp',em:'🪙',name:'古泉铜币',story:'币上字迹模糊，却能买通时间，让某个人多陪你一会儿。'},
+    {id:'罗马金币',art:'猫狗星球_整件美术/roman_gold.webp',em:'🥇',name:'罗马金币',story:'背面是位故去的君王，正面是你正想念的人。'},
+    {id:'丝路币',art:'猫狗星球_整件美术/silkroad_coin.webp',em:'🥇',name:'丝路金币',story:'币边磨损得厉害，却磨不掉上面的远行脚印。'}]},
   herb:{name:'草木簇',em:'🌿',rarity:'normal',synth:3,items:[
-    {id:'野花',art:'猫狗星球_整件美术/wildflower.png',em:'🌼',name:'路边野花',story:'它把花别在耳边，说这样回家时你一眼就能认出。'},
-    {id:'红叶',art:'猫狗星球_整件美术/red_leaf.png',em:'🍁',name:'山间红叶',story:'叶脉里写着秋天第一个念头：该回去了。'},
-    {id:'松果',art:'猫狗星球_整件美术/pinecone.png',em:'🌲',name:'松林松果',story:'它把松果藏在枕下，说这样梦里也有森林的味道。'}]},
+    {id:'野花',art:'猫狗星球_整件美术/wildflower.webp',em:'🌼',name:'路边野花',story:'它把花别在耳边，说这样回家时你一眼就能认出。'},
+    {id:'红叶',art:'猫狗星球_整件美术/red_leaf.webp',em:'🍁',name:'山间红叶',story:'叶脉里写着秋天第一个念头：该回去了。'},
+    {id:'松果',art:'猫狗星球_整件美术/pinecone.webp',em:'🌲',name:'松林松果',story:'它把松果藏在枕下，说这样梦里也有森林的味道。'}]},
   fabric:{name:'织物簇',em:'🧵',rarity:'normal',synth:3,items:[
-    {id:'绣帕',art:'猫狗星球_整件美术/embroidered_hanky.png',em:'👘',name:'江南绣帕',story:'帕角绣着一只猫，针脚歪歪的，像孩子缝的。'},
-    {id:'围巾',art:'猫狗星球_整件美术/silk_scarf.png',em:'🧣',name:'丝路围巾',story:'围巾上有驼铃的纹路，风一吹像在赶路。'},
-    {id:'扎染',art:'猫狗星球_整件美术/tie_dye.png',em:'🧣',name:'大理扎染',story:'蓝白之间，它说那是苍山雪落进洱海的样子。'}]},
+    {id:'绣帕',art:'猫狗星球_整件美术/embroidered_hanky.webp',em:'👘',name:'江南绣帕',story:'帕角绣着一只猫，针脚歪歪的，像孩子缝的。'},
+    {id:'围巾',art:'猫狗星球_整件美术/silk_scarf.webp',em:'🧣',name:'丝路围巾',story:'围巾上有驼铃的纹路，风一吹像在赶路。'},
+    {id:'扎染',art:'猫狗星球_整件美术/tie_dye.webp',em:'🧣',name:'大理扎染',story:'蓝白之间，它说那是苍山雪落进洱海的样子。'}]},
   stardust:{name:'星屑簇',em:'✨',rarity:'rare',synth:5,items:[
-    {id:'星屑结晶',art:'猫狗星球_整件美术/stardust_crystal.png',em:'💎',name:'星屑结晶',story:'握在手里凉凉的，像把一小片夜空揣进了兜。'},
-    {id:'星轨图',art:'猫狗星球_整件美术/star_track.png',em:'🌌',name:'星轨图',story:'纸上画着它走过的所有路，连起来竟是一颗心。'},
-    {id:'流星铁',art:'猫狗星球_整件美术/meteor_iron.png',em:'☄️',name:'流星铁',story:'一块从天上掉下来的铁，握着它，像握住了坠落的承诺。'}]},
+    {id:'星屑结晶',art:'猫狗星球_整件美术/stardust_crystal.webp',em:'💎',name:'星屑结晶',story:'握在手里凉凉的，像把一小片夜空揣进了兜。'},
+    {id:'星轨图',art:'猫狗星球_整件美术/star_track.webp',em:'🌌',name:'星轨图',story:'纸上画着它走过的所有路，连起来竟是一颗心。'},
+    {id:'流星铁',art:'猫狗星球_整件美术/meteor_iron.webp',em:'☄️',name:'流星铁',story:'一块从天上掉下来的铁，握着它，像握住了坠落的承诺。'}]},
   tide:{name:'潮汐簇',em:'🌊',rarity:'rare',synth:5,items:[
-    {id:'潮汐罗盘',art:'猫狗星球_整件美术/tide_compass.png',em:'🧭',name:'潮汐罗盘',story:'指针随潮水起落，它说海也有想家的时候。'},
-    {id:'贝壳',art:'猫狗星球_整件美术/conch.png',em:'🐚',name:'螺声贝壳',story:'贴在耳边，听见的是千里外那片海在叫它。'},
-    {id:'珊瑚',art:'猫狗星球_整件美术/coral.png',em:'🪸',name:'深海珊瑚',story:'珊瑚枝桠里卡着一只小蟹，它说那是海里寄来的信使。'}]},
+    {id:'潮汐罗盘',art:'猫狗星球_整件美术/tide_compass.webp',em:'🧭',name:'潮汐罗盘',story:'指针随潮水起落，它说海也有想家的时候。'},
+    {id:'贝壳',art:'猫狗星球_整件美术/conch.webp',em:'🐚',name:'螺声贝壳',story:'贴在耳边，听见的是千里外那片海在叫它。'},
+    {id:'珊瑚',art:'猫狗星球_整件美术/coral.webp',em:'🪸',name:'深海珊瑚',story:'珊瑚枝桠里卡着一只小蟹，它说那是海里寄来的信使。'}]},
   time:{name:'时之簇',em:'⏳',rarity:'epic',synth:5,items:[
-    {id:'时之沙漏',art:'猫狗星球_整件美术/hourglass.png',em:'⏳',name:'时之沙漏',story:'沙漏倒转一次，它就多陪你一个春天。'},
-    {id:'古旧怀表',art:'猫狗星球_整件美术/pocket_watch.png',em:'🕰️',name:'古旧怀表',story:'表针停在三点，那是它出发的时刻。'},
-    {id:'日晷',art:'猫狗星球_整件美术/sundial.png',em:'☀️',name:'青铜日晷',story:'它对着日晷站了一会儿，影子慢慢挪，像时间在自己走。'}]},
+    {id:'时之沙漏',art:'猫狗星球_整件美术/hourglass.webp',em:'⏳',name:'时之沙漏',story:'沙漏倒转一次，它就多陪你一个春天。'},
+    {id:'古旧怀表',art:'猫狗星球_整件美术/pocket_watch.webp',em:'🕰️',name:'古旧怀表',story:'表针停在三点，那是它出发的时刻。'},
+    {id:'日晷',art:'猫狗星球_整件美术/sundial.webp',em:'☀️',name:'青铜日晷',story:'它对着日晷站了一会儿，影子慢慢挪，像时间在自己走。'}]},
   prism:{name:'棱镜簇',em:'🔺',rarity:'rare',synth:5,items:[
-    {id:'棱镜碎片',art:'猫狗星球_整件美术/prism_shard.png',em:'🔺',name:'棱镜碎片',story:'光穿过它，散成七种想你的方式。'},
-    {id:'虹石',art:'猫狗星球_整件美术/rainbow_stone.png',em:'🌈',name:'虹石',story:'石头里封着一道小彩虹，雨天才会显现。'},
-    {id:'琉璃',art:'猫狗星球_整件美术/liuli.png',em:'🔷',name:'古法琉璃',story:'琉璃里封着一小片天青色，是它从某个晴天偷来的。'}]},
+    {id:'棱镜碎片',art:'猫狗星球_整件美术/prism_shard.webp',em:'🔺',name:'棱镜碎片',story:'光穿过它，散成七种想你的方式。'},
+    {id:'虹石',art:'猫狗星球_整件美术/rainbow_stone.webp',em:'🌈',name:'虹石',story:'石头里封着一道小彩虹，雨天才会显现。'},
+    {id:'琉璃',art:'猫狗星球_整件美术/liuli.webp',em:'🔷',name:'古法琉璃',story:'琉璃里封着一小片天青色，是它从某个晴天偷来的。'}]},
   primor:{name:'先民簇',em:'🪬',rarity:'epic',synth:5,items:[
-    {id:'先民信物',art:'猫狗星球_整件美术/primor_relic.png',em:'🪬',name:'先民信物',story:'谁也看不懂上面的符号，只有它说：这是问候。'},
-    {id:'古境信物',art:'猫狗星球_整件美术/ancient_relic.png',em:'🪬',name:'古境信物',story:'来自喵汪古境的馈赠，带着原生文明的体温。'},
-    {id:'图腾',art:'猫狗星球_整件美术/totem.png',em:'🪬',name:'部落图腾',story:'图腾上的纹路谁也读不懂，只有它说：这是"我们记得你"。'}]},
+    {id:'先民信物',art:'猫狗星球_整件美术/primor_relic.webp',em:'🪬',name:'先民信物',story:'谁也看不懂上面的符号，只有它说：这是问候。'},
+    {id:'古境信物',art:'猫狗星球_整件美术/ancient_relic.webp',em:'🪬',name:'古境信物',story:'来自喵汪古境的馈赠，带着原生文明的体温。'},
+    {id:'图腾',art:'猫狗星球_整件美术/totem.webp',em:'🪬',name:'部落图腾',story:'图腾上的纹路谁也读不懂，只有它说：这是"我们记得你"。'}]},
   // —— 节庆图鉴（Phase A 长线留存）：节日窗口限定碎片，仅该节庆期间可获取，跨年轮转抬高天花板 ——
   f_spring:{name:'春节限定',em:'🧧',rarity:'fest',festival:true,synth:4,items:[
-    {id:'spring_door',art:'猫狗星球_称号美术/spring.png',em:'🧧',name:'新春门笺',festival:true,story:'门上那张红笺写着"平安"，它说这是替你贴的。'},
-    {id:'spring_beast',art:'猫狗星球_称号美术/spring.png',em:'🐯',name:'年兽玩偶',festival:true,story:'据说年兽怕红怕响，它却把年兽哄成了枕头边的玩偶。'}]},
+    {id:'spring_door',art:'猫狗星球_称号美术/spring.webp',em:'🧧',name:'新春门笺',festival:true,story:'门上那张红笺写着"平安"，它说这是替你贴的。'},
+    {id:'spring_beast',art:'猫狗星球_称号美术/spring.webp',em:'🐯',name:'年兽玩偶',festival:true,story:'据说年兽怕红怕响，它却把年兽哄成了枕头边的玩偶。'}]},
   f_duanwu:{name:'端午限定',em:'🐉',rarity:'fest',festival:true,synth:4,items:[
-    {id:'duanwu_badge',art:'猫狗星球_称号美术/duanwu_dragon.png',em:'🐉',name:'龙舟徽章',festival:true,story:'它混进龙舟队划了半程，回来时胳膊酸得像挂了两面旗。'},
-    {id:'duanwu_sachet',art:'猫狗星球_称号美术/duanwu_dragon.png',em:'🌿',name:'艾草香囊',festival:true,story:'香囊里塞满艾草，说这样夏天就不怕蚊虫来串门。'}]},
+    {id:'duanwu_badge',art:'猫狗星球_称号美术/duanwu_dragon.webp',em:'🐉',name:'龙舟徽章',festival:true,story:'它混进龙舟队划了半程，回来时胳膊酸得像挂了两面旗。'},
+    {id:'duanwu_sachet',art:'猫狗星球_称号美术/duanwu_dragon.webp',em:'🌿',name:'艾草香囊',festival:true,story:'香囊里塞满艾草，说这样夏天就不怕蚊虫来串门。'}]},
   f_zhongqiu:{name:'中秋限定',em:'🥮',rarity:'fest',festival:true,synth:4,items:[
-    {id:'zhongqiu_lantern',art:'猫狗星球_称号美术/zhongqiu_mooncake.png',em:'🌕',name:'兔儿灯',festival:true,story:'兔子灯举在手里，它说月亮看见灯，就像看见家里亮着的窗。'},
-    {id:'zhongqiu_mold',art:'猫狗星球_称号美术/zhongqiu_mooncake.png',em:'🥮',name:'月饼模',festival:true,story:'它从老作坊带回一只月饼模，说下次中秋要自己烤给你吃。'}]},
+    {id:'zhongqiu_lantern',art:'猫狗星球_称号美术/zhongqiu_mooncake.webp',em:'🌕',name:'兔儿灯',festival:true,story:'兔子灯举在手里，它说月亮看见灯，就像看见家里亮着的窗。'},
+    {id:'zhongqiu_mold',art:'猫狗星球_称号美术/zhongqiu_mooncake.webp',em:'🥮',name:'月饼模',festival:true,story:'它从老作坊带回一只月饼模，说下次中秋要自己烤给你吃。'}]},
   // —— 铺满年度日历：其余 7 节庆限定簇（与 FESTIVAL_CLUSTERS 映射对应）——
   f_yuanxiao:{name:'元宵限定',em:'🏮',rarity:'fest',festival:true,synth:4,items:[
-    {id:'yuanxiao_lantern',art:'猫狗星球_称号美术/yuanxiao_lantern.png',em:'🏮',name:'花灯',festival:true,story:'它提着花灯挤进人群，说这一盏要留给你猜谜。'},
-    {id:'yuanxiao_tangyuan',art:'猫狗星球_称号美术/yuanxiao_lantern.png',em:'🥣',name:'汤圆',festival:true,story:'一碗汤圆分你一半，它说这样元宵就不冷了。'}]},
+    {id:'yuanxiao_lantern',art:'猫狗星球_称号美术/yuanxiao_lantern.webp',em:'🏮',name:'花灯',festival:true,story:'它提着花灯挤进人群，说这一盏要留给你猜谜。'},
+    {id:'yuanxiao_tangyuan',art:'猫狗星球_称号美术/yuanxiao_lantern.webp',em:'🥣',name:'汤圆',festival:true,story:'一碗汤圆分你一半，它说这样元宵就不冷了。'}]},
   f_qingming:{name:'清明限定',em:'🌿',rarity:'fest',festival:true,synth:4,items:[
-    {id:'qingming_qingtuan',art:'猫狗星球_称号美术/qingming_willow.png',em:'🌿',name:'青团',festival:true,story:'它把第一口青团留给你，说这是春天的味道。'},
-    {id:'qingming_kite',art:'猫狗星球_称号美术/qingming_willow.png',em:'🪁',name:'纸鸢',festival:true,story:'风筝线那头系着它写的思念，风一吹就飞到你窗前。'}]},
+    {id:'qingming_qingtuan',art:'猫狗星球_称号美术/qingming_willow.webp',em:'🌿',name:'青团',festival:true,story:'它把第一口青团留给你，说这是春天的味道。'},
+    {id:'qingming_kite',art:'猫狗星球_称号美术/qingming_willow.webp',em:'🪁',name:'纸鸢',festival:true,story:'风筝线那头系着它写的思念，风一吹就飞到你窗前。'}]},
   f_qixi:{name:'七夕限定',em:'🎋',rarity:'fest',festival:true,synth:4,items:[
-    {id:'qixi_knot',art:'猫狗星球_称号美术/qixi_bamboo.png',em:'💞',name:'同心结',festival:true,story:'它编了只同心结塞给你，说这样不管多远都连着。'},
-    {id:'qixi_bridge',art:'猫狗星球_称号美术/qixi_bamboo.png',em:'🕊️',name:'鹊桥信',festival:true,story:'它托喜鹊递来一封信，落款是"想你"。'}]},
+    {id:'qixi_knot',art:'猫狗星球_称号美术/qixi_bamboo.webp',em:'💞',name:'同心结',festival:true,story:'它编了只同心结塞给你，说这样不管多远都连着。'},
+    {id:'qixi_bridge',art:'猫狗星球_称号美术/qixi_bamboo.webp',em:'🕊️',name:'鹊桥信',festival:true,story:'它托喜鹊递来一封信，落款是"想你"。'}]},
   f_chongyang:{name:'重阳限定',em:'🏔️',rarity:'fest',festival:true,synth:4,items:[
-    {id:'chongyang_wine',art:'猫狗星球_称号美术/chongyang_mountain.png',em:'🍶',name:'菊花酒',festival:true,story:'它酿了菊花酒登高时与你碰杯，说敬老也敬远行。'},
-    {id:'chongyang_cert',art:'猫狗星球_称号美术/chongyang_mountain.png',em:'🏔️',name:'登高凭证',festival:true,story:'它在最高处插了面小旗，写着"到此一游，与你同登"。'}]},
+    {id:'chongyang_wine',art:'猫狗星球_称号美术/chongyang_mountain.webp',em:'🍶',name:'菊花酒',festival:true,story:'它酿了菊花酒登高时与你碰杯，说敬老也敬远行。'},
+    {id:'chongyang_cert',art:'猫狗星球_称号美术/chongyang_mountain.webp',em:'🏔️',name:'登高凭证',festival:true,story:'它在最高处插了面小旗，写着"到此一游，与你同登"。'}]},
   f_dongzhi:{name:'冬至限定',em:'❄️',rarity:'fest',festival:true,synth:4,items:[
-    {id:'dongzhi_heater',art:'猫狗星球_称号美术/dongzhi_snowflake.png',em:'🔥',name:'暖炉',festival:true,story:'它把暖炉推到你脚边，说冬至再冷也有这一方暖。'},
-    {id:'dongzhi_wine',art:'猫狗星球_称号美术/dongzhi_snowflake.png',em:'❄️',name:'冬酿',festival:true,story:'一壶冬酿温着，它说这是给长夜留的甜。'}]},
+    {id:'dongzhi_heater',art:'猫狗星球_称号美术/dongzhi_snowflake.webp',em:'🔥',name:'暖炉',festival:true,story:'它把暖炉推到你脚边，说冬至再冷也有这一方暖。'},
+    {id:'dongzhi_wine',art:'猫狗星球_称号美术/dongzhi_snowflake.webp',em:'❄️',name:'冬酿',festival:true,story:'一壶冬酿温着，它说这是给长夜留的甜。'}]},
   f_laba:{name:'腊八限定',em:'🥣',rarity:'fest',festival:true,synth:4,items:[
-    {id:'laba_congee',art:'猫狗星球_称号美术/laba_porridge.png',em:'🥣',name:'腊八粥',festival:true,story:'一碗腊八粥熬了整夜，它说这是把一年收成都煮进去了。'},
-    {id:'laba_lamp',art:'猫狗星球_称号美术/laba_porridge.png',em:'🪔',name:'暖灯',festival:true,story:'它在门口挂了盏暖灯，说腊八夜回家的路要亮着。'}]},
+    {id:'laba_congee',art:'猫狗星球_称号美术/laba_porridge.webp',em:'🥣',name:'腊八粥',festival:true,story:'一碗腊八粥熬了整夜，它说这是把一年收成都煮进去了。'},
+    {id:'laba_lamp',art:'猫狗星球_称号美术/laba_porridge.webp',em:'🪔',name:'暖灯',festival:true,story:'它在门口挂了盏暖灯，说腊八夜回家的路要亮着。'}]},
   f_crossyear:{name:'跨年限定',em:'🎆',rarity:'fest',festival:true,synth:4,items:[
-    {id:'crossyear_firework',art:'猫狗星球_称号美术/crossyear_fireworks.png',em:'🎆',name:'岁末烟火',festival:true,story:'它拉着你跑到屋顶看烟火，说旧年就这样笑着送走了。'},
-    {id:'crossyear_wish',art:'猫狗星球_称号美术/crossyear_fireworks.png',em:'✨',name:'新年愿望',festival:true,story:'它把愿望写在小纸条上塞进你口袋：今年也要一起旅行。'}]},
+    {id:'crossyear_firework',art:'猫狗星球_称号美术/crossyear_fireworks.webp',em:'🎆',name:'岁末烟火',festival:true,story:'它拉着你跑到屋顶看烟火，说旧年就这样笑着送走了。'},
+    {id:'crossyear_wish',art:'猫狗星球_称号美术/crossyear_fireworks.webp',em:'✨',name:'新年愿望',festival:true,story:'它把愿望写在小纸条上塞进你口袋：今年也要一起旅行。'}]},
 };
 // —— v1.2 故事书数据：精选整件/纪念品多章故事（storyOf 自动降级为单章）——
 const STORY_FULL = {
@@ -2029,24 +2042,24 @@ const TITLES = {
   qixi2:{name:'巧手织女', em:'🎋', desc:'完成七夕活动', fn:()=>(S.festivals||[]).indexOf('qixi')>=0},
   laba:{name:'腊八粥客', em:'🥣', desc:'完成腊八活动', fn:()=>(S.festivals||[]).indexOf('laba')>=0},
   // —— Phase A 节庆图鉴（限定整件收藏家 + 岁时全集，独立于原"全收集"）——
-  f_spring:{name:'新春收藏家', em:'🧧', desc:'集齐春节限定整件', type:'festival', fn:()=>CLUSTERS.f_spring.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/spring.png'},
-  f_duanwu:{name:'端午收藏家', em:'🐉', desc:'集齐端午限定整件', type:'festival', fn:()=>CLUSTERS.f_duanwu.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/duanwu_dragon.png'},
-  f_zhongqiu:{name:'中秋收藏家', em:'🥮', desc:'集齐中秋限定整件', type:'festival', fn:()=>CLUSTERS.f_zhongqiu.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/zhongqiu_mooncake.png'},
-  f_yuanxiao:{name:'元宵收藏家', em:'🏮', desc:'集齐元宵限定整件', type:'festival', fn:()=>CLUSTERS.f_yuanxiao.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/yuanxiao_lantern.png'},
-  f_qingming:{name:'清明收藏家', em:'🌿', desc:'集齐清明限定整件', type:'festival', fn:()=>CLUSTERS.f_qingming.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/qingming_willow.png'},
-  f_qixi:{name:'七夕收藏家', em:'🎋', desc:'集齐七夕限定整件', type:'festival', fn:()=>CLUSTERS.f_qixi.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/qixi_bamboo.png'},
-  f_chongyang:{name:'重阳收藏家', em:'🏔️', desc:'集齐重阳限定整件', type:'festival', fn:()=>CLUSTERS.f_chongyang.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/chongyang_mountain.png'},
-  f_dongzhi:{name:'冬至收藏家', em:'❄️', desc:'集齐冬至限定整件', type:'festival', fn:()=>CLUSTERS.f_dongzhi.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/dongzhi_snowflake.png'},
-  f_laba:{name:'腊八收藏家', em:'🥣', desc:'集齐腊八限定整件', type:'festival', fn:()=>CLUSTERS.f_laba.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/laba_porridge.png'},
-  f_crossyear:{name:'跨年收藏家', em:'🎆', desc:'集齐跨年限定整件', type:'festival', fn:()=>CLUSTERS.f_crossyear.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/crossyear_fireworks.png'},
-  year_fest:{name:'岁时全集', em:'📅', desc:'集齐全部 10 节庆限定整件（跨一整年）', type:'festival', fn:()=>['f_spring','f_yuanxiao','f_qingming','f_duanwu','f_qixi','f_zhongqiu','f_chongyang','f_dongzhi','f_laba','f_crossyear'].every(k=>S.titles.indexOf(k)>=0), art:'猫狗星球_称号美术/year_fest_calendar.png'},
+  f_spring:{name:'新春收藏家', em:'🧧', desc:'集齐春节限定整件', type:'festival', fn:()=>CLUSTERS.f_spring.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/spring.webp'},
+  f_duanwu:{name:'端午收藏家', em:'🐉', desc:'集齐端午限定整件', type:'festival', fn:()=>CLUSTERS.f_duanwu.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/duanwu_dragon.webp'},
+  f_zhongqiu:{name:'中秋收藏家', em:'🥮', desc:'集齐中秋限定整件', type:'festival', fn:()=>CLUSTERS.f_zhongqiu.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/zhongqiu_mooncake.webp'},
+  f_yuanxiao:{name:'元宵收藏家', em:'🏮', desc:'集齐元宵限定整件', type:'festival', fn:()=>CLUSTERS.f_yuanxiao.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/yuanxiao_lantern.webp'},
+  f_qingming:{name:'清明收藏家', em:'🌿', desc:'集齐清明限定整件', type:'festival', fn:()=>CLUSTERS.f_qingming.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/qingming_willow.webp'},
+  f_qixi:{name:'七夕收藏家', em:'🎋', desc:'集齐七夕限定整件', type:'festival', fn:()=>CLUSTERS.f_qixi.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/qixi_bamboo.webp'},
+  f_chongyang:{name:'重阳收藏家', em:'🏔️', desc:'集齐重阳限定整件', type:'festival', fn:()=>CLUSTERS.f_chongyang.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/chongyang_mountain.webp'},
+  f_dongzhi:{name:'冬至收藏家', em:'❄️', desc:'集齐冬至限定整件', type:'festival', fn:()=>CLUSTERS.f_dongzhi.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/dongzhi_snowflake.webp'},
+  f_laba:{name:'腊八收藏家', em:'🥣', desc:'集齐腊八限定整件', type:'festival', fn:()=>CLUSTERS.f_laba.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/laba_porridge.webp'},
+  f_crossyear:{name:'跨年收藏家', em:'🎆', desc:'集齐跨年限定整件', type:'festival', fn:()=>CLUSTERS.f_crossyear.items.every(it=>S.items.some(i=>i.id===it.id)), art:'猫狗星球_称号美术/crossyear_fireworks.webp'},
+  year_fest:{name:'岁时全集', em:'📅', desc:'集齐全部 10 节庆限定整件（跨一整年）', type:'festival', fn:()=>['f_spring','f_yuanxiao','f_qingming','f_duanwu','f_qixi','f_zhongqiu','f_chongyang','f_dongzhi','f_laba','f_crossyear'].every(k=>S.titles.indexOf(k)>=0), art:'猫狗星球_称号美术/year_fest_calendar.webp'},
   // —— P1a 收藏品变异/完美度（普通/闪光/羁绊；主 11 簇天花板 ×3）——
-  perfect_shiny:{name:'流光图鉴', em:'🌟', desc:'所有收藏整件均集齐「闪光」变体', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id && i.variant==='闪光'))), art:'猫狗星球_称号美术/perfect_shiny_star.png'},
-  perfect_bond:{name:'羁绊图鉴', em:'💞', desc:'所有收藏整件均集齐「羁绊」变体', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id && i.variant==='羁绊'))), art:'猫狗星球_称号美术/perfect_bond_hearts.png'},
-  perfect_all:{name:'万象图鉴', em:'💎', desc:'所有非节庆整件集齐 普通/闪光/羁绊 三态', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>['普通','闪光','羁绊'].every(v=>S.items.some(i=>i.id===it.id && i.variant===v)))), art:'猫狗星球_称号美术/perfect_all_gem.png'},
+  perfect_shiny:{name:'流光图鉴', em:'🌟', desc:'所有收藏整件均集齐「闪光」变体', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id && i.variant==='闪光'))), art:'猫狗星球_称号美术/perfect_shiny_star.webp'},
+  perfect_bond:{name:'羁绊图鉴', em:'💞', desc:'所有收藏整件均集齐「羁绊」变体', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>S.items.some(i=>i.id===it.id && i.variant==='羁绊'))), art:'猫狗星球_称号美术/perfect_bond_hearts.webp'},
+  perfect_all:{name:'万象图鉴', em:'💎', desc:'所有非节庆整件集齐 普通/闪光/羁绊 三态', type:'collect', fn:()=>Object.keys(CLUSTERS).filter(k=>!CLUSTERS[k].festival).every(k=>CLUSTERS[k].items.every(it=>['普通','闪光','羁绊'].every(v=>S.items.some(i=>i.id===it.id && i.variant===v)))), art:'猫狗星球_称号美术/perfect_all_gem.webp'},
   // —— L8 单宠装扮 / L9 世界观 称号 ——
-  dress_up:{name:'时尚旅伴', em:'👗', desc:'集齐所有装扮', type:'collect', fn:()=>COSMETICS.every(c=>S.cosmetics.indexOf(c.id)>=0), art:'猫狗星球_称号美术/dress_up_gown.png'},
-  loremaster:{name:'通晓者', em:'📖', desc:'解锁全部世界观剧情', type:'collect', fn:()=>LORE.every(l=>l.cond()), art:'猫狗星球_称号美术/loremaster_book.png'},
+  dress_up:{name:'时尚旅伴', em:'👗', desc:'集齐所有装扮', type:'collect', fn:()=>COSMETICS.every(c=>S.cosmetics.indexOf(c.id)>=0), art:'猫狗星球_称号美术/dress_up_gown.webp'},
+  loremaster:{name:'通晓者', em:'📖', desc:'解锁全部世界观剧情', type:'collect', fn:()=>LORE.every(l=>l.cond()), art:'猫狗星球_称号美术/loremaster_book.webp'},
   // —— L10 遇友 称号 ——
   meeter:{name:'旅途知音', em:'🤝', desc:'结识 5 位陌生旅友', type:'social', fn:()=>(S.metCount||0)>=5},
   photographer:{name:'合影收藏家', em:'📸', desc:'收藏 10 张偶遇合影', type:'social', fn:()=>(S.photos||[]).length>=10},
@@ -2084,30 +2097,30 @@ const TITLES = {
   const HOU='猫狗星球_候美术/', WHOLE='猫狗星球_整件美术/', SOLAR='猫狗星球_节气美术/', SCENE='猫狗星球_场景美术/', SECRET='猫狗星球_秘境美术/', TITLE='猫狗星球_称号美术/';
   const MAP = {
     // ① 七十二候微称号 → 候美术/{term}_1（24 张全已生成）
-    hou_lichun:HOU+'lichun_1.png', hou_yushui:HOU+'yushui_1.png', hou_jingzhe:HOU+'jingzhe_1.png', hou_chunfen:HOU+'chunfen_1.png',
-    hou_qingming:HOU+'qingming_1.png', hou_guyu:HOU+'guyu_1.png', hou_lixia:HOU+'lixia_1.png', hou_xiaoman:HOU+'xiaoman_1.png',
-    hou_mangzhong:HOU+'mangzhong_1.png', hou_xiazhi:HOU+'xiazhi_1.png', hou_xiaoshu:HOU+'xiaoshu_1.png', hou_dashu:HOU+'dashu_1.png',
-    hou_liqiu:HOU+'liqiu_1.png', hou_chushu:HOU+'chushu_1.png', hou_bailu:HOU+'bailu_1.png', hou_qiufen:HOU+'qiufen_1.png',
-    hou_hanlu:HOU+'hanlu_1.png', hou_shuangjiang:HOU+'shuangjiang_1.png', hou_lidong:HOU+'lidong_1.png', hou_xiaoxue:HOU+'xiaoxue_1.png',
-    hou_daxue:HOU+'daxue_1.png', hou_dongzhi:HOU+'dongzhi_1.png', hou_xiaohan:HOU+'xiaohan_1.png', hou_dahan:HOU+'dahan_1.png',
+    hou_lichun:HOU+'lichun_1.webp', hou_yushui:HOU+'yushui_1.webp', hou_jingzhe:HOU+'jingzhe_1.webp', hou_chunfen:HOU+'chunfen_1.webp',
+    hou_qingming:HOU+'qingming_1.webp', hou_guyu:HOU+'guyu_1.webp', hou_lixia:HOU+'lixia_1.webp', hou_xiaoman:HOU+'xiaoman_1.webp',
+    hou_mangzhong:HOU+'mangzhong_1.webp', hou_xiazhi:HOU+'xiazhi_1.webp', hou_xiaoshu:HOU+'xiaoshu_1.webp', hou_dashu:HOU+'dashu_1.webp',
+    hou_liqiu:HOU+'liqiu_1.webp', hou_chushu:HOU+'chushu_1.webp', hou_bailu:HOU+'bailu_1.webp', hou_qiufen:HOU+'qiufen_1.webp',
+    hou_hanlu:HOU+'hanlu_1.webp', hou_shuangjiang:HOU+'shuangjiang_1.webp', hou_lidong:HOU+'lidong_1.webp', hou_xiaoxue:HOU+'xiaoxue_1.webp',
+    hou_daxue:HOU+'daxue_1.webp', hou_dongzhi:HOU+'dongzhi_1.webp', hou_xiaohan:HOU+'xiaohan_1.webp', hou_dahan:HOU+'dahan_1.webp',
     // ② 收藏家类 → 整件美术代表（每簇取 1 件）
-    ceramic:WHOLE+'tangsancai.png', fabric:WHOLE+'embroidered_hanky.png', compass:WHOLE+'bronze_compass.png', bell:WHOLE+'courtyard_bell.png',
-    coin:WHOLE+'bronze_coin.png', stardust:WHOLE+'stardust_crystal.png', time:WHOLE+'hourglass.png', primor:WHOLE+'primor_relic.png',
-    herb:WHOLE+'wildflower.png', tide:WHOLE+'tide_compass.png', prism:WHOLE+'prism_shard.png',
-    secret:SECRET+'realm_worldtree.png', all:TITLE+'perfect_all_gem.png',
+    ceramic:WHOLE+'tangsancai.webp', fabric:WHOLE+'embroidered_hanky.webp', compass:WHOLE+'bronze_compass.webp', bell:WHOLE+'courtyard_bell.webp',
+    coin:WHOLE+'bronze_coin.webp', stardust:WHOLE+'stardust_crystal.webp', time:WHOLE+'hourglass.webp', primor:WHOLE+'primor_relic.webp',
+    herb:WHOLE+'wildflower.webp', tide:WHOLE+'tide_compass.webp', prism:WHOLE+'prism_shard.webp',
+    secret:SECRET+'realm_worldtree.webp', all:TITLE+'perfect_all_gem.webp',
     // ③ 节气类 → 节气美术代表
-    suishi:SOLAR+'lichun.png', sishi:SOLAR+'qiufen.png', jieqiMaster:SOLAR+'dongzhi.png', shidai:SOLAR+'chunfen.png',
+    suishi:SOLAR+'lichun.webp', sishi:SOLAR+'qiufen.webp', jieqiMaster:SOLAR+'dongzhi.webp', shidai:SOLAR+'chunfen.webp',
     // ④ 探索类 → 场景/秘境美术（按地貌/主题）
-    hz:SCENE+'town.png', cd:SCENE+'town.png', su:SCENE+'town.png', xa:SCENE+'loess.png', dh:SCENE+'loess.png', bj:SCENE+'snow.png',
-    zjj:SCENE+'town.png', xzp:SCENE+'snow.png', shaolin:SCENE+'town.png', wudang:SCENE+'town.png', putuo:SCENE+'town.png',
-    india:SCENE+'town.png', uk:SCENE+'grassland.png', worldTraveler:SCENE+'city.png', shanhe:SCENE+'snowplain.png', wan:SCENE+'city.png',
-    deep:SECRET+'realm_deepsea.png', abyss:SECRET+'era_abyss.png',
+    hz:SCENE+'town.webp', cd:SCENE+'town.webp', su:SCENE+'town.webp', xa:SCENE+'loess.webp', dh:SCENE+'loess.webp', bj:SCENE+'snow.webp',
+    zjj:SCENE+'town.webp', xzp:SCENE+'snow.webp', shaolin:SCENE+'town.webp', wudang:SCENE+'town.webp', putuo:SCENE+'town.webp',
+    india:SCENE+'town.webp', uk:SCENE+'grassland.webp', worldTraveler:SCENE+'city.webp', shanhe:SCENE+'snowplain.webp', wan:SCENE+'city.webp',
+    deep:SECRET+'realm_deepsea.webp', abyss:SECRET+'era_abyss.webp',
     // ⑤ 候进阶/大师 + 节日变体 → 候/节气/称号美术
-    houApprentice:HOU+'lichun_1.png', houScholar:HOU+'qiufen_1.png', houMaster:SOLAR+'xiazhi.png',
-    shou:TITLE+'spring.png', deng:TITLE+'yuanxiao_lantern.png', long:TITLE+'duanwu_dragon.png', yue:TITLE+'zhongqiu_mooncake.png',
-    deng3:TITLE+'chongyang_mountain.png', qixi2:TITLE+'qixi_bamboo.png', laba:TITLE+'laba_porridge.png', secretMaster:SECRET+'realm_worldtree.png',
-    season_starfall:SECRET+'era_cosmos.png', season_awake:SECRET+'era_ancient.png', season_depth:SECRET+'era_abyss.png', season_veil:SECRET+'era_chrono.png',
-    season_bloom:SECRET+'realm_mirrorlake.png', season_harvest:SECRET+'realm_corridor.png'
+    houApprentice:HOU+'lichun_1.webp', houScholar:HOU+'qiufen_1.webp', houMaster:SOLAR+'xiazhi.webp',
+    shou:TITLE+'spring.webp', deng:TITLE+'yuanxiao_lantern.webp', long:TITLE+'duanwu_dragon.webp', yue:TITLE+'zhongqiu_mooncake.webp',
+    deng3:TITLE+'chongyang_mountain.webp', qixi2:TITLE+'qixi_bamboo.webp', laba:TITLE+'laba_porridge.webp', secretMaster:SECRET+'realm_worldtree.webp',
+    season_starfall:SECRET+'era_cosmos.webp', season_awake:SECRET+'era_ancient.webp', season_depth:SECRET+'era_abyss.webp', season_veil:SECRET+'era_chrono.webp',
+    season_bloom:SECRET+'realm_mirrorlake.webp', season_harvest:SECRET+'realm_corridor.webp'
   };
   Object.keys(MAP).forEach(k=>{ if(TITLES[k] && !TITLES[k].art) TITLES[k].art = MAP[k]; });
 })();
@@ -2149,6 +2162,9 @@ function sanitize(s){
   }
   for(const n of ['secret','seenSecret','gotLegend','chosen','firstAdSlots','gotRare','gotDay2Legend']){ if(typeof s[n]!=='boolean') s[n]=t[n]; }
   for(const n of ['companion','name','petId','lastAdDate','lastLoginDate']){ if(typeof s[n]!=='string') s[n]=t[n]; }
+  s.name=normalizePetName(s.name, t.name);
+  // 旧版存档中的内置图片路径平滑迁移到新版 WebP；用户上传的 data URL 不会被改动。
+  migrateArtworkInSave(s);
   if(!Array.isArray(s.titles)) s.titles=[];
   if(!Array.isArray(s.souvenirs)) s.souvenirs=[];
   if(!Array.isArray(s.homeShowcase)) s.homeShowcase=[];
@@ -2189,7 +2205,7 @@ function sanitize(s){
 // 专用满级测试账号：仅 ?demo=full 临时启用，不写入、不覆盖玩家正常本地存档。
 function buildFullDemoAccount(){
   const d=JSON.parse(JSON.stringify(STARTER));
-  d.__fullDemo=true; d.petId='demo_full'; d.companion='猫狗星球_宠物美术/d_shiba.png'; d.name='满级测试旅伴'; d.chosen=true; d.seenSplash=true;
+  d.__fullDemo=true; d.petId='demo_full'; d.companion='猫狗星球_宠物美术/d_shiba.webp'; d.name='满级测试旅伴'; d.chosen=true; d.seenSplash=true;
   d.level=30; d.xp=xpNeed(30); d.star=999999; d.starTotal=999999; d.food=9999; d.trips=999; d.day=365;
   d.deepTrips=999; d.secretTrips=999; d.synthCount=999; d.expandCount=5; d.fragTotal=9999; d.loginDays=365;
   d.gotLegend=true; d.gotRare=true; d.gotDay2Legend=true; d.randomTrips=20; d.fission=5;
@@ -2262,7 +2278,7 @@ function splashHTML(){
   return `<div class="splash">
     <div class="shead">
       <div class="sicon">✦ ─ ✦</div>
-      <img class="brand-title-art" src="猫狗星球_登录气泡标题.png" alt="猫狗星球">
+      <img class="brand-title-art" src="猫狗星球_登录气泡标题.webp" alt="猫狗星球">
       <div class="ssub">— 和旅伴一起环游世界 —</div>
     </div>
     <div class="sbody">
@@ -2440,8 +2456,8 @@ function onboardHTML(){
   h+=grid('cat','🐱 猫咪（9 种）');
   h+=grid('dog','🐶 狗狗（9 种）');
   h+=`<div class="card" style="margin-top:10px"><h3>${ic("camera")} 用我家毛孩子</h3>
-    <p class="muted">上传一张宠物照片，它就成了你的专属旅伴（仅本地预览，不上传服务器）。</p>
-    <input type="file" id="petUpload" accept="image/*" style="font-size:13px;width:100%">
+    <p class="muted">上传一张宠物照片，它就成了你的专属旅伴（仅保存在当前浏览器，会自动压缩到 512px，不上传服务器）。</p>
+    <input type="file" id="petUpload" accept="image/jpeg,image/png,image/webp" style="font-size:13px;width:100%">
     <div id="petPreview" style="margin-top:8px"></div>
   </div>`;
   h+=`<div class="card"><h3>✏️ 给它起个名字（必填）</h3>
@@ -2465,17 +2481,25 @@ function selectPet(id){
 }
 function handleUpload(ev){
   const f=ev&&ev.target&&ev.target.files&&ev.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=()=>{ pendingImg=r.result; pendingPet=null;
+  if(!/^image\/(jpeg|png|webp)$/i.test(f.type)){ toast('请上传 JPG、PNG 或 WebP 图片'); return; }
+  if(f.size>MAX_PET_AVATAR_BYTES){ toast('图片请控制在 5MB 以内'); return; }
+  const src=URL.createObjectURL(f), img=new Image();
+  img.onload=()=>{
+    const scale=Math.min(1,PET_AVATAR_EDGE/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round((img.naturalWidth||1)*scale)); canvas.height=Math.max(1,Math.round((img.naturalHeight||1)*scale));
+    const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    pendingImg=canvas.toDataURL('image/webp',0.82); URL.revokeObjectURL(src); pendingPet=null;
     document.querySelectorAll('[data-pet]').forEach(e=>e.classList.remove('on'));
-    const prev=document.getElementById('petPreview'); if(prev) prev.innerHTML=`<img src="${r.result}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:2px solid var(--accent2)">`;
+    const prev=document.getElementById('petPreview'); if(prev) prev.innerHTML=`<img src="${pendingImg}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:2px solid var(--accent2)">`;
     updateConfirmState();
   };
-  r.readAsDataURL(f);
+  img.onerror=()=>{ URL.revokeObjectURL(src); toast('这张图片无法读取，请换一张试试'); };
+  img.src=src;
 }
 function confirmPet(){
   if(!(pendingPet || pendingImg)){ toast('请先选择一只旅伴，或上传你家毛孩子的照片'); return; }
-  const nm=(document.getElementById('petNameInput').value||'').trim();
+  const nm=normalizePetName(document.getElementById('petNameInput').value, '');
   if(!nm){ toast('请给旅伴起个名字再出发 🐾'); return; }
   audio.playSFX('petConfirm');
   applyCompanion({petId:pendingPet, img:pendingImg, name:nm});
@@ -2561,7 +2585,7 @@ function effDepth(base){ return Math.max(0, Math.min(6, base + DURATIONS[draft.d
 
 function bind(){
   document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{ const nextView=b.dataset.view, changed=view!==nextView; view=nextView;
-    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b)); if(changed) audio.playFileSFX('sfx_swipe.wav',.28); render(); });
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b)); if(changed) audio.playFileSFX('sfx_swipe.ogg',.28); render(); });
   const psb=document.getElementById('petSwitchBtn'); if(psb) psb.onclick=()=>{ audio.playSFX('click'); view='roster';render(); };
   document.querySelectorAll('[data-switch]').forEach(e=>e.onclick=()=>switchPet(e.dataset.switch));
   document.querySelectorAll('[data-rename]').forEach(e=>e.onclick=()=>renamePet(e.dataset.rename));
@@ -4193,13 +4217,18 @@ const PT = (function(){
   }
   function exportSession(){
     if(!enabled){ toast('未处于试玩采集模式（需 ?ptid=）'); return; }
+    const snapshot=(typeof S!=='undefined')?JSON.parse(JSON.stringify(S)):null;
+    // 本地自定义头像属于个人图片，不随试玩记录导出。
+    if(snapshot && typeof snapshot.companion==='string' && snapshot.companion.indexOf('data:image/')===0){
+      snapshot.companion='[本地头像已脱敏]'; snapshot.hasLocalAvatar=true;
+    }
     const data = {
       meta:{ tool:'猫狗星球_试玩采集', ptid, exportedAt:new Date().toISOString(),
-             note:'本文件为试玩员单会话原始采集，含事件流与状态快照；不含个人信息，仅本地匿名记录。events=埋点缓冲(view/ad/share等)，log=行为日志(depart/return/share等漏斗)。' },
+             note:'本文件为试玩员单会话原始采集，含事件流与状态快照；本地头像原图已自动脱敏。events=埋点缓冲(view/ad/share等)，log=行为日志(depart/return/share等漏斗)。' },
       startedAt,
       events: dumpAnalytics().filter(e=>!ptid || (e.p&&e.p.ptid)===ptid),
       log: (typeof S!=='undefined' && S.log)? S.log.slice() : [],
-      snapshot: (typeof S!=='undefined')? JSON.parse(JSON.stringify(S)) : null
+      snapshot
     };
     try{
       const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
