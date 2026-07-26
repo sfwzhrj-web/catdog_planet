@@ -324,6 +324,9 @@
     border-radius:12px; padding:10px 12px; margin-bottom:10px; font-size:13px; line-height:1.6;}
   .show-tile{position:relative;isolation:isolate;overflow:hidden;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:10px;background:var(--bg);border:1px solid var(--line);box-shadow:0 2px 6px rgba(60,50,40,.06);}
   .show-tile .variant-mark{position:absolute;right:2px;bottom:1px;z-index:1;font-size:12px;line-height:1;filter:drop-shadow(0 1px 1px rgba(255,255,255,.9));}
+  .showcase-tile{cursor:pointer;font:inherit;padding:0;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;}
+  .showcase-tile:hover,.showcase-tile:focus-visible{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 5px 12px rgba(191,138,62,.22);outline:none;}
+  .showcase-detail-art{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 10px;filter:drop-shadow(0 4px 7px rgba(60,45,30,.2));}
   /* P2 稀客横幅（暖色治愈调性统一） */
   .visitor-banner{display:flex;flex-direction:column;align-items:stretch;gap:8px;background:linear-gradient(120deg,#fff3e6,#fdeef6);border:1px solid var(--accent);border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:13px;box-shadow:0 4px 12px rgba(232,160,106,.1);}
   .visitor-banner .v-top{display:flex;align-items:center;gap:8px;}
@@ -2412,6 +2415,7 @@ function bind(){
   const afs=document.getElementById('adFirstSlotsBtn'); if(afs) afs.onclick=function(){ audio.emit('game:adReward'); adFirstSlots(); };
   const rs=document.getElementById('resetBtn'); if(rs) rs.onclick=function(){ audio.emit('game:click'); resetAll(); };
   const cl=document.querySelectorAll('.closeX'); cl.forEach(c=>c.onclick=closeModals);
+  document.querySelectorAll('[data-showcase]').forEach(e=>e.onclick=()=>{ audio.emit('game:click'); showShowcaseDetail(e.dataset.showcase,e.dataset.showcaseId,e.dataset.showcaseVariant); });
   document.querySelectorAll('[data-tune-game]').forEach(i=>i.onchange=()=>{
     const k=i.dataset.tuneGame, v=parseFloat(i.value); if(isNaN(v)) return;
     O[k]=v; saveOverrides(); applyOverrides(); render(); logEvent('tune', `${k}=${v}`);
@@ -3147,12 +3151,28 @@ function homeProsperity(){
 }
 function homeShowcaseHTML(){
   // 纪念品优先采用已配套的道具图，避免设备缺少 emoji 字形时显示为带斜线的占位框。
-  const souv=(S.souvenirs||[]).map(s=>{ const art=s.art||SOUVENIR_ART[souvenirCat(s.name)]; return `<div class="show-tile" title="${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</div>`; });
+  const souv=(S.souvenirs||[]).map(s=>{ const art=s.art||SOUVENIR_ART[souvenirCat(s.name)]; return `<button class="show-tile showcase-tile" type="button" data-showcase="souvenir" data-showcase-id="${s.name}" title="查看${s.name}的旅行故事" aria-label="查看纪念品${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</button>`; });
   // 变体标记固定为图框内角标，不能参与内容流挤出卡片边界。
-  const items=(S.items||[]).slice(0,12).map(it=>{ const mark=it.variant==='闪光'?'🌟':it.variant==='羁绊'?'💞':''; return `<div class="show-tile" title="${it.name}${it.variant?'·'+it.variant:''}">${itemIcon(it)}${mark?`<span class="variant-mark" aria-label="${it.variant}">${mark}</span>`:''}</div>`; });
+  const items=(S.items||[]).slice(0,12).map(it=>{ const mark=it.variant==='闪光'?'🌟':it.variant==='羁绊'?'💞':''; return `<button class="show-tile showcase-tile" type="button" data-showcase="item" data-showcase-id="${it.id}" data-showcase-variant="${it.variant||'普通'}" title="查看${it.name}的旅行故事" aria-label="查看整件${it.name}${it.variant?'，'+it.variant:''}">${itemIcon(it)}${mark?`<span class="variant-mark" aria-label="${it.variant}">${mark}</span>`:''}</button>`; });
   const all=souv.concat(items);
   if(!all.length) return '<span class="muted">架子还空着——去旅行，把纪念品带回来摆上吧。</span>';
   return all.join('');
+}
+function showShowcaseDetail(kind,id,variantKey){
+  const isSouvenir=kind==='souvenir';
+  const entry=isSouvenir?(S.souvenirs||[]).find(s=>s.name===id):(S.items||[]).find(it=>it.id===id&&it.variant===(variantKey||'普通'));
+  if(!entry) return;
+  const dest=isSouvenir?DEST.find(d=>d.souvenir&&d.souvenir.name===entry.name):null;
+  const cluster=!isSouvenir?Object.values(CLUSTERS).find(c=>c.items.some(it=>it.id===entry.id)):null;
+  const art=isSouvenir?(entry.art||SOUVENIR_ART[souvenirCat(entry.name)]):entry.art;
+  const variant=entry.variant||'普通';
+  const variantText=variant==='闪光'?'闪光：在旅行中偶遇的稀有光泽形态。':variant==='羁绊'?'羁绊：与旅伴共同经历后留存的特别形态。':'普通：这件旅行收获最初的样子。';
+  const story=(isSouvenir?souvenirStoryOf(entry):storyOf(entry))[0]||entry.story||'它安静地留在小窝里，提醒着每一次出发。';
+  const type=isSouvenir?'地点纪念品':'旅行整件';
+  const source=isSouvenir?`获得地点：${dest?`${dest.name} · ${dest.tag||'旅行目的地'}`:'一次特别的旅行'}`:`所属收藏：${cluster?cluster.name:'旅行收藏'} · 集齐对应残片后合成`;
+  const visual=art?`<img class="showcase-detail-art" src="${art}" alt="${entry.name}" onerror="this.outerHTML='<div style=&quot;font-size:52px;text-align:center;margin:8px 0&quot;>${entry.em||'🎁'}</div>'">`:`<div style="font-size:52px;text-align:center;margin:8px 0">${entry.em||'🎁'}</div>`;
+  document.getElementById('genSheet').innerHTML=`<span class="closeX" role="button" tabindex="0" onclick="closeModals()">×</span>${visual}<h3 style="text-align:center;margin:0 24px 6px">${entry.name}</h3><p class="muted" style="text-align:center;margin:0 0 12px">${type}${isSouvenir?'':' · '+variant}</p><div class="card" style="margin:0 0 10px;background:#fff8ee"><b>${source}</b><p class="muted" style="margin:7px 0 0;line-height:1.65">${story}</p></div>${isSouvenir?'':`<p class="muted" style="margin:0 0 10px">${varEm(variant)} ${variantText}</p>`}<button class="btn ghost" onclick="closeModals()">收好这段回忆</button>`;
+  document.getElementById('genMask').classList.add('on');
 }
 
 // —— v1.2 故事书：整件/纪念品多章叙事（章节导航 + 阅读进度）——
