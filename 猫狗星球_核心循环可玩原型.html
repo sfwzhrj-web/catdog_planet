@@ -1686,7 +1686,8 @@ function biomeThumb(rn, em, cls){
 const JOURNAL_PLACE_ART=Object.fromEntries(['hz','cd','su','xa','dh','bj','zjj','xzp','shaolin','wudang','putuo','sjz','ty','sy','cc','hrb'].map(id=>[id,`猫狗星球_手账地点美术/${id}.png`]));
 function journalPlaceThumb(e){
   const regionName=parseRegionName({tag:e.destTag||'',name:e.destName||''});
-  const art=JOURNAL_PLACE_ART[e.destId] || (REGION_DEFS[regionName]&&REGION_DEFS[regionName].art) || '';
+  const dest=DEST.find(d=>d.id===e.destId);
+  const art=JOURNAL_PLACE_ART[e.destId] || (dest&&dest.souvenir&&souvenirArt(dest.souvenir)) || (REGION_DEFS[regionName]&&REGION_DEFS[regionName].art) || '';
   return art ? `<img class="biome-place" src="${art}" alt="${e.destName||regionName}" onerror="this.style.display='none'">` : biomeThumb(regionName,e.destEm,'biome-place');
 }
 const FRAGMENT_ART={
