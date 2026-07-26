@@ -456,6 +456,13 @@
   .story-body p{margin:6px 0;position:relative;padding-left:12px;}
   .story-body p::before{content:'“';position:absolute;left:-2px;top:-4px;color:var(--accent);opacity:.4;font-size:18px;font-family:'CatDogUI',sans-serif;}
   .story-count{font-size:11px;color:var(--soft);font-weight:500;}
+  .story-category{margin-top:12px;border:1px solid var(--line);border-radius:14px;background:#fffdf9;overflow:hidden;}
+  .story-category summary{min-height:45px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;font-weight:800;font-size:13px;color:var(--ink);}
+  .story-category summary::-webkit-details-marker{display:none;}
+  .story-category summary::after{content:'展开';padding:3px 7px;border-radius:999px;background:#f4ede3;color:var(--accent);font-size:10px;font-weight:700;}
+  .story-category[open] summary{border-bottom:1px solid rgba(180,151,113,.2);}
+  .story-category[open] summary::after{content:'收起';background:#eef7f2;color:#4d8b6b;}
+  .story-category-body{padding:10px 10px 2px;}
   .mini-btn{border:1px solid var(--accent);background:#fff;color:var(--accent);border-radius:10px;padding:3px 12px;font-size:12px;cursor:pointer;}
   /* —— v1.2 故事书精修：阅读进度条 / 章节导航 —— */
   .sb-progress{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:12px;color:var(--soft);}
@@ -3449,19 +3456,19 @@ function storybookHTML(){
   if(!total){ h+='<p class="muted">还没有解锁任何藏品的故事——去旅行吧，每结识一件新藏品都会带来一段小故事。</p></div>'; return h; }
   if(itemsWithStory.length){
     const read1=read.filter(id=>itemsWithStory.some(it=>it.id===id)).length;
-    h+='<div style="margin-top:10px"><h4>🏺 整件故事 <span class="story-count">（'+read1+'/'+itemsWithStory.length+' 已读）</span></h4>';
+    h+='<details class="story-category" open><summary><span>🏺 整件故事 <span class="story-count">（'+read1+'/'+itemsWithStory.length+' 已读）</span></span></summary><div class="story-category-body">';
     itemsWithStory.forEach(it=>{
       const isLegend=it.id==='唐三彩'||it.id==='青铜剑'||it.id==='圣甲虫护符'||it.id==='黑绘陶罐'||it.id==='秦俑'||it.id==='影青瓷盏'||
         it.id==='先民信物'||it.id==='古境信物'||it.id==='部落图腾'||it.id==='定海珠'||it.id==='镇魂钟';
       h+=storyEntryHTML(it.id, it.name, itemIcon(it), storyOf(it), read.indexOf(it.id)>=0, isLegend);
     });
-    h+='</div>';
+    h+='</div></details>';
   }
   if(souvs.length){
     const read2=read.filter(id=>souvs.some(s=>s.name===id)).length;
-    h+='<div style="margin-top:12px"><h4>📍 纪念品故事 <span class="story-count">（'+read2+'/'+souvs.length+' 已读）</span></h4>';
+    h+='<details class="story-category"><summary><span>📍 纪念品故事 <span class="story-count">（'+read2+'/'+souvs.length+' 已读）</span></span></summary><div class="story-category-body">';
     souvs.forEach(s=>{ const sa=souvenirArt(s); h+=storyEntryHTML(s.name, s.name, sa?`<img src="${sa}" alt="">`:s.em, souvenirStoryOf(s), read.indexOf(s.name)>=0, false); });
-    h+='</div>';
+    h+='</div></details>';
   }
   h+='</div>';
   return h;
