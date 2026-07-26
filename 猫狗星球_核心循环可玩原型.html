@@ -1349,10 +1349,12 @@ function defaultHomeShowcase(owned){
 }
 function homeSouvenirSelection(){
   const owned=S.souvenirs||[];
+  const excluded=S.homeShowcaseExcluded||[];
   const chosen=(S.homeShowcase||[]).map(n=>owned.find(s=>s.name===n)).filter(Boolean);
   const unique=chosen.filter((s,i,a)=>a.findIndex(x=>x.name===s.name)===i);
-  const filler=defaultHomeShowcase(owned).filter(s=>!unique.some(x=>x.name===s.name));
-  return unique.concat(filler).slice(0,HOME_SHOWCASE_LIMIT);
+  const filler=defaultHomeShowcase(owned).filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name));
+  const overflow=owned.filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name)&&!filler.some(x=>x.name===s.name));
+  return unique.concat(filler,overflow).slice(0,HOME_SHOWCASE_LIMIT);
 }
 function souvenirCat(name){
   if(/瓷|陶|窑|俑|砂|琉璃/.test(name)) return 'ceramic';
@@ -2003,7 +2005,7 @@ const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1
   houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
   chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
   travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
-  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(),
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(), homeShowcaseExcluded:[],
   friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false };
 
 // 存档消毒：强制所有字段按 STARTER 类型对齐（防旧版/残缺 localStorage 数据崩溃）
@@ -2027,6 +2029,8 @@ function sanitize(s){
   if(!Array.isArray(s.souvenirs)) s.souvenirs=[];
   if(!Array.isArray(s.homeShowcase)) s.homeShowcase=[];
   s.homeShowcase=[...new Set(s.homeShowcase)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0).slice(0,HOME_SHOWCASE_LIMIT);
+  if(!Array.isArray(s.homeShowcaseExcluded)) s.homeShowcaseExcluded=[];
+  s.homeShowcaseExcluded=[...new Set(s.homeShowcaseExcluded)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0&&s.homeShowcase.indexOf(n)<0);
   if(!Array.isArray(s.cosmetics)) s.cosmetics=[];
   if(!Array.isArray(s.equipped)) s.equipped=[];
   s.equipped=[...new Set(s.equipped)].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR);
@@ -2070,6 +2074,7 @@ function buildFullDemoAccount(){
   d.titleLv=Object.fromEntries(Object.keys(TITLES).map(id=>[id,3])); d.titleCycle=Object.fromEntries(Object.keys(TITLES).map(id=>[id,1]));
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
   d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
+  d.homeShowcaseExcluded=[];
   d.journal=DEST.filter(x=>x.stories&&x.stories.length).slice(0,16).map((x,i)=>({
     day:365-i*3, destId:x.id, destName:x.name, destTag:x.tag||'', destEm:x.em,
     story:x.stories[i%x.stories.length], season:['春','夏','秋','冬'][i%4],
@@ -2474,17 +2479,20 @@ function bind(){
     if(index>=0){
       picked.splice(index,1);
       S.homeShowcase=picked;
+      S.homeShowcaseExcluded=[...new Set([...(S.homeShowcaseExcluded||[]),name])];
       save(); render(); toast(`已将「${name}」移出手动陈列，小窝会自动补齐空位`);
       return;
     }
     if(picked.length>=HOME_SHOWCASE_LIMIT){ toast(`小窝最多手动陈列 ${HOME_SHOWCASE_LIMIT} 件，请先移出一件`); return; }
     picked.push(name);
     S.homeShowcase=picked;
+    S.homeShowcaseExcluded=(S.homeShowcaseExcluded||[]).filter(n=>n!==name);
     save(); render(); toast(`已将「${name}」加入小窝陈列`);
   });
   const hsr=document.querySelector('[data-home-showcase-reset]'); if(hsr) hsr.onclick=()=>{
     audio.emit('game:click');
     S.homeShowcase=HOME_SHOWCASE_DEFAULT.filter(n=>(S.souvenirs||[]).some(s=>s.name===n)).slice(0,HOME_SHOWCASE_LIMIT);
+    S.homeShowcaseExcluded=[];
     save(); render(); toast('已恢复推荐陈列');
   };
   document.querySelectorAll('[data-tune-game]').forEach(i=>i.onchange=()=>{
