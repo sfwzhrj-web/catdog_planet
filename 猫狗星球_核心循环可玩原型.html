@@ -286,13 +286,25 @@
   .postcard::after{content:""; position:absolute; top:-40px; right:-40px; width:150px; height:150px; border-radius:50%;
     background:radial-gradient(circle, rgba(214,154,78,.16), transparent 70%); pointer-events:none;}
   /* 写实邮票（右上角白边齿孔感 + 投影） */
-  .pc-stamp{position:absolute;top:11px;right:10px;width:48px;height:48px;z-index:3;display:block;transform:rotate(-13deg);opacity:.82;}
-  .stamp-ring{position:absolute;left:2px;top:2px;width:38px;height:38px;border:2px double rgba(142,78,54,.82);border-radius:50%;display:grid;place-items:center;background:rgba(255,250,244,.45);}
-  .stamp-ring .ui-ic{width:19px;height:19px;filter:sepia(.7) saturate(.9) hue-rotate(330deg);opacity:.88;}
+  .pc-stamp{position:absolute;top:12px;right:10px;width:54px;height:46px;z-index:3;display:block;opacity:.78;}
+  .stamp-ring{position:absolute;left:2px;top:3px;width:36px;height:36px;border:2px double rgba(142,78,54,.82);border-radius:50%;display:grid;place-items:center;background:rgba(255,250,244,.45);}
+  .stamp-ring .ui-ic{width:17px;height:17px;filter:sepia(.7) saturate(.9) hue-rotate(330deg);opacity:.88;}
   .stamp-ring::before,.stamp-ring::after{content:'';position:absolute;border-radius:50%;pointer-events:none;}
   .stamp-ring::before{inset:4px;border:1px dashed rgba(142,78,54,.7);}
-  .stamp-ring::after{width:4px;height:4px;background:rgba(142,78,54,.8);left:16px;top:-4px;box-shadow:0 40px 0 rgba(142,78,54,.8);}
-  .stamp-bars{position:absolute;left:18px;top:26px;width:33px;height:2px;background:rgba(142,78,54,.74);box-shadow:0 5px 0 rgba(142,78,54,.74),0 10px 0 rgba(142,78,54,.74);border-radius:2px;}
+  .stamp-ring::after{display:none;}
+  .stamp-bars{position:absolute;left:40px;top:14px;width:14px;height:2px;background:rgba(142,78,54,.74);box-shadow:0 5px 0 rgba(142,78,54,.74),0 10px 0 rgba(142,78,54,.74);border-radius:2px;}
+  .journal-atlas{margin:12px 0 14px;padding:10px 11px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,#fffaf1,#f4fbf8);}
+  .journal-atlas summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-weight:800;color:var(--ink);list-style:none;}
+  .journal-atlas summary::-webkit-details-marker{display:none;}
+  .journal-atlas summary b{color:var(--accent);font-size:12px;}
+  .journal-atlas p{margin:7px 0 9px;font-size:12px;line-height:1.45;color:var(--soft);}
+  .journal-atlas-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}
+  .journal-region{min-width:0;min-height:70px;padding:5px 3px;border:1px solid rgba(180,151,113,.28);border-radius:10px;background:rgba(255,255,255,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;}
+  .journal-region img{width:30px;height:30px;object-fit:cover;border-radius:8px;box-shadow:0 2px 6px rgba(80,60,40,.15);}
+  .journal-region .atlas-em{font-size:24px;line-height:30px;}
+  .journal-region b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;line-height:1.2;color:var(--ink);}
+  .journal-region span{font-size:9px;line-height:1.2;color:var(--soft);}
+  .journal-region.locked{filter:saturate(.2);opacity:.58;}
   /* 邮戳（虚线圆环 + 斜印文字） */
   .pc-mark{position:absolute; top:13px; right:54px; width:54px; height:54px; z-index:2; pointer-events:none;
     border:2px dashed rgba(122,92,62,.55); border-radius:50%; transform:rotate(-14deg);
@@ -2117,12 +2129,16 @@ function buildFullDemoAccount(){
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
   d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
   d.homeShowcaseExcluded=[];
-  d.journal=DEST.filter(x=>x.stories&&x.stories.length).slice(0,16).map((x,i)=>({
+  d.journal=REGIONS.map((r,i)=>{
+    const x=DEST.find(dest=>dest.regionId===r.id&&dest.stories&&dest.stories.length);
+    if(!x) return null;
+    return {
     day:365-i*3, destId:x.id, destName:x.name, destTag:x.tag||'', destEm:x.em,
     story:x.stories[i%x.stories.length], season:['春','夏','秋','冬'][i%4],
-    items:x.souvenir?[{em:x.souvenir.em,name:x.souvenir.name}]:[],
+    items:x.souvenir?[{type:'souvenir',em:x.souvenir.em,name:x.souvenir.name,art:souvenirArt(x.souvenir)}]:[],
     festival:i<FESTIVALS.length?FESTIVALS[i].id:null, solarTerm:SOLAR_TERMS[i%SOLAR_TERMS.length].id, lost:false
-  }));
+    };
+  }).filter(Boolean);
   d.storybook=[...new Set([...d.items.filter(x=>!x.festival).map(x=>x.id),...d.souvenirs.map(x=>x.name)])];
   d.helped=30; d.helpedBy=20; d.friendGift=30; d.metCount=20; d.giftStreak=30; d.bondLevel=3; d.bondFill=999;
   d.durCount={2:10,4:10,8:10,12:10}; d.onboard=1; d.lastSeason='frost';
@@ -3239,6 +3255,17 @@ function journalItemArt(it){
 }
 function journalChipHTML(it){ const art=journalItemArt(it); return `<span class="chip">${art?`<img class="chip-art" src="${art}" alt="">`:it.em} ${it.name}</span>`; }
 function postcardStamp(){ return `<span class="stamp-ring">${ic('paw')}</span><span class="stamp-bars"></span>`; }
+function journalRegionAtlasHTML(){
+  const all=REGIONS.slice().sort((a,b)=>Number(b.domestic)-Number(a.domestic)||a.name.localeCompare(b.name,'zh-CN'));
+  const reached=all.filter(r=>(S.regionCount&&S.regionCount[r.id])>0).length;
+  const tiles=all.map(r=>{
+    const count=(S.regionCount&&S.regionCount[r.id])||0;
+    const visited=count>0;
+    const thumb=r.art?`<img src="${r.art}" alt="${r.name}" onerror="this.outerHTML='<span class=&quot;atlas-em&quot;>${r.em||'🗺️'}</span>'">`:`<span class="atlas-em">${r.em||'🗺️'}</span>`;
+    return `<div class="journal-region ${visited?'on':'locked'}" title="${r.name}${visited?` · 已旅行 ${count} 次`:' · 尚未抵达'}">${thumb}<b>${r.name}</b><span>${visited?`已达 ${count}`:'待启程'}</span></div>`;
+  }).join('');
+  return `<details class="journal-atlas"><summary><span>${ic('map')} 地域旅行册</span><b>${reached}/${all.length}</b></summary><p>34 个省区和 30 个国家各有固定章节；首次抵达会解锁对应的旅行记录。</p><div class="journal-atlas-grid">${tiles}</div></details>`;
+}
 function journalCardHTML(e){
   const chips=(e.items||[]).map(journalChipHTML).join('');
   const extra=(e.festival?`<span class="chip fest">${ic("lantern")} 节庆</span>`:'')+(e.solarTerm?`<span class="chip solar">${ic("leaf")} 节气</span>`:'')+(e.lost?`<span class="chip">${ic('lost')} 迷路了，空手而归</span>`:'');
@@ -3267,6 +3294,7 @@ function journalHTML(){
   const J=S.journal||[];
   let h='<div class="card"><h3>'+ic('journal')+' 旅行手账（'+J.length+' 篇）</h3>';
   h+='<p class="muted">每次出游都会自动记一篇——目的地、故事、带回的小东西。翻翻旧旅程，或把喜欢的明信片寄给好友。</p>';
+  h+=journalRegionAtlasHTML();
   if(!J.length){ h+='<p class="muted">还没有手账记录——出发去旅行吧，它会把见闻写下来寄给你。</p></div>'; return h; }
   ['春','夏','秋','冬'].forEach(se=>{
     const list=J.filter(e=>e.season===se);
