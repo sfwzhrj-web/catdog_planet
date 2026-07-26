@@ -319,6 +319,9 @@
   .souv-img{width:42px; height:42px; border-radius:10px; object-fit:cover; border:1px solid rgba(60,50,40,.08); box-shadow:0 3px 8px rgba(60,50,40,.14); background:var(--bg);}
   .codex-item .souv-art .em{font-size:26px;}
   .codex-item .item-art{flex:none; width:42px; height:42px; border-radius:10px; object-fit:cover; border:1px solid rgba(60,50,40,.08); box-shadow:0 3px 8px rgba(60,50,40,.14); background:var(--bg);}
+  .fragment-art{width:42px;height:42px;object-fit:contain;display:block;filter:drop-shadow(0 3px 4px rgba(60,45,30,.2));}
+  .fragment-label-art{width:20px;height:20px;object-fit:contain;vertical-align:-5px;margin-right:3px;filter:drop-shadow(0 2px 2px rgba(60,45,30,.16));}
+  .fragment-chip-art{width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:2px;filter:drop-shadow(0 1px 2px rgba(60,45,30,.16));}
   .show-tile .item-art{width:32px; height:32px; object-fit:contain;}
   .pet-opt{border:1px solid var(--line); box-shadow:0 4px 12px rgba(60,50,40,.06); border-radius:14px; background:var(--card);}
   .pet-opt.on{border-color:var(--accent); background:#FBF3E7; box-shadow:0 0 0 2px var(--accent) inset, 0 6px 16px rgba(191,138,62,.16);}
@@ -1665,6 +1668,16 @@ function biomeThumb(rn, em, cls){
   const bm=biomeOf(name);
   return bm ? `<img class="${cls||'biome-art'}" src="${bm}" alt="${name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${em}</span>'">` : `<span class="em">${em}</span>`;
 }
+const FRAGMENT_ART={
+  ceramic:'猫狗星球_图标美术/残片CG/ceramic.png', compass:'猫狗星球_图标美术/残片CG/compass.png', bell:'猫狗星球_图标美术/残片CG/bell.png',
+  coin:'猫狗星球_图标美术/残片CG/coin.png', herb:'猫狗星球_图标美术/残片CG/herb.png', fabric:'猫狗星球_图标美术/残片CG/fabric.png',
+  stardust:'猫狗星球_图标美术/残片CG/stardust.png', tide:'猫狗星球_图标美术/残片CG/tide.png', time:'猫狗星球_图标美术/残片CG/time.png',
+  prism:'猫狗星球_图标美术/残片CG/prism.png', primor:'猫狗星球_图标美术/残片CG/primor.png'
+};
+function fragmentIcon(key, cls='fragment-art'){
+  const c=CLUSTERS[key]; const art=FRAGMENT_ART[key];
+  return art?`<img class="${cls}" src="${art}" alt="${c?c.name:'残片'}" onerror="this.outerHTML='${c?c.em:'🧩'}'">`:(c?c.em:'🧩');
+}
 function itemIcon(it){ return it.art?`<img class="item-art" src="${it.art}" alt="${it.name}" onerror="this.outerHTML='${it.em}'">`:it.em; }
 function solarIcon(t){ return t.art?`<img class="item-art" src="${t.art}" alt="${t.name}" onerror="this.outerHTML='${t.em}'">`:t.em; }
 const _rmap={};
@@ -2985,7 +2998,7 @@ function showReturn(dest, story, gained, synthMsg, mapMsg, lost){
     else if(g.type==='encounter'){ audio.emit('game:star'); const c=g.cosmetic?` · 获得装扮「${g.cosmetic.em}${g.cosmetic.name}」`:(g.star?` · +${g.star}星屑`:''); chips+=`<span class="chip enc">${g.art?`<img class="chip-art" src="${g.art}" alt="">`:g.em} 偶遇·${g.name}${c}</span>`; }
     else if(g.type==='meet'){ /* 遇友以独立卡片呈现，不出 chip */ }
     else { audio.emit('game:frag'); const rn=g.rarity==='legend'?'legend':g.rarity==='epic'?'epic':g.rarity==='rare'?'rare':'';
-      chips+=`<span class="chip ${rn}">${CLUSTERS[g.cl].em} ${CLUSTERS[g.cl].name.replace('簇','')}残片${g.rarity?('·'+rarName(g.rarity)):''}</span>`; }
+      chips+=`<span class="chip ${rn}">${fragmentIcon(g.cl,'fragment-chip-art')} ${CLUSTERS[g.cl].name.replace('簇','')}残片${g.rarity?('·'+rarName(g.rarity)):''}</span>`; }
   });
   if(!gained.length) chips='<span class="chip">这次只带了照片回来</span>';
   const rn=parseRegionName(dest);
@@ -3134,7 +3147,7 @@ function variantMatrixHTML(){
     const sh=items.filter(it=>S.items.some(i=>i.id===it.id && i.variant==='闪光')).length;
     const bo=items.filter(it=>S.items.some(i=>i.id===it.id && i.variant==='羁绊')).length;
     h+=`<div style="margin:10px 0;padding:8px;border:1px solid var(--line);border-radius:10px">
-      <div style="font-weight:700;font-size:13px;margin-bottom:6px">${c.em} ${c.name} · 整件 ${cnt}/${items.length} · 闪光 ${sh}/${items.length} · 羁绊 ${bo}/${items.length}</div>`;
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">${fragmentIcon(k,'fragment-label-art')} ${c.name} · 整件 ${cnt}/${items.length} · 闪光 ${sh}/${items.length} · 羁绊 ${bo}/${items.length}</div>`;
     items.forEach(it=>{
       const hasN=S.items.some(i=>i.id===it.id && i.variant==='普通');
       const hasS=S.items.some(i=>i.id===it.id && i.variant==='闪光');
@@ -3332,7 +3345,7 @@ function codexHTML(){
   if(!activeClusters.length && !(S.tmapFrag>0||S.tmap>0)) h+='<p class="muted">还没收集到任何残片——出发去探索吧。</p>';
   activeClusters.forEach(key=>{
     const c=CLUSTERS[key]; const have=S.frags[key];
-    h+=`<div class="codex-item"><div class="em">${c.em}</div><div style="flex:1">
+    h+=`<div class="codex-item"><div class="em">${fragmentIcon(key)}</div><div style="flex:1">
       <div class="t">${c.name} <span style="font-size:11px;color:var(--soft)">${rarName(c.rarity)}</span></div>
       <div class="s">持有 ${have} / ${c.synth} 张</div>
       <div class="bar"><i style="width:${Math.min(100,have/c.synth*100)}%"></i></div></div></div>`;
