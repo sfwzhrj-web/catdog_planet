@@ -146,6 +146,9 @@
   .chip.tmap{background:#e7f1ec; color:var(--accent2); font-weight:700;}
   .codex-item{display:flex; gap:10px; align-items:center; padding:9px; border-bottom:1px solid var(--line);}
   .codex-item .em{font-size:26px;}
+  .codex-item .item-visual{position:relative;flex:none;width:42px;height:42px;display:grid;place-items:center;font-size:26px;}
+  .codex-item .item-visual .item-art{width:42px;height:42px;}
+  .codex-item .item-visual .variant-mark{position:absolute;right:-4px;bottom:-3px;z-index:2;font-size:13px;line-height:1;filter:drop-shadow(0 1px 1px rgba(255,255,255,.95));}
   .codex-item .cmp-thumb{width:42px;height:42px;border-radius:10px;object-fit:cover;flex:none;border:1px solid rgba(60,50,40,.1);box-shadow:0 3px 8px rgba(60,50,40,.14);background:var(--bg);}
   .pet-row{animation:petPop .35s ease;}
   @keyframes petPop{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -326,6 +329,11 @@
   .show-tile .variant-mark{position:absolute;right:2px;bottom:1px;z-index:1;font-size:12px;line-height:1;filter:drop-shadow(0 1px 1px rgba(255,255,255,.9));}
   .showcase-tile{cursor:pointer;font:inherit;padding:0;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;}
   .showcase-tile:hover,.showcase-tile:focus-visible{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 5px 12px rgba(191,138,62,.22);outline:none;}
+  .home-souvenir-grid{display:grid;grid-template-columns:repeat(7,42px);gap:8px;margin-top:10px;max-width:max-content;}
+  .home-souvenir-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:8px;margin-top:10px;}
+  .home-souvenir-picker .showcase-tile{width:48px;height:48px;justify-self:center;}
+  .home-souvenir-picker .showcase-tile.on{border:2px solid var(--accent);background:#fff7ea;box-shadow:0 0 0 2px rgba(191,138,62,.14);}
+  .picker-check{position:absolute;right:2px;bottom:1px;z-index:2;width:15px;height:15px;display:grid;place-items:center;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:800;line-height:1;box-shadow:0 1px 3px rgba(60,45,30,.25);}
   .showcase-detail-art{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 10px;filter:drop-shadow(0 4px 7px rgba(60,45,30,.2));}
   /* P2 稀客横幅（暖色治愈调性统一） */
   .visitor-banner{display:flex;flex-direction:column;align-items:stretch;gap:8px;background:linear-gradient(120deg,#fff3e6,#fdeef6);border:1px solid var(--accent);border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:13px;box-shadow:0 4px 12px rgba(232,160,106,.1);}
@@ -1332,11 +1340,19 @@ const COMPLETE_SOUVENIR_NAMES=[
 ];
 function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); return i<0?null:`猫狗星球_纪念品美术/全图鉴/s${String(i+1).padStart(3,'0')}.png`; }
 function souvenirArt(s){ return completeSouvenirArt(s)||FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
+const HOME_SHOWCASE_LIMIT=14;
+const HOME_SHOWCASE_DEFAULT=['西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝','唐三彩马','星屑瓶','古境徽记'];
+function defaultHomeShowcase(owned){
+  const preferred=HOME_SHOWCASE_DEFAULT.map(n=>owned.find(s=>s.name===n)).filter(Boolean);
+  const rest=owned.filter(s=>HOME_SHOWCASE_DEFAULT.indexOf(s.name)<0);
+  return preferred.concat(rest).slice(0,HOME_SHOWCASE_LIMIT);
+}
 function homeSouvenirSelection(){
   const owned=S.souvenirs||[];
-  const featured=FEATURED_SOUVENIR_NAMES.map(n=>owned.find(s=>s.name===n)).filter(Boolean);
-  const rest=owned.filter(s=>FEATURED_SOUVENIR_NAMES.indexOf(s.name)<0);
-  return featured.concat(rest).slice(0,12);
+  const chosen=(S.homeShowcase||[]).map(n=>owned.find(s=>s.name===n)).filter(Boolean);
+  const unique=chosen.filter((s,i,a)=>a.findIndex(x=>x.name===s.name)===i);
+  const filler=defaultHomeShowcase(owned).filter(s=>!unique.some(x=>x.name===s.name));
+  return unique.concat(filler).slice(0,HOME_SHOWCASE_LIMIT);
 }
 function souvenirCat(name){
   if(/瓷|陶|窑|俑|砂|琉璃/.test(name)) return 'ceramic';
@@ -1987,7 +2003,7 @@ const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1
   houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
   chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
   travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
-  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[],
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(),
   friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false };
 
 // 存档消毒：强制所有字段按 STARTER 类型对齐（防旧版/残缺 localStorage 数据崩溃）
@@ -2009,6 +2025,8 @@ function sanitize(s){
   for(const n of ['companion','name','petId','lastAdDate','lastLoginDate']){ if(typeof s[n]!=='string') s[n]=t[n]; }
   if(!Array.isArray(s.titles)) s.titles=[];
   if(!Array.isArray(s.souvenirs)) s.souvenirs=[];
+  if(!Array.isArray(s.homeShowcase)) s.homeShowcase=[];
+  s.homeShowcase=[...new Set(s.homeShowcase)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0).slice(0,HOME_SHOWCASE_LIMIT);
   if(!Array.isArray(s.cosmetics)) s.cosmetics=[];
   if(!Array.isArray(s.equipped)) s.equipped=[];
   s.equipped=[...new Set(s.equipped)].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR);
@@ -2051,6 +2069,7 @@ function buildFullDemoAccount(){
   d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['flower']; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
   d.titleLv=Object.fromEntries(Object.keys(TITLES).map(id=>[id,3])); d.titleCycle=Object.fromEntries(Object.keys(TITLES).map(id=>[id,1]));
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
+  d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
   d.journal=DEST.filter(x=>x.stories&&x.stories.length).slice(0,16).map((x,i)=>({
     day:365-i*3, destId:x.id, destName:x.name, destTag:x.tag||'', destEm:x.em,
     story:x.stories[i%x.stories.length], season:['春','夏','秋','冬'][i%4],
@@ -2244,8 +2263,8 @@ function homeHTML(){
   // P1 家园装饰：繁荣度 + 季节皮肤 + 陈列架（展示不管理）
   const _pros=homeProsperity();
   h+=`<div class="card"><h3>${ic("home")} 小窝（繁荣度 ${_pros}）</h3>
-    <p class="muted">季节皮肤：<b>${_season}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝精选陈列 12 件，每件都有对应的旅行实物。完整收藏可在图鉴查看。</p>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${homeShowcaseHTML()}</div>
+    <p class="muted">季节皮肤：<b>${_season}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝陈列 14 件，每件都有对应的旅行实物。可在图鉴自由调整。</p>
+    <div class="home-souvenir-grid">${homeShowcaseHTML()}</div>
   </div>`;
   if(S.onboard===0){
     h+=`<div class="card"><h3>${ic('play')} 第一次？30 秒上手</h3>
@@ -2447,6 +2466,27 @@ function bind(){
   const rs=document.getElementById('resetBtn'); if(rs) rs.onclick=function(){ audio.emit('game:click'); resetAll(); };
   const cl=document.querySelectorAll('.closeX'); cl.forEach(c=>c.onclick=closeModals);
   document.querySelectorAll('[data-showcase]').forEach(e=>e.onclick=()=>{ audio.emit('game:click'); showShowcaseDetail(e.dataset.showcase,e.dataset.showcaseId,e.dataset.showcaseVariant); });
+  document.querySelectorAll('[data-home-showcase]').forEach(e=>e.onclick=()=>{
+    audio.emit('game:click');
+    const name=e.dataset.homeShowcase;
+    const picked=[...(S.homeShowcase||[])];
+    const index=picked.indexOf(name);
+    if(index>=0){
+      picked.splice(index,1);
+      S.homeShowcase=picked;
+      save(); render(); toast(`已将「${name}」移出手动陈列，小窝会自动补齐空位`);
+      return;
+    }
+    if(picked.length>=HOME_SHOWCASE_LIMIT){ toast(`小窝最多手动陈列 ${HOME_SHOWCASE_LIMIT} 件，请先移出一件`); return; }
+    picked.push(name);
+    S.homeShowcase=picked;
+    save(); render(); toast(`已将「${name}」加入小窝陈列`);
+  });
+  const hsr=document.querySelector('[data-home-showcase-reset]'); if(hsr) hsr.onclick=()=>{
+    audio.emit('game:click');
+    S.homeShowcase=HOME_SHOWCASE_DEFAULT.filter(n=>(S.souvenirs||[]).some(s=>s.name===n)).slice(0,HOME_SHOWCASE_LIMIT);
+    save(); render(); toast('已恢复推荐陈列');
+  };
   document.querySelectorAll('[data-tune-game]').forEach(i=>i.onchange=()=>{
     const k=i.dataset.tuneGame, v=parseFloat(i.value); if(isNaN(v)) return;
     O[k]=v; saveOverrides(); applyOverrides(); render(); logEvent('tune', `${k}=${v}`);
@@ -3183,7 +3223,7 @@ function homeProsperity(){
 function homeShowcaseHTML(){
   // 纪念品优先采用已配套的道具图，避免设备缺少 emoji 字形时显示为带斜线的占位框。
   const souv=homeSouvenirSelection().map(s=>{ const art=souvenirArt(s); return `<button class="show-tile showcase-tile" type="button" data-showcase="souvenir" data-showcase-id="${s.name}" title="查看${s.name}的旅行故事" aria-label="查看纪念品${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</button>`; });
-  // 小窝只陈列 12 件独立纪念品；整件及其变体保留在图鉴中，避免泛化图重复堆放。
+  // 小窝固定陈列 14 件独立纪念品；整件及其变体保留在图鉴中，避免泛化图重复堆放。
   const all=souv;
   if(!all.length) return '<span class="muted">架子还空着——去旅行，把纪念品带回来摆上吧。</span>';
   return all.join('');
@@ -3295,7 +3335,7 @@ function codexHTML(){
   S.items.filter(it=>!it.festival).forEach(it=>{
     const isLegend=it.id==='唐三彩'||it.id==='青铜剑'||it.id==='圣甲虫护符'||it.id==='黑绘陶罐'||it.id==='秦俑'||it.id==='影青瓷盏'||
       it.id==='先民信物'||it.id==='古境信物'||it.id==='部落图腾'||it.id==='定海珠'||it.id==='镇魂钟';
-    h+=`<div class="codex-item"><div class="em">${itemIcon(it)}${it.variant?varEm(it.variant):''}</div><div><div class="t">${it.name}${it.variant?` <span style="font-size:11px;color:var(--soft)">${it.variant}</span>`:''}${isLegend?' <span class="chip legend" style="font-size:10px;padding:1px 5px;vertical-align:middle">渠道独占</span>':''}</div><div class="s">${it.story}</div></div></div>`;
+    h+=`<div class="codex-item"><div class="item-visual">${itemIcon(it)}${it.variant?`<span class="variant-mark" aria-label="${it.variant}">${varEm(it.variant)}</span>`:''}</div><div><div class="t">${it.name}${it.variant?` <span style="font-size:11px;color:var(--soft)">${it.variant}</span>`:''}${isLegend?' <span class="chip legend" style="font-size:10px;padding:1px 5px;vertical-align:middle">渠道独占</span>':''}</div><div class="s">${it.story}</div></div></div>`;
   });
   h+='</div>';
   // P0 呈现强化：图鉴完美度总览 + 变体缺口可视化
@@ -3343,6 +3383,13 @@ function codexHTML(){
     h+=`<div class="codex-item"><div class="souv-art">${sa?`<img class="souv-img" src="${sa}" alt="${d.souvenir.name}" onerror="this.outerHTML='<span class=&quot;em&quot;>${d.souvenir.em}</span>'">`:`<span class="em">${d.souvenir.em}</span>`}</div><div style="flex:1"><div class="t">${d.souvenir.name} · <span style="color:var(--soft);font-size:12px">${d.name}</span></div><div class="s">${d.souvenir.story}</div></div></div>`;
   });
   h+='</div>';
+  const showcasePicked=(S.homeShowcase||[]);
+  const showcaseChoices=(S.souvenirs||[]).slice().sort((a,b)=>COMPLETE_SOUVENIR_NAMES.indexOf(a.name)-COMPLETE_SOUVENIR_NAMES.indexOf(b.name));
+  h+=`<div class="card codex-card" data-codexsec="home-showcase"><h3>🏡 小窝陈列设置（${showcasePicked.length}/${HOME_SHOWCASE_LIMIT}）</h3>
+    <p class="muted">从已带回的纪念品中自由挑选，最多 ${HOME_SHOWCASE_LIMIT} 件。小窝始终以 7×2 的完整两排呈现；少于 ${HOME_SHOWCASE_LIMIT} 件时会自动补齐收藏，避免出现空格。</p>
+    <button class="btn ghost" type="button" data-home-showcase-reset>恢复推荐陈列</button>
+    <div class="home-souvenir-picker">${showcaseChoices.map(s=>{ const selected=showcasePicked.indexOf(s.name)>=0; const art=souvenirArt(s); return `<button class="show-tile showcase-tile ${selected?'on':''}" type="button" data-home-showcase="${s.name}" title="${selected?'移出':'加入'}小窝陈列：${s.name}" aria-label="${selected?'移出':'加入'}小窝陈列：${s.name}" aria-pressed="${selected}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}${selected?'<span class="picker-check">✓</span>':''}</button>`; }).join('')}</div>
+  </div>`;
   // 节气信物（仅显示已收集，未获取隐藏，Phase 3）
   h+='<div class="card codex-card" data-codexsec="solar"><h3>🌿 节气信物（'+(S.solarTerms||[]).length+'/24）</h3>';
   h+='<p class="muted">每个节气期间首次出游，会带回一张该节气的限定信物，记录四季流转中旅伴的故事。已收集到的会显示在这里。</p>';
@@ -3382,7 +3429,7 @@ function codexHTML(){
       <div class="bar"><i style="width:${Math.min(100,have/c.synth*100)}%"></i></div></div></div>`;
   });
   const festItems=S.items.filter(it=>it.festival);
-  if(festItems.length){ h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'; festItems.forEach(it=>{ h+=`<div class="codex-item" style="flex:1;min-width:140px"><div class="em">${itemIcon(it)}${it.variant?varEm(it.variant):''}</div><div style="flex:1"><div class="t">${it.name}${it.variant?` <span style="font-size:11px;color:var(--soft)">${it.variant}</span>`:''}</div><div class="s">${it.story}</div></div></div>`; }); h+='</div>'; }
+  if(festItems.length){ h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'; festItems.forEach(it=>{ h+=`<div class="codex-item" style="flex:1;min-width:140px"><div class="item-visual">${itemIcon(it)}${it.variant?`<span class="variant-mark" aria-label="${it.variant}">${varEm(it.variant)}</span>`:''}</div><div style="flex:1"><div class="t">${it.name}${it.variant?` <span style="font-size:11px;color:var(--soft)">${it.variant}</span>`:''}</div><div class="s">${it.story}</div></div></div>`; }); h+='</div>'; }
   h+='</div>';
   // 节日活动（仅显示已参与，未获取隐藏，Phase 4）
   const doneFest=FESTIVALS.filter(f=>(S.festivals||[]).indexOf(f.id)>=0);
