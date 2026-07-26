@@ -1348,7 +1348,7 @@ const COMPLETE_SOUVENIR_NAMES=[
   '赵州桥石构件','晋商古币','辽代鎏金马具','渤海国瓦当','金代铜镜','明孝陵石像生','三国铜权','海上丝路罗盘','滕王阁诗文卷','齐鲁竹简','龙门石龛残件','编钟残片','马王堆帛书','南越玉印','南海珊瑚信物','夜郎铜鼓','滇王金印','河西简牍','吐谷浑金饰','红砖厝信物','北魏鎏金佛','骆越铜鼓','鎏金小佛像','西夏文残碑','楼兰织锦','漕运铜砝码','元青花瓷片','钓鱼城弩机','维港灯塔模型','葡式瓷砖','刺桐港罗盘','唐三彩马','北宋汴绣','东巴木牌','黄山松石','泰山经石峪刻石','平遥古钱币','土楼夯土砖','九寨彩石','漓江鸬鹚信物','喀纳斯鹿石','鼓浪屿琴键',
   '圣甲虫护符','黑绘陶罐','罗马金币','平安画卷','铜佛残片','神殿石雕','圣索菲亚马赛克','汉谟拉比法典残片','波斯金杯','翡翠面具','黄金太阳盘','古卷残页','佛牙匣残片','中世纪彩窗','泰姬白玉','琥珀宫残片','巨石阵石楔','城堡铜钥','摩尔彩陶','会安锦灯','大城佛首','鎏金塔刹','新罗金冠','突厥金饰','佩特拉石龛','岩石教堂残件','美泉宫瓷盘','布拉格铜钟残件','蒲甘佛塔砖','浮屠石佛','撒马尔罕釉砖','城堡山铜钥'
 ];
-function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); return i<0?null:`猫狗星球_纪念品美术/全图鉴_居中/s${String(i+1).padStart(3,'0')}.png`; }
+function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); if(i<0) return null; const n=i+1; const tuned=[6,10,11].includes(n)?'?visual-center=2':''; return `猫狗星球_纪念品美术/全图鉴_居中/s${String(n).padStart(3,'0')}.png${tuned}`; }
 function souvenirArt(s){ return completeSouvenirArt(s)||FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
 const HOME_SHOWCASE_LIMIT=14;
 const HOME_SHOWCASE_DEFAULT=['西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝','唐三彩马','星屑瓶','古境徽记'];
