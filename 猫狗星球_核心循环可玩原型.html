@@ -597,7 +597,7 @@
 document.getElementById('preStart').onclick=function(){
   if(this._done)return; this._done=true;
   window.__preSplashStarted=true;
-  // 首个载入页不经过 render 包装，用户点击后在此明确启动「夜院微光」（bgm_splash.wav）。
+  // 首个载入页不经过 render 包装，用户点击后在此明确启动「夜院微光」（bgm_splash.ogg）。
   // 这样既符合浏览器的用户手势播放规则，也确保登录载入页不会被角色页音乐抢占。
   if(typeof audio!=='undefined') audio.playBGM('splash');
   document.getElementById('preBar').style.width='100%';
@@ -4209,8 +4209,8 @@ const audio = (function(){
   let bgmLFOs = [];
   // 载入与选择旅伴阶段共用「夜院微光」；避免角色页落入持续的合成底音。
   const BGM_FILES = {
-    splash:'bgm_splash.wav', roster:'bgm_splash.wav', frost:'bgm_frost.wav', thaw:'bgm_thaw.wav', bloom:'bgm_bloom.wav',
-    scorch:'bgm_scorch.wav', harvest:'bgm_harvest.wav', yearend:'bgm_yearend.wav'
+    splash:'bgm_splash.ogg', roster:'bgm_splash.ogg', frost:'bgm_frost.ogg', thaw:'bgm_thaw.ogg', bloom:'bgm_bloom.ogg',
+    scorch:'bgm_scorch.ogg', harvest:'bgm_harvest.ogg', yearend:'bgm_yearend.ogg'
   };
   // 偏好存储：开关和音量分别记入本地账号存档。
   let sfxOn = true; let bgmOn = true; let sfxVol = 0.4; let bgmVol = 0.2; let prefsSaveTimer = null;
