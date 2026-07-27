@@ -2071,7 +2071,6 @@ function bind(){
   const asb=document.getElementById('adStarBtn'); if(asb) asb.onclick=adStar;
   const afb=document.getElementById('adFoodBtn'); if(afb) afb.onclick=adFood;
   const afs=document.getElementById('adFirstSlotsBtn'); if(afs) afs.onclick=function(){ audio.emit('game:adReward'); adFirstSlots(); };
-  const rs=document.getElementById('resetBtn'); if(rs) rs.onclick=function(){ audio.emit('game:click'); resetAll(); };
   const cl=document.querySelectorAll('.closeX'); cl.forEach(c=>c.onclick=closeModals);
   document.querySelectorAll('[data-journal-region]').forEach(e=>e.onclick=()=>{
     audio.emit('game:click');
@@ -3549,15 +3548,10 @@ function shopHTML(){
   h+=`<button class="btn sec" id="adFoodBtn" ${dis} style="margin-bottom:8px">▶️ 看广告 +${AD_FOOD_REWARD} 干粮</button>`;
   if(q<=0) h+='<p class="muted" style="color:var(--accent)">今日补给广告已达上限，明天再来 🌙（护 P1）</p>';
   h+='</div>';
-  h+=`<div class="card"><button class="btn ghost" id="resetBtn" style="color:#c06">♻️ 重置原型</button>`;
-  h+=`<p class="legend-note">IAA 触点两类：①出行加速（每出行 1 次/日，硬顶 ${AD_CAP_TRAVEL}，省时）；②商店补星屑/干粮（基础 ${AD_CAP_SUPPLY}/日，分享可 +）。全部<b>非强制</b>、奖励仅效率资源。无内购、无抽卡。</p></div>`;
+  h+=`<div class="card"><p class="legend-note">IAA 触点两类：①出行加速（每出行 1 次/日，硬顶 ${AD_CAP_TRAVEL}，省时）；②商店补星屑/干粮（基础 ${AD_CAP_SUPPLY}/日，分享可 +）。全部<b>非强制</b>、奖励仅效率资源。无内购、无抽卡。</p></div>`;
   return h;
 }
 function buyFood(){ if(S.star<SHOP_FOOD_COST){ toast('星屑不足，去旅行赚点 ⭐'); return; } S.star-=SHOP_FOOD_COST; S.food+=SHOP_FOOD_GET; save(); logEvent('buy', `干粮+${SHOP_FOOD_GET}(花${SHOP_FOOD_COST}星)`); render(); toast('干粮 +'+SHOP_FOOD_GET+' 🍞'); }
-function resetAll(){
-  clearGameSaves(); S=loadActivePet();
-  view='home'; render(); toast('已重置');
-}
 function expandBackpack(){ audio.emit('game:bagExpand');
   if(S.star<EXPAND_COST){ toast(`星屑不足，需要 ${EXPAND_COST}⭐`); return; }
   S.star-=EXPAND_COST; S.backpack+=EXPAND_SLOTS; S.expandCount=(S.expandCount||0)+1;
@@ -4094,7 +4088,6 @@ audio.init();
         <div style="display:flex;align-items:center;gap:9px;padding:8px 2px 0 27px"><input id="audioSfxVolume" type="range" min="0" max="100" step="1" value="${sfxPercent}" aria-label="音效音量" style="flex:1;accent-color:var(--accent)"><output id="audioSfxVolumeValue" style="width:34px;text-align:right;font-size:12px;color:var(--soft)">${sfxPercent}%</output></div></div>
       <p class="muted" style="font-size:11px">音效包括：点击、出发、归来、解锁、季节更替等交互反馈。</p></div>`;
     h+=`<div class="card"><h3>🛡️ 服务与保护</h3><p class="muted">可随时查看服务、隐私与未成年人保护说明。当前为原型版；正式微信小游戏上线前会补充运营主体、客服与平台隐私声明。</p><div style="display:flex;flex-wrap:wrap;gap:7px"><button class="btn ghost" type="button" data-compliance-policy="terms">用户协议</button><button class="btn ghost" type="button" data-compliance-policy="privacy">隐私保护指引</button><button class="btn ghost" type="button" data-compliance-policy="minor">未成年人保护</button></div></div>`;
-    h+=`<div class="card"><h3>🗂️ 本机数据</h3><p class="muted">重置会删除这台设备上的旅伴、旅行进度与本地设置，无法恢复；不会影响其他设备。</p><button class="btn ghost" id="settingsResetBtn" style="color:#b85b45">重置本机数据</button></div>`;
     h+=`<p class="muted" style="text-align:center;font-size:11px;margin:14px 0 4px">猫狗星球 · 原型体验版 v0.1</p>`;
     return h;
   };
@@ -4114,9 +4107,6 @@ audio.init();
       sfxVolume.onchange=function(){ audio.commitPreferences(); if(audio.sfxOn) audio.emit('ui:click'); };
     }
     const settingsPet=document.getElementById('settingsPetBtn'); if(settingsPet) settingsPet.onclick=function(){ audio.emit('ui:click'); view='roster'; render(); };
-    const settingsReset=document.getElementById('settingsResetBtn'); if(settingsReset) settingsReset.onclick=function(){
-      if(confirm('确定重置这台设备上的全部本地数据吗？此操作无法恢复。')){ audio.emit('ui:back'); resetAll(); }
-    };
     bindCompliancePolicyLinks(document);
   };
 })();
