@@ -337,7 +337,33 @@ const HOME_THEMES=[
   {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)'},
   {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)'}
 ];
-const HOME_THEME_BY_ID=Object.fromEntries(HOME_THEMES.map(t=>[t.id,t]));
+// 月度主题：每月仅主推一套，错过后会在六个月轮换中返场；均为永久外观，不做限时强度。
+const MONTHLY_HOME_THEMES=[
+  {id:'mist_teahouse',name:'雾岛茶室',em:'🍵',cost:1080,desc:'潮雾绕过茶盏，旅行故事在窗边慢慢晾干。',bg:'linear-gradient(160deg,#dce8df,#f5eee3)'},
+  {id:'sea_post',name:'海风邮局',em:'📮',cost:1180,desc:'海风翻动明信片，每封都写着下一站。',bg:'linear-gradient(160deg,#d8edf2,#f8ead7)'},
+  {id:'moon_garden',name:'月光花圃',em:'🌙',cost:1280,desc:'月色落在花叶上，像一封没有寄出的晚安。',bg:'linear-gradient(160deg,#e6e2f3,#f4eadf)'},
+  {id:'autumn_shop',name:'秋日小铺',em:'🍂',cost:1400,desc:'木架上摆满旅途带回的小物，门口有风铃。',bg:'linear-gradient(160deg,#f4dfbd,#f2e9d8)'},
+  {id:'winter_bakery',name:'冬夜烘焙',em:'🥐',cost:1520,desc:'烤箱暖着深夜，雪落在玻璃窗外。',bg:'linear-gradient(160deg,#e6edf3,#f3e4d6)'},
+  {id:'cloud_observatory',name:'云端天文台',em:'🔭',cost:1660,desc:'云海之上，每颗星都像一枚等待认领的旅印。',bg:'linear-gradient(160deg,#dbe5f6,#e5dcf0)'}
+];
+const HOME_RENOVATIONS=[
+  {id:'travel_wall',name:'旅行墙',em:'🗺️',cost:600,desc:'把手账路线、邮戳和照片连成一面回家的地图。'},
+  {id:'courtyard',name:'窗边庭院',em:'🌿',cost:900,desc:'让季节在小窝外留下风、花和一点雨。'},
+  {id:'attic',name:'记忆阁楼',em:'📚',cost:1300,desc:'为旧故事留一层安静的灯和一张可翻看的长桌。'},
+  {id:'sky_deck',name:'星穹露台',em:'🌌',cost:1800,desc:'把最远一次旅行的夜色，铺成能抬头看见的露台。'}
+];
+const STAR_WORKSHOP_MODULES=[
+  {id:'plaque',name:'展签刻印',em:'🏷️',cost:260,desc:'为陈列补上一行地点与归来日期。'},
+  {id:'lamp',name:'暖光布景',em:'💡',cost:420,desc:'让纪念品在傍晚也有柔和的聚光。'},
+  {id:'garden',name:'窗台花圃',em:'🪴',cost:640,desc:'在窗边添一簇随季节更替的植物。'},
+  {id:'storycase',name:'故事陈列柜',em:'🗄️',cost:900,desc:'为收集到的物件留出一格会翻页的故事。'}
+];
+const HOME_THEME_BY_ID=Object.fromEntries(HOME_THEMES.concat(MONTHLY_HOME_THEMES).map(t=>[t.id,t]));
+const MONTHLY_HOME_THEME_BY_ID=Object.fromEntries(MONTHLY_HOME_THEMES.map(t=>[t.id,t]));
+function featuredMonthlyTheme(){ return MONTHLY_HOME_THEMES[(today().getMonth())%MONTHLY_HOME_THEMES.length]; }
+function themeOwnedIn(state,id){ return (HOME_THEMES.some(t=>t.id===id)&&(state.homeThemes||[]).indexOf(id)>=0) || (MONTHLY_HOME_THEME_BY_ID[id]&&(state.monthlyThemes||[]).indexOf(id)>=0); }
+function renovationRemainingCost(){ return HOME_RENOVATIONS.filter(x=>(S.renovations||[]).indexOf(x.id)<0).reduce((n,x)=>n+x.cost,0); }
+function workshopRemainingCost(){ return STAR_WORKSHOP_MODULES.filter(x=>(S.workshopModules||[]).indexOf(x.id)<0).reduce((n,x)=>n+x.cost,0); }
 const JOURNAL_FRAME_COST=15;
 function availableEncounterCosmetics(owned){ return COSMETICS.filter(c=>owned.indexOf(c.id)<0&&c.acquire==='encounter'&&(!c.unlock||c.unlock())); }
 // 偶遇事件（L6：出游被动触发，给惊喜与装扮来源）
@@ -1512,7 +1538,7 @@ const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1
   houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
   chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
   travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
-  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], framedJournal:[], homeThemes:['seasonal'], activeHomeTheme:'seasonal', equipped:[], cosmetics:[], wardrobeSlots:WARDROBE_INITIAL, decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:[], homeShowcaseExcluded:[], homeShowcaseSlots:HOME_SHOWCASE_INITIAL,
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], framedJournal:[], homeThemes:['seasonal'], monthlyThemes:[], renovations:[], workshopModules:[], activeHomeTheme:'seasonal', equipped:[], cosmetics:[], wardrobeSlots:WARDROBE_INITIAL, decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:[], homeShowcaseExcluded:[], homeShowcaseSlots:HOME_SHOWCASE_INITIAL,
   friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false,
   audioPrefs:{bgmOn:true,sfxOn:true,bgmVol:0.2,sfxVol:0.4} };
 
@@ -1528,8 +1554,14 @@ function sanitize(s){
   if(!Array.isArray(s.framedJournal)) s.framedJournal=[];
   s.framedJournal=[...new Set(s.framedJournal)].filter(id=>typeof id==='string'&&s.journal.some(j=>j&&j.id===id));
   if(!Array.isArray(s.homeThemes)) s.homeThemes=[];
-  s.homeThemes=[...new Set(['seasonal',...s.homeThemes])].filter(id=>HOME_THEME_BY_ID[id]);
-  if(typeof s.activeHomeTheme!=='string'||s.homeThemes.indexOf(s.activeHomeTheme)<0) s.activeHomeTheme='seasonal';
+  s.homeThemes=[...new Set(['seasonal',...s.homeThemes])].filter(id=>HOME_THEMES.some(t=>t.id===id));
+  if(!Array.isArray(s.monthlyThemes)) s.monthlyThemes=[];
+  s.monthlyThemes=[...new Set(s.monthlyThemes)].filter(id=>MONTHLY_HOME_THEME_BY_ID[id]);
+  if(!Array.isArray(s.renovations)) s.renovations=[];
+  s.renovations=[...new Set(s.renovations)].filter(id=>HOME_RENOVATIONS.some(x=>x.id===id));
+  if(!Array.isArray(s.workshopModules)) s.workshopModules=[];
+  s.workshopModules=[...new Set(s.workshopModules)].filter(id=>STAR_WORKSHOP_MODULES.some(x=>x.id===id));
+  if(typeof s.activeHomeTheme!=='string'||!themeOwnedIn(s,s.activeHomeTheme)) s.activeHomeTheme='seasonal';
   if(!Array.isArray(s.log)) s.log=[];
   if(typeof s.giftToday!=='object'||Array.isArray(s.giftToday)) s.giftToday={};
   if(typeof s.friendSince!=='object'||Array.isArray(s.friendSince)) s.friendSince={};
@@ -1606,7 +1638,7 @@ function buildFullDemoAccount(){
   d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
   d.homeShowcaseExcluded=[];
   d.homeShowcaseSlots=HOME_SHOWCASE_LIMIT;
-  d.homeThemes=HOME_THEMES.map(t=>t.id); d.activeHomeTheme='stardeck';
+  d.homeThemes=HOME_THEMES.map(t=>t.id); d.monthlyThemes=MONTHLY_HOME_THEMES.map(t=>t.id); d.renovations=HOME_RENOVATIONS.map(x=>x.id); d.workshopModules=STAR_WORKSHOP_MODULES.map(x=>x.id); d.activeHomeTheme='cloud_observatory';
   d.journal=REGIONS.map((r,i)=>{
     const x=DEST.find(dest=>dest.regionId===r.id&&dest.stories&&dest.stories.length);
     if(!x) return null;
@@ -1802,6 +1834,7 @@ function homeHTML(){
   h+=`<div class="card"><div class="scene companion-showcase" style="background:${_homeSkin}">
       <div class="window-light"></div>
       <div class="floor-shadow"></div>
+      <div class="home-style-effects">${homeWorkshopEffectsHTML()}</div>
       <div class="pet">${companionHTML(false)}</div>
       <div class="showcase-decoration-layer">${showcaseDecorHTML()}</div>
     </div>
@@ -1819,6 +1852,7 @@ function homeHTML(){
     ${_showNext?`<button class="btn ghost" type="button" data-home-showcase-upgrade style="margin:4px 0 8px">扩建第 ${_showSlots+1} 个陈列位 · ${_showNext}⭐</button>`:'<p class="muted" style="font-size:11px;margin:4px 0 8px">陈列位已全部扩建（14/14）</p>'}
     <div class="home-souvenir-grid">${homeShowcaseHTML()}</div>
   </div>`;
+  h+=homeLongTermHTML();
   if(S.onboard===0){
     h+=`<div class="card"><h3>${ic('play')} 第一次？30 秒上手</h3>
       <p class="muted">你不是"挂机"，你是它的<b>旅行策划师</b>：选目的地、选时长、带点干粮，剩下的交给时间。回来总有惊喜。</p></div>`;
@@ -2040,6 +2074,9 @@ function bind(){
   };
   document.querySelectorAll('[data-showcase]').forEach(e=>e.onclick=()=>{ audio.emit('game:click'); showShowcaseDetail(e.dataset.showcase,e.dataset.showcaseId,e.dataset.showcaseVariant); });
   document.querySelectorAll('[data-home-theme]').forEach(e=>e.onclick=()=>selectHomeTheme(e.dataset.homeTheme));
+  document.querySelectorAll('[data-monthly-theme]').forEach(e=>e.onclick=()=>buyMonthlyTheme(e.dataset.monthlyTheme));
+  document.querySelectorAll('[data-renovation]').forEach(e=>e.onclick=()=>buyRenovation(e.dataset.renovation));
+  document.querySelectorAll('[data-workshop]').forEach(e=>e.onclick=()=>buyWorkshopModule(e.dataset.workshop));
   const hsu=document.querySelector('[data-home-showcase-upgrade]'); if(hsu) hsu.onclick=upgradeHomeShowcaseSlot;
   document.querySelectorAll('[data-frame-journal]').forEach(e=>e.onclick=()=>frameJournal(e.dataset.frameJournal));
   document.querySelectorAll('[data-home-showcase]').forEach(e=>e.onclick=()=>{
@@ -2862,6 +2899,47 @@ function journalHTML(){
 function homeProsperity(){
   return (S.items||[]).length*2 + (S.souvenirs||[]).length*3 + (S.festivals||[]).length*5 + (S.solarTerms||[]).length*2 + (S.houTerms||[]).length*1;
 }
+function homeWorkshopEffectsHTML(){
+  const owned=S.workshopModules||[];
+  return [
+    owned.indexOf('lamp')>=0?'<i class="home-fx fx-lamp" aria-hidden="true"></i>':'',
+    owned.indexOf('garden')>=0?'<i class="home-fx fx-garden" aria-hidden="true">🌿</i>':'',
+    owned.indexOf('storycase')>=0?'<i class="home-fx fx-storycase" aria-hidden="true">📚</i>':''
+  ].join('');
+}
+function homeLongTermHTML(){
+  const featured=featuredMonthlyTheme(), ownsFeatured=(S.monthlyThemes||[]).indexOf(featured.id)>=0;
+  const renCount=(S.renovations||[]).length, modCount=(S.workshopModules||[]).length;
+  const monthlyAction=ownsFeatured
+    ?`<button class="btn ghost" type="button" data-home-theme="${featured.id}">${S.activeHomeTheme===featured.id?'本月主题使用中':'使用「'+featured.name+'」'}</button>`
+    :`<button class="btn" type="button" data-monthly-theme="${featured.id}">永久添置 · ${featured.cost}⭐</button>`;
+  const renovationRows=HOME_RENOVATIONS.map((x,i)=>{
+    const owned=(S.renovations||[]).indexOf(x.id)>=0;
+    const ready=!owned&&HOME_RENOVATIONS.slice(0,i).every(prev=>(S.renovations||[]).indexOf(prev.id)>=0);
+    const state=owned?'已完成':ready?`扩建 · ${x.cost}⭐`:'完成上一章后开放';
+    return `<button class="longterm-item ${owned?'on':''}" type="button" data-renovation="${x.id}" ${(!owned&&!ready)?'disabled':''}><b>${x.em} ${x.name}</b><span>${x.desc}</span><i>${state}</i></button>`;
+  }).join('');
+  const workshopRows=STAR_WORKSHOP_MODULES.map((x,i)=>{
+    const owned=(S.workshopModules||[]).indexOf(x.id)>=0;
+    const ready=!owned&&STAR_WORKSHOP_MODULES.slice(0,i).every(prev=>(S.workshopModules||[]).indexOf(prev.id)>=0);
+    const state=owned?'已制作':ready?`制作 · ${x.cost}⭐`:'完成上一项后开放';
+    return `<button class="longterm-item ${owned?'on':''}" type="button" data-workshop="${x.id}" ${(!owned&&!ready)?'disabled':''}><b>${x.em} ${x.name}</b><span>${x.desc}</span><i>${state}</i></button>`;
+  }).join('');
+  const archive=MONTHLY_HOME_THEMES.map(x=>{
+    const owned=(S.monthlyThemes||[]).indexOf(x.id)>=0, cls=`theme-archive ${x.id===featured.id?'featured':''} ${owned?'owned':''}`;
+    const label=`${x.em} ${x.name}${x.id===featured.id?' · 本月':''}${owned?' · 已拥有':''}`;
+    return owned?`<button class="${cls}" type="button" data-home-theme="${x.id}">${label}</button>`:`<span class="${cls}">${label}</span>`;
+  }).join('');
+  return `<details class="card longterm-panel" open><summary><span>✨ 本月星尘主题 · ${featured.em} ${featured.name}</span></summary>
+    <div class="longterm-body"><p class="muted">${featured.desc} 本月主推，购入后永久保留；错过不会绝版，将在六个月轮换后返场。主题只改变小窝视觉与氛围，不影响旅行掉落。</p>${monthlyAction}<div class="theme-archive-row">${archive}</div></div>
+  </details>
+  <details class="card longterm-panel" open><summary><span>🛠️ 小窝改造册（${renCount}/${HOME_RENOVATIONS.length}）</span></summary>
+    <div class="longterm-body"><p class="muted">四章改造是长期外观目标：解锁旅行墙、庭院、阁楼与露台的展示氛围，不增加战力或资源产出。</p><div class="longterm-list">${renovationRows}</div></div>
+  </details>
+  <details class="card longterm-panel"><summary><span>✨ 星尘工坊（${modCount}/${STAR_WORKSHOP_MODULES.length}）</span></summary>
+    <div class="longterm-body"><p class="muted">把星屑做成可见的展示细节：展签、暖光、花圃与故事柜。已制作的暖光、花圃、故事柜会直接出现在小窝里。</p><div class="longterm-list">${workshopRows}</div></div>
+  </details>`;
+}
 function upgradeHomeShowcaseSlot(){
   const current=homeShowcaseSlots(), cost=homeShowcaseNextCost();
   if(!cost){ toast('小窝陈列位已全部扩建'); return; }
@@ -2878,11 +2956,39 @@ function upgradeWardrobeSlot(){
   track('economy_wardrobe_slot',{slot:current+1,cost});
   audio.emit('game:unlock'); save(); render(); toast(`衣柜新增了第 ${current+1} 个展示位`);
 }
+function buyMonthlyTheme(id){
+  const theme=MONTHLY_HOME_THEME_BY_ID[id];
+  if(!theme) return;
+  if((S.monthlyThemes||[]).indexOf(id)>=0){ S.activeHomeTheme=id; audio.emit('game:click'); save(); render(); toast(`小窝已换成「${theme.name}」`); return; }
+  if(featuredMonthlyTheme().id!==id){ toast('本月主推之外的主题会在六个月轮换后返场，不会绝版。'); return; }
+  if(S.star<theme.cost){ toast(`星屑不足，需要 ${theme.cost}⭐`); return; }
+  S.star-=theme.cost; S.monthlyThemes=[...(S.monthlyThemes||[]),id]; S.activeHomeTheme=id;
+  track('economy_monthly_theme',{theme:id,cost:theme.cost}); audio.emit('game:unlock'); save(); render(); toast(`已永久添置「${theme.name}」`);
+}
+function buyRenovation(id){
+  const idx=HOME_RENOVATIONS.findIndex(x=>x.id===id), item=HOME_RENOVATIONS[idx];
+  if(!item) return;
+  if((S.renovations||[]).indexOf(id)>=0){ toast(`「${item.name}」已经完成`); return; }
+  if(HOME_RENOVATIONS.slice(0,idx).some(x=>(S.renovations||[]).indexOf(x.id)<0)){ toast('请先完成上一章小窝改造。'); return; }
+  if(S.star<item.cost){ toast(`星屑不足，需要 ${item.cost}⭐`); return; }
+  S.star-=item.cost; S.renovations=[...(S.renovations||[]),id];
+  track('economy_home_renovation',{renovation:id,cost:item.cost}); audio.emit('game:unlock'); save(); render(); toast(`小窝改造完成：「${item.name}」`);
+}
+function buyWorkshopModule(id){
+  const idx=STAR_WORKSHOP_MODULES.findIndex(x=>x.id===id), item=STAR_WORKSHOP_MODULES[idx];
+  if(!item) return;
+  if((S.workshopModules||[]).indexOf(id)>=0){ toast(`「${item.name}」已经制作`); return; }
+  if(STAR_WORKSHOP_MODULES.slice(0,idx).some(x=>(S.workshopModules||[]).indexOf(x.id)<0)){ toast('请先完成上一项工坊制作。'); return; }
+  if(S.star<item.cost){ toast(`星屑不足，需要 ${item.cost}⭐`); return; }
+  S.star-=item.cost; S.workshopModules=[...(S.workshopModules||[]),id];
+  track('economy_star_workshop',{module:id,cost:item.cost}); audio.emit('game:unlock'); save(); render(); toast(`星尘工坊完成：「${item.name}」`);
+}
 function selectHomeTheme(id){
   const theme=HOME_THEME_BY_ID[id];
   if(!theme) return;
-  const owned=(S.homeThemes||[]).indexOf(id)>=0;
+  const owned=themeOwnedIn(S,id);
   if(owned){ S.activeHomeTheme=id; audio.emit('game:click'); save(); render(); toast(`小窝已换成「${theme.name}」`); return; }
+  if(MONTHLY_HOME_THEME_BY_ID[id]){ buyMonthlyTheme(id); return; }
   if(S.star<theme.cost){ toast(`星屑不足，需要 ${theme.cost}⭐`); return; }
   S.star-=theme.cost; S.homeThemes=[...(S.homeThemes||[]),id]; S.activeHomeTheme=id;
   track('economy_home_theme_purchase',{theme:id,cost:theme.cost}); audio.emit('game:unlock'); save(); render(); toast(`小窝添置了「${theme.name}」`);
@@ -3383,7 +3489,7 @@ function wardrobeHTML(){
 function shopHTML(){
   const cap=AD_CAP_SUPPLY+S.bonusAdToday, q=supplyAdLeft(), rem=Math.max(0,cap-S.supplyAdToday);
   let h='<div class="card"><h3>'+ic('shop')+' 星屑商店（纯 IAA 经济）</h3>';
-  h+=`<p class="muted">星屑只从旅行/登录/互送/广告获得，<b>绝不出售</b>。可买干粮（效率项，不影响稀有度 —— ADR-1）。传说/稀有收集物不入市、不可直购（P4 红线）。</p>`;
+  h+=`<p class="muted">星屑只从旅行/登录/互送/广告获得，<b>绝不出售</b>。除了干粮，也可在小窝投入展示位、改造册、星尘工坊和月度主题；它们全是永久外观与故事展示，不影响稀有度。传说/稀有收集物不入市、不可直购（P4 红线）。</p>`;
   h+=`<button class="btn ghost" id="buyFood" style="margin:8px 0">${ic('food')} 补干粮 +${SHOP_FOOD_GET}（${SHOP_FOOD_COST} 星屑）当前 ${S.star}</button>`;
   h+='</div>';
   h+='<div class="card"><h3>'+ic('backpack')+' 背包容量</h3>';
@@ -3457,7 +3563,9 @@ function revCalc(){
   const foodCap = LOGIN_FOOD + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_FOOD_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_FOOD;
   const showcaseSlots=homeShowcaseSlots(), showcaseRemaining=homeShowcaseRemainingCost();
   const wardrobeSlotCount=wardrobeSlots(), wardrobeRemaining=wardrobeRemainingCost();
-  return {invPerPet,inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap,shareFill,activePets,showcaseSlots,showcaseRemaining,wardrobeSlotCount,wardrobeRemaining};
+  const renovationRemaining=renovationRemainingCost(), workshopRemaining=workshopRemainingCost();
+  const featuredTheme=featuredMonthlyTheme(), featuredThemeRemaining=(S.monthlyThemes||[]).indexOf(featuredTheme.id)>=0?0:featuredTheme.cost;
+  return {invPerPet,inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap,shareFill,activePets,showcaseSlots,showcaseRemaining,wardrobeSlotCount,wardrobeRemaining,renovationRemaining,workshopRemaining,featuredTheme,featuredThemeRemaining};
 }
 function tuneHTML(){
   let g='';
@@ -3488,6 +3596,9 @@ function tuneHTML(){
      <div class="crow"><span>小窝陈列位</span><b>${c.showcaseSlots}/14 · 余 ${c.showcaseRemaining}⭐</b></div>
      <div class="crow"><span>衣柜展示位</span><b>${c.wardrobeSlotCount}/8 · 余 ${c.wardrobeRemaining}⭐</b></div>
      <div class="crow"><span>长期展示位回收总额</span><b>${c.showcaseRemaining+c.wardrobeRemaining}⭐</b></div>
+     <div class="crow"><span>小窝改造册</span><b>余 ${c.renovationRemaining}⭐</b></div>
+     <div class="crow"><span>星尘工坊</span><b>余 ${c.workshopRemaining}⭐</b></div>
+     <div class="crow"><span>本月主题 · ${c.featuredTheme.name}</span><b>${c.featuredThemeRemaining?`余 ${c.featuredThemeRemaining}⭐`:'已拥有'}</b></div>
    </div>`;
   const overridesOn = Object.keys(O).length>0;
   let h='';
