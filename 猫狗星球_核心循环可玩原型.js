@@ -1,15 +1,19 @@
+// 外层登录载入层显示时，禁止存档状态在背后抢先播放主界面音乐。
+window.__splashGateActive=true;
 // 设置点击事件
 document.getElementById('preStart').onclick=function(){
   if(this._done)return; this._done=true;
   window.__preSplashStarted=true;
   // 首个载入页不经过 render 包装，用户点击后在此明确启动「夜院微光」（bgm_splash.ogg）。
   // 这样既符合浏览器的用户手势播放规则，也确保登录载入页不会被角色页音乐抢占。
+  // 登录层只使用 8 秒版本「夜院微光」（bgm_splash.ogg）。
   if(typeof audio!=='undefined') audio.playBGM('splash');
   document.getElementById('preBar').style.width='100%';
   setTimeout(function(){
     document.getElementById('preSplash').style.display='none';
     document.getElementById('app').style.display='';
     if(window.__appReady){
+      window.__splashGateActive=false;
       S.seenSplash=true;
       save();
       render();
@@ -331,11 +335,11 @@ function wardrobeRemainingCost(){ let total=0; for(let n=wardrobeSlots();n<MAX_H
 // 星屑长期消耗：纯视觉小窝主题，不影响掉落、秘境或稀有收集。
 // 主题均可永久保留并自由切换，避免把星屑变成一次性、不可逆的惩罚。
 const HOME_THEMES=[
-  {id:'seasonal',name:'四季窗台',em:'🌿',cost:0,desc:'跟随当下节气变换窗外的颜色。',bg:null,art:'猫狗星球_秘境美术/scene_bloom.webp'},
-  {id:'sunroom',name:'晨光花房',em:'🌤️',cost:80,desc:'把一次远行换来的暖光，留在小窝里。',bg:'linear-gradient(160deg,#fff1c9,#fce6d8)',art:'猫狗星球_秘境美术/scene_thaw.webp'},
-  {id:'rainstudy',name:'雨夜书房',em:'📚',cost:140,desc:'雨声、旧地图与尚未寄出的明信片。',bg:'linear-gradient(160deg,#dce9f0,#e9e3f1)',art:'猫狗星球_秘境美术/scene_frost.webp'},
-  {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)',art:'猫狗星球_秘境美术/scene_harvest.webp'},
-  {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)',art:'猫狗星球_秘境美术/scene_yearend.webp'}
+  {id:'seasonal',name:'四季窗台',em:'🌿',cost:0,desc:'跟随当下节气变换窗外的颜色。',bg:null,art:'猫狗星球_小窝主题美术/base_seasonal.webp'},
+  {id:'sunroom',name:'晨光花房',em:'🌤️',cost:80,desc:'把一次远行换来的暖光，留在小窝里。',bg:'linear-gradient(160deg,#fff1c9,#fce6d8)',art:'猫狗星球_小窝主题美术/base_sunroom.webp'},
+  {id:'rainstudy',name:'雨夜书房',em:'📚',cost:140,desc:'雨声、旧地图与尚未寄出的明信片。',bg:'linear-gradient(160deg,#dce9f0,#e9e3f1)',art:'猫狗星球_小窝主题美术/base_rainstudy.webp'},
+  {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)',art:'猫狗星球_小窝主题美术/base_hearth.webp'},
+  {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)',art:'猫狗星球_小窝主题美术/base_stardeck.webp'}
 ];
 // 月度主题：每月仅主推一套，错过后会在六个月轮换中返场；均为永久外观，不做限时强度。
 const MONTHLY_HOME_THEMES=[
@@ -2027,9 +2031,9 @@ function bind(){
     let p=0; const iv=setInterval(()=>{ p+=Math.random()*8+2; if(p>=100){ p=100; clearInterval(iv); }
       sbar.style.width=p+'%'; },150);
     document.getElementById('splashStartBtn').onclick=()=>{
-      audio.playSFX('splashComplete'); audio.playBGM('roster');
+      audio.playSFX('splashComplete'); audio.playBGM('splash');
       sbar.style.width='100%';
-      setTimeout(()=>{ S.seenSplash=true; save(); render(); },400);
+      setTimeout(()=>{ window.__splashGateActive=false; S.seenSplash=true; save(); render(); },400);
     };
   }
   const bh=document.getElementById('backHome'); if(bh) bh.onclick=()=>{audio.emit('game:back'); view='home'; render();};
@@ -2910,6 +2914,8 @@ function homeWorkshopEffectsHTML(){
 }
 function homeLongTermHTML(){
   const featured=featuredMonthlyTheme(), ownsFeatured=(S.monthlyThemes||[]).indexOf(featured.id)>=0;
+  const activeTheme=HOME_THEME_BY_ID[S.activeHomeTheme]||HOME_THEME_BY_ID.seasonal;
+  const activeMonthlyTheme=MONTHLY_HOME_THEME_BY_ID[activeTheme.id]||null;
   const renCount=(S.renovations||[]).length, modCount=(S.workshopModules||[]).length;
   const monthlyAction=ownsFeatured
     ?`<button class="btn ghost" type="button" data-home-theme="${featured.id}">${S.activeHomeTheme===featured.id?'本月主题使用中':'使用「'+featured.name+'」'}</button>`
@@ -2927,12 +2933,18 @@ function homeLongTermHTML(){
     return `<button class="longterm-item ${owned?'on':''}" type="button" data-workshop="${x.id}" ${(!owned&&!ready)?'disabled':''}><b>${x.em} ${x.name}</b><span>${x.desc}</span><i>${state}</i></button>`;
   }).join('');
   const archive=MONTHLY_HOME_THEMES.map(x=>{
-    const owned=(S.monthlyThemes||[]).indexOf(x.id)>=0, cls=`theme-archive ${x.id===featured.id?'featured':''} ${owned?'owned':''}`;
-    const label=`${x.em} ${x.name}${x.id===featured.id?' · 本月':''}${owned?' · 已拥有':''}`;
-    return owned?`<button class="${cls}" type="button" data-home-theme="${x.id}">${label}</button>`:`<span class="${cls}">${label}</span>`;
+    const owned=(S.monthlyThemes||[]).indexOf(x.id)>=0, isFeatured=x.id===featured.id, isActive=x.id===activeTheme.id;
+    const cls=`theme-archive ${isFeatured?'featured':''} ${owned?'owned':''} ${isActive?'on':''}`;
+    const label=`${x.em} ${x.name}${isActive?' · 使用中':isFeatured?' · 本月':owned?' · 使用':''}`;
+    const bg=`background-image:linear-gradient(180deg,rgba(20,16,12,.05),rgba(20,16,12,.46)),url('${x.art}')`;
+    if(owned) return `<button class="${cls}" type="button" data-home-theme="${x.id}" style="${bg}">${label}</button>`;
+    if(isFeatured) return `<button class="${cls}" type="button" data-monthly-theme="${x.id}" style="${bg}">${label} · ${x.cost}⭐</button>`;
+    return `<span class="${cls}" style="${bg}">${label} · 轮换返场</span>`;
   }).join('');
-  return `<details class="card longterm-panel" open><summary><span>✨ 本月星尘主题 · ${featured.em} ${featured.name}</span></summary>
-    <div class="longterm-body"><div class="theme-feature-preview" style="background-image:linear-gradient(180deg,rgba(20,16,12,.04),rgba(20,16,12,.22)),url('${featured.art}')"><span>${featured.em} ${featured.name}</span></div><p class="muted">${featured.desc} 本月主推，购入后永久保留；错过不会绝版，将在六个月轮换后返场。主题只改变小窝视觉与氛围，不影响旅行掉落。</p>${monthlyAction}<div class="theme-archive-row">${archive}</div></div>
+  const previewTheme=activeMonthlyTheme||featured;
+  const previewHint=activeMonthlyTheme?`当前使用：${activeMonthlyTheme.desc}`:`本月主推：${featured.desc}`;
+  return `<details class="card longterm-panel" open><summary><span>✨ 星尘主题 · ${previewTheme.em} ${previewTheme.name}</span></summary>
+    <div class="longterm-body"><div class="theme-feature-preview" style="background-image:linear-gradient(180deg,rgba(20,16,12,.04),rgba(20,16,12,.22)),url('${previewTheme.art}')"><span>${previewTheme.em} ${previewTheme.name}${activeMonthlyTheme?' · 当前使用':''}</span></div><p class="muted">${previewHint} 本月主推可直接添置；已拥有的主题可在下方随时切换，预览会跟随当前选择，不再固定显示雾岛茶室。</p>${monthlyAction}<div class="theme-archive-row">${archive}</div></div>
   </details>
   <details class="card longterm-panel" open><summary><span>🛠️ 小窝改造册（${renCount}/${HOME_RENOVATIONS.length}）</span></summary>
     <div class="longterm-body"><p class="muted">四章改造是长期外观目标：解锁旅行墙、庭院、阁楼与露台的展示氛围，不增加战力或资源产出。</p><div class="longterm-list">${renovationRows}</div></div>
@@ -4014,7 +4026,7 @@ const audio = (function(){
     toggleSFX(){ this.setSFXOn(!sfxOn); },
     setBGMOn(v){
       bgmOn=!!v; _savePrefs();
-      if(bgmOn){ const sea=activeSeason(); this.playBGM(S.seenSplash?(!S.chosen||view==='onboard'||view==='roster'?'roster':sea.id):'splash'); }
+      if(bgmOn){ const sea=activeSeason(); this.playBGM((window.__splashGateActive||!S.seenSplash)?'splash':(!S.chosen||view==='onboard'||view==='roster'?'roster':sea.id)); }
       else this.stopBGM();
       return bgmOn;
     },
@@ -4033,7 +4045,7 @@ audio.init();
   const _uh=window.unlockHidden; if(_uh) window.unlockHidden=function(id){ audio.emit('game:unlock'); return _uh.apply(this,arguments); };
   const _render=window.render;
   if(_render) window.render=function(){ const r=_render.apply(this,arguments);
-    if(!S.seenSplash) audio.playBGM('splash');
+    if(window.__splashGateActive||!S.seenSplash) audio.playBGM('splash');
     else if(!S.chosen||view==='onboard'||view==='roster') audio.playBGM('roster');
     else{ const sea=activeSeason(); audio.playBGM(sea.id); }
     return r;
