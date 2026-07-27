@@ -331,20 +331,20 @@ function wardrobeRemainingCost(){ let total=0; for(let n=wardrobeSlots();n<MAX_H
 // 星屑长期消耗：纯视觉小窝主题，不影响掉落、秘境或稀有收集。
 // 主题均可永久保留并自由切换，避免把星屑变成一次性、不可逆的惩罚。
 const HOME_THEMES=[
-  {id:'seasonal',name:'四季窗台',em:'🌿',cost:0,desc:'跟随当下节气变换窗外的颜色。',bg:null},
-  {id:'sunroom',name:'晨光花房',em:'🌤️',cost:80,desc:'把一次远行换来的暖光，留在小窝里。',bg:'linear-gradient(160deg,#fff1c9,#fce6d8)'},
-  {id:'rainstudy',name:'雨夜书房',em:'📚',cost:140,desc:'雨声、旧地图与尚未寄出的明信片。',bg:'linear-gradient(160deg,#dce9f0,#e9e3f1)'},
-  {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)'},
-  {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)'}
+  {id:'seasonal',name:'四季窗台',em:'🌿',cost:0,desc:'跟随当下节气变换窗外的颜色。',bg:null,art:'猫狗星球_秘境美术/scene_bloom.webp'},
+  {id:'sunroom',name:'晨光花房',em:'🌤️',cost:80,desc:'把一次远行换来的暖光，留在小窝里。',bg:'linear-gradient(160deg,#fff1c9,#fce6d8)',art:'猫狗星球_秘境美术/scene_thaw.webp'},
+  {id:'rainstudy',name:'雨夜书房',em:'📚',cost:140,desc:'雨声、旧地图与尚未寄出的明信片。',bg:'linear-gradient(160deg,#dce9f0,#e9e3f1)',art:'猫狗星球_秘境美术/scene_frost.webp'},
+  {id:'hearth',name:'金秋壁炉',em:'🔥',cost:220,desc:'落叶在窗外旋转，壁炉替旅伴守着夜。',bg:'linear-gradient(160deg,#f7ddba,#f4d2bd)',art:'猫狗星球_秘境美术/scene_harvest.webp'},
+  {id:'stardeck',name:'星河露台',em:'🌌',cost:320,desc:'把看过的星空铺成一座安静的露台。',bg:'linear-gradient(160deg,#dbe4f8,#d8d0ed)',art:'猫狗星球_秘境美术/scene_yearend.webp'}
 ];
 // 月度主题：每月仅主推一套，错过后会在六个月轮换中返场；均为永久外观，不做限时强度。
 const MONTHLY_HOME_THEMES=[
-  {id:'mist_teahouse',name:'雾岛茶室',em:'🍵',cost:1080,desc:'潮雾绕过茶盏，旅行故事在窗边慢慢晾干。',bg:'linear-gradient(160deg,#dce8df,#f5eee3)'},
-  {id:'sea_post',name:'海风邮局',em:'📮',cost:1180,desc:'海风翻动明信片，每封都写着下一站。',bg:'linear-gradient(160deg,#d8edf2,#f8ead7)'},
-  {id:'moon_garden',name:'月光花圃',em:'🌙',cost:1280,desc:'月色落在花叶上，像一封没有寄出的晚安。',bg:'linear-gradient(160deg,#e6e2f3,#f4eadf)'},
-  {id:'autumn_shop',name:'秋日小铺',em:'🍂',cost:1400,desc:'木架上摆满旅途带回的小物，门口有风铃。',bg:'linear-gradient(160deg,#f4dfbd,#f2e9d8)'},
-  {id:'winter_bakery',name:'冬夜烘焙',em:'🥐',cost:1520,desc:'烤箱暖着深夜，雪落在玻璃窗外。',bg:'linear-gradient(160deg,#e6edf3,#f3e4d6)'},
-  {id:'cloud_observatory',name:'云端天文台',em:'🔭',cost:1660,desc:'云海之上，每颗星都像一枚等待认领的旅印。',bg:'linear-gradient(160deg,#dbe5f6,#e5dcf0)'}
+  {id:'mist_teahouse',name:'雾岛茶室',em:'🍵',cost:1080,desc:'潮雾绕过茶盏，旅行故事在窗边慢慢晾干。',bg:'linear-gradient(160deg,#dce8df,#f5eee3)',art:'猫狗星球_小窝主题美术/mist_teahouse.webp'},
+  {id:'sea_post',name:'海风邮局',em:'📮',cost:1180,desc:'海风翻动明信片，每封都写着下一站。',bg:'linear-gradient(160deg,#d8edf2,#f8ead7)',art:'猫狗星球_小窝主题美术/sea_post.webp'},
+  {id:'moon_garden',name:'月光花圃',em:'🌙',cost:1280,desc:'月色落在花叶上，像一封没有寄出的晚安。',bg:'linear-gradient(160deg,#e6e2f3,#f4eadf)',art:'猫狗星球_小窝主题美术/moon_garden.webp'},
+  {id:'autumn_shop',name:'秋日小铺',em:'🍂',cost:1400,desc:'木架上摆满旅途带回的小物，门口有风铃。',bg:'linear-gradient(160deg,#f4dfbd,#f2e9d8)',art:'猫狗星球_小窝主题美术/autumn_shop.webp'},
+  {id:'winter_bakery',name:'冬夜烘焙',em:'🥐',cost:1520,desc:'烤箱暖着深夜，雪落在玻璃窗外。',bg:'linear-gradient(160deg,#e6edf3,#f3e4d6)',art:'猫狗星球_小窝主题美术/winter_bakery.webp'},
+  {id:'cloud_observatory',name:'云端天文台',em:'🔭',cost:1660,desc:'云海之上，每颗星都像一枚等待认领的旅印。',bg:'linear-gradient(160deg,#dbe5f6,#e5dcf0)',art:'猫狗星球_小窝主题美术/cloud_observatory.webp'}
 ];
 const HOME_RENOVATIONS=[
   {id:'travel_wall',name:'旅行墙',em:'🗺️',cost:600,desc:'把手账路线、邮戳和照片连成一面回家的地图。'},
@@ -1831,7 +1831,8 @@ function homeHTML(){
   const _skin={'春':'linear-gradient(160deg,#eaf6e7,#f4faf0)','夏':'linear-gradient(160deg,#e6f1f8,#eef6fb)','秋':'linear-gradient(160deg,#fbf0dd,#fdf6ec)','冬':'linear-gradient(160deg,#eef2f7,#f5f8fb)'}[_season];
   const _homeTheme=HOME_THEME_BY_ID[S.activeHomeTheme]||HOME_THEME_BY_ID.seasonal;
   const _homeSkin=_homeTheme.bg||_skin;
-  h+=`<div class="card"><div class="scene companion-showcase" style="background:${_homeSkin}">
+  const _homeSceneStyle=_homeTheme.art?`background-image:linear-gradient(180deg,rgba(28,22,16,.04),rgba(28,22,16,.18)),url('${_homeTheme.art}');background-size:cover;background-position:center;`:`background:${_homeSkin}`;
+  h+=`<div class="card"><div class="scene companion-showcase ${_homeTheme.art?'has-theme-art':''}" style="${_homeSceneStyle}">
       <div class="window-light"></div>
       <div class="floor-shadow"></div>
       <div class="home-style-effects">${homeWorkshopEffectsHTML()}</div>
@@ -2931,7 +2932,7 @@ function homeLongTermHTML(){
     return owned?`<button class="${cls}" type="button" data-home-theme="${x.id}">${label}</button>`:`<span class="${cls}">${label}</span>`;
   }).join('');
   return `<details class="card longterm-panel" open><summary><span>✨ 本月星尘主题 · ${featured.em} ${featured.name}</span></summary>
-    <div class="longterm-body"><p class="muted">${featured.desc} 本月主推，购入后永久保留；错过不会绝版，将在六个月轮换后返场。主题只改变小窝视觉与氛围，不影响旅行掉落。</p>${monthlyAction}<div class="theme-archive-row">${archive}</div></div>
+    <div class="longterm-body"><div class="theme-feature-preview" style="background-image:linear-gradient(180deg,rgba(20,16,12,.04),rgba(20,16,12,.22)),url('${featured.art}')"><span>${featured.em} ${featured.name}</span></div><p class="muted">${featured.desc} 本月主推，购入后永久保留；错过不会绝版，将在六个月轮换后返场。主题只改变小窝视觉与氛围，不影响旅行掉落。</p>${monthlyAction}<div class="theme-archive-row">${archive}</div></div>
   </details>
   <details class="card longterm-panel" open><summary><span>🛠️ 小窝改造册（${renCount}/${HOME_RENOVATIONS.length}）</span></summary>
     <div class="longterm-body"><p class="muted">四章改造是长期外观目标：解锁旅行墙、庭院、阁楼与露台的展示氛围，不增加战力或资源产出。</p><div class="longterm-list">${renovationRows}</div></div>
