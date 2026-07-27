@@ -2908,8 +2908,8 @@ function homeWorkshopEffectsHTML(){
   const owned=S.workshopModules||[];
   return [
     owned.indexOf('lamp')>=0?'<i class="home-fx fx-lamp" aria-hidden="true"></i>':'',
-    owned.indexOf('garden')>=0?'<i class="home-fx fx-garden" aria-hidden="true">🌿</i>':'',
-    owned.indexOf('storycase')>=0?'<i class="home-fx fx-storycase" aria-hidden="true">📚</i>':''
+    owned.indexOf('garden')>=0?'<i class="home-fx fx-garden" aria-hidden="true"></i>':'',
+    owned.indexOf('storycase')>=0?'<i class="home-fx fx-storycase" aria-hidden="true"></i>':''
   ].join('');
 }
 function homeLongTermHTML(){
