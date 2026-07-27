@@ -1,7 +1,15 @@
 // 外层登录载入层显示时，禁止存档状态在背后抢先播放主界面音乐。
 window.__splashGateActive=true;
+const preConsent=document.getElementById('preConsent');
+const preConsentHint=document.getElementById('preConsentHint');
+const preStart=document.getElementById('preStart');
+function syncPreConsent(){ if(preStart) preStart.disabled=!(preConsent&&preConsent.checked); if(preConsentHint) preConsentHint.textContent=''; }
+if(preConsent) preConsent.onchange=syncPreConsent;
+syncPreConsent();
+bindCompliancePolicyLinks(document);
 // 设置点击事件
-document.getElementById('preStart').onclick=function(){
+preStart.onclick=function(){
+  if(!(preConsent&&preConsent.checked)){ if(preConsentHint) preConsentHint.textContent='请先阅读并同意相关说明'; return; }
   if(this._done)return; this._done=true;
   window.__preSplashStarted=true;
   // 首个载入页不经过 render 包装，用户点击后在此明确启动「夜院微光」（bgm_splash.ogg）。
@@ -2635,6 +2643,25 @@ function closeModals(){
   if(modalReturnFocus && document.contains(modalReturnFocus)) modalReturnFocus.focus();
   modalReturnFocus=null;
 }
+function compliancePolicyHTML(kind){
+  const content={
+    terms:{title:'用户协议（原型版）',body:`<p>欢迎使用《猫狗星球》可玩原型。当前版本为本地体验原型，不提供真实账号注册、支付或在线社交服务。</p><p>请合理安排体验时间，不使用本产品实施违法、侵权或破坏服务安全的行为。正式上线版本将公布完整运营主体、客服方式、适用范围及版本生效日期。</p>`},
+    privacy:{title:'隐私保护指引（原型版）',body:`<p>当前原型会在本设备保存游戏进度、旅伴昵称与设置。若你主动选择宠物照片，图片仅保存在当前设备浏览器中，不会上传到本原型服务器。</p><p>正式微信小游戏版如调用昵称头像、相册/相机、广告、支付或其他微信能力，将在微信后台逐项声明信息类型、用途、保存期限与第三方 SDK，并在调用前取得授权。</p><p>本地原型数据可通过“调参”页的重置账号功能清除。</p>`},
+    minor:{title:'未成年人保护说明',body:`<p>本产品建议适龄 8+，最终适龄标识以微信小游戏审核结果为准。未成年人应在监护人指导下使用。</p><p>正式运营版本将按国家规定和平台要求接入实名与防沉迷能力，并提供时长、权限与消费管理入口；未成年人游戏服务时间、时长和消费限制以届时有效规则为准。</p>`}
+  }[kind]||{title:'说明',body:'<p>暂无内容。</p>'};
+  return `<button type="button" class="closeX" aria-label="关闭${content.title}">×</button><h3 style="margin:0 28px 10px">${content.title}</h3><div class="card" style="margin:0;background:#fffaf2"><div class="muted" style="line-height:1.75">${content.body}</div></div><button class="btn ghost" type="button" onclick="closeModals()" style="margin-top:12px">我知道了</button>`;
+}
+function openCompliancePolicy(kind){
+  const sheet=document.getElementById('genSheet'), mask=document.getElementById('genMask');
+  if(!sheet||!mask) return;
+  if(typeof audio!=='undefined') audio.emit('ui:modal_open');
+  sheet.innerHTML=compliancePolicyHTML(kind); mask.classList.add('on');
+  const close=sheet.querySelector('.closeX'); if(close) close.onclick=closeModals;
+}
+function bindCompliancePolicyLinks(root){
+  if(!root) return;
+  root.querySelectorAll('[data-compliance-policy]').forEach(btn=>btn.onclick=function(){ openCompliancePolicy(this.dataset.compliancePolicy); });
+}
 document.addEventListener('keydown',function(ev){
   if(ev.key==='Escape' && document.querySelector('.mask.on')){ ev.preventDefault(); closeModals(); }
 });
@@ -4065,6 +4092,7 @@ audio.init();
         <button class="btn ghost ${audio.sfxOn?'':'on'}" style="font-size:12px;padding:4px 10px;min-width:56px" data-audio-sfx>${audio.sfxOn?'关闭':'开启'}</button></div>
         <div style="display:flex;align-items:center;gap:9px;padding:8px 2px 0 27px"><input id="audioSfxVolume" type="range" min="0" max="100" step="1" value="${sfxPercent}" aria-label="音效音量" style="flex:1;accent-color:var(--accent)"><output id="audioSfxVolumeValue" style="width:34px;text-align:right;font-size:12px;color:var(--soft)">${sfxPercent}%</output></div></div>
       <p class="muted" style="font-size:11px">音效包括：点击、出发、归来、解锁、季节更替等交互反馈。</p></div>`;
+    h+=`<div class="card"><h3>🛡️ 服务与保护</h3><p class="muted">可随时查看服务、隐私与未成年人保护说明。当前为原型版；正式微信小游戏上线前会补充运营主体、客服与平台隐私声明。</p><div style="display:flex;flex-wrap:wrap;gap:7px"><button class="btn ghost" type="button" data-compliance-policy="terms">用户协议</button><button class="btn ghost" type="button" data-compliance-policy="privacy">隐私保护指引</button><button class="btn ghost" type="button" data-compliance-policy="minor">未成年人保护</button></div></div>`;
     return h;
   };
   const _bind=bind; if(_bind) bind=function(){ _bind.apply(this,arguments);
@@ -4082,6 +4110,7 @@ audio.init();
       sfxVolume.oninput=function(){ const value=audio.setSFXVolume(Number(this.value)/100); const out=document.getElementById('audioSfxVolumeValue'); if(out) out.textContent=Math.round(value*100)+'%'; };
       sfxVolume.onchange=function(){ audio.commitPreferences(); if(audio.sfxOn) audio.emit('ui:click'); };
     }
+    bindCompliancePolicyLinks(document);
   };
 })();
 
