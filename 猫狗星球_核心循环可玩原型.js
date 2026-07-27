@@ -4079,11 +4079,12 @@ audio.init();
   };
 })();
 
-// 调参面板：设置 BGM/SFX 开关
+// 正式设置页：只保留玩家可理解、可安全操作的内容，不公开经济与开发调参。
 (function(){
-  const _tune=tuneHTML; if(_tune) tuneHTML=function(){ let h=_tune();
+  const _tune=tuneHTML; if(_tune) tuneHTML=function(){ let h='';
     const seas=activeSeason();
     const bgmPercent=Math.round(audio.bgmVolume*100), sfxPercent=Math.round(audio.sfxVolume*100);
+    h+=`<div class="card"><h3>⚙️ 设置</h3><p class="muted">管理你的旅伴、声音与本机数据。游戏进度仅保存在当前设备。</p><div class="tune-row" style="margin:8px 0 0"><label>🐾 当前旅伴</label><span style="font-size:12px;color:var(--soft);flex:1;text-align:right">${S.name||'我的旅伴'} · Lv${S.level||1}</span><button class="btn ghost" id="settingsPetBtn" style="font-size:12px;padding:4px 10px">管理</button></div></div>`;
     h+=`<div class="card"><h3>🔊 声音</h3>
       <div style="padding:5px 0 9px;border-bottom:1px solid #eee7dc"><div class="tune-row" style="margin:0"><label>🎵 背景音乐</label><span style="font-size:12px;color:var(--soft);flex:1">${seas?seas.em+' '+seas.name:''}</span>
         <button class="btn ghost ${audio.bgmOn?'':'on'}" style="font-size:12px;padding:4px 10px;min-width:56px" data-audio-bgm>${audio.bgmOn?'关闭':'开启'}</button></div>
@@ -4093,6 +4094,8 @@ audio.init();
         <div style="display:flex;align-items:center;gap:9px;padding:8px 2px 0 27px"><input id="audioSfxVolume" type="range" min="0" max="100" step="1" value="${sfxPercent}" aria-label="音效音量" style="flex:1;accent-color:var(--accent)"><output id="audioSfxVolumeValue" style="width:34px;text-align:right;font-size:12px;color:var(--soft)">${sfxPercent}%</output></div></div>
       <p class="muted" style="font-size:11px">音效包括：点击、出发、归来、解锁、季节更替等交互反馈。</p></div>`;
     h+=`<div class="card"><h3>🛡️ 服务与保护</h3><p class="muted">可随时查看服务、隐私与未成年人保护说明。当前为原型版；正式微信小游戏上线前会补充运营主体、客服与平台隐私声明。</p><div style="display:flex;flex-wrap:wrap;gap:7px"><button class="btn ghost" type="button" data-compliance-policy="terms">用户协议</button><button class="btn ghost" type="button" data-compliance-policy="privacy">隐私保护指引</button><button class="btn ghost" type="button" data-compliance-policy="minor">未成年人保护</button></div></div>`;
+    h+=`<div class="card"><h3>🗂️ 本机数据</h3><p class="muted">重置会删除这台设备上的旅伴、旅行进度与本地设置，无法恢复；不会影响其他设备。</p><button class="btn ghost" id="settingsResetBtn" style="color:#b85b45">重置本机数据</button></div>`;
+    h+=`<p class="muted" style="text-align:center;font-size:11px;margin:14px 0 4px">猫狗星球 · 原型体验版 v0.1</p>`;
     return h;
   };
   const _bind=bind; if(_bind) bind=function(){ _bind.apply(this,arguments);
@@ -4110,6 +4113,10 @@ audio.init();
       sfxVolume.oninput=function(){ const value=audio.setSFXVolume(Number(this.value)/100); const out=document.getElementById('audioSfxVolumeValue'); if(out) out.textContent=Math.round(value*100)+'%'; };
       sfxVolume.onchange=function(){ audio.commitPreferences(); if(audio.sfxOn) audio.emit('ui:click'); };
     }
+    const settingsPet=document.getElementById('settingsPetBtn'); if(settingsPet) settingsPet.onclick=function(){ audio.emit('ui:click'); view='roster'; render(); };
+    const settingsReset=document.getElementById('settingsResetBtn'); if(settingsReset) settingsReset.onclick=function(){
+      if(confirm('确定重置这台设备上的全部本地数据吗？此操作无法恢复。')){ audio.emit('ui:back'); resetAll(); }
+    };
     bindCompliancePolicyLinks(document);
   };
 })();
