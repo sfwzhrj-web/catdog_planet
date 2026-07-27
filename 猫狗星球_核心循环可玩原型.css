@@ -396,6 +396,7 @@
   .showcase-tile{cursor:pointer;font:inherit;padding:0;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;}
   .showcase-tile:hover,.showcase-tile:focus-visible{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 5px 12px rgba(191,138,62,.22);outline:none;}
   .home-souvenir-grid{display:grid;grid-template-columns:repeat(7,42px);gap:8px;margin-top:10px;max-width:max-content;}
+  .home-showcase-empty{grid-column:1/-1;width:100%;margin:0;padding:10px 12px;line-height:1.65;border:1px dashed var(--line);border-radius:10px;background:rgba(255,255,255,.52);}
   .home-souvenir-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:8px;margin-top:10px;}
   .home-souvenir-picker .showcase-tile{width:48px;height:48px;justify-self:center;}
   .home-souvenir-picker .showcase-tile.on{border:2px solid var(--accent);background:#fff7ea;box-shadow:0 0 0 2px rgba(191,138,62,.14);}

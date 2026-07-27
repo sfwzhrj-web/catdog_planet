@@ -321,6 +321,13 @@ const COSMETICS = [
 ];
 const FESTIVAL_COSMETICS={yuanxiao:'lantern',zhongqiu:'moon_rabbit_hood',dongzhi:'winter_lights'};
 const MAX_HOME_DECOR=8;
+// 衣柜展示经济：初始 2 位，最高 8 位；完整扩建 680 星屑。
+// 装扮仍只通过旅行与事件获得，展示位仅管理同时穿戴/摆放数量。
+const WARDROBE_INITIAL=2;
+const WARDROBE_SLOT_COSTS=Object.freeze({2:30,3:50,4:80,5:120,6:170,7:230});
+function wardrobeSlots(){ return Math.max(WARDROBE_INITIAL,Math.min(MAX_HOME_DECOR,Math.floor(Number(S&&S.wardrobeSlots)||WARDROBE_INITIAL))); }
+function wardrobeNextCost(){ return WARDROBE_SLOT_COSTS[wardrobeSlots()]||0; }
+function wardrobeRemainingCost(){ let total=0; for(let n=wardrobeSlots();n<MAX_HOME_DECOR;n++) total+=WARDROBE_SLOT_COSTS[n]||0; return total; }
 // 星屑长期消耗：纯视觉小窝主题，不影响掉落、秘境或稀有收集。
 // 主题均可永久保留并自由切换，避免把星屑变成一次性、不可逆的惩罚。
 const HOME_THEMES=[
@@ -462,7 +469,7 @@ function migrateArtworkInSave(v){
   if(!v||typeof v!=='object') return;
   Object.keys(v).forEach(function(k){ const value=v[k]; if(typeof value==='string') v[k]=deliveryArtPath(value); else if(value&&typeof value==='object') migrateArtworkInSave(value); });
 }
-function equippedCosmetics(){ return [...new Set(S.equipped||[])].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR); }
+function equippedCosmetics(){ return [...new Set(S.equipped||[])].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,wardrobeSlots()); }
 function companionHTML(showDecor=true){
   let pet;
   if(typeof S.companion==='string' && S.companion.indexOf('data:image')===0) pet=`<img class="cmp-img" src="${S.companion}" alt="我的旅伴">`;
@@ -814,21 +821,30 @@ const COMPLETE_SOUVENIR_NAMES=[
 ];
 function completeSouvenirArt(s){ const i=COMPLETE_SOUVENIR_NAMES.indexOf(s.name); if(i<0) return null; const n=i+1; const tuned=[6,10,11].includes(n)?'?visual-center=2':''; return `猫狗星球_纪念品美术/全图鉴_居中/s${String(n).padStart(3,'0')}.webp${tuned}`; }
 function souvenirArt(s){ return completeSouvenirArt(s)||FEATURED_SOUVENIR_ART[s.name]||s.art||SOUVENIR_ART[souvenirCat(s.name)]; }
+// 小窝陈列经济：初始 3 位，最高 14 位（7×2 完整陈列）。
+// 前三位让新玩家尽快形成“家”的感觉；后续成本递增，完整扩建约 1,870 星屑，
+// 对应中长期旅行目标，但不出售掉落、稀有物或数值战力。
+const HOME_SHOWCASE_INITIAL=3;
 const HOME_SHOWCASE_LIMIT=14;
+const HOME_SHOWCASE_SLOT_COSTS=Object.freeze({3:20,4:35,5:55,6:80,7:110,8:145,9:185,10:230,11:280,12:335,13:395});
+function homeShowcaseSlots(){ return Math.max(HOME_SHOWCASE_INITIAL,Math.min(HOME_SHOWCASE_LIMIT,Math.floor(Number(S&&S.homeShowcaseSlots)||HOME_SHOWCASE_INITIAL))); }
+function homeShowcaseNextCost(){ return HOME_SHOWCASE_SLOT_COSTS[homeShowcaseSlots()]||0; }
+function homeShowcaseRemainingCost(){ let total=0; for(let n=homeShowcaseSlots();n<HOME_SHOWCASE_LIMIT;n++) total+=HOME_SHOWCASE_SLOT_COSTS[n]||0; return total; }
 const HOME_SHOWCASE_DEFAULT=['西湖团扇','竹叶书签','园林窗棂','陶土兵俑','飞天壁画','故宫脊兽','武陵石峰','鎏金坛城','木鱼','太极玉牌','南海潮音贝','唐三彩马','星屑瓶','古境徽记'];
-function defaultHomeShowcase(owned){
+function defaultHomeShowcase(owned,limit=homeShowcaseSlots()){
   const preferred=HOME_SHOWCASE_DEFAULT.map(n=>owned.find(s=>s.name===n)).filter(Boolean);
   const rest=owned.filter(s=>HOME_SHOWCASE_DEFAULT.indexOf(s.name)<0);
-  return preferred.concat(rest).slice(0,HOME_SHOWCASE_LIMIT);
+  return preferred.concat(rest).slice(0,limit);
 }
 function homeSouvenirSelection(){
   const owned=S.souvenirs||[];
   const excluded=S.homeShowcaseExcluded||[];
   const chosen=(S.homeShowcase||[]).map(n=>owned.find(s=>s.name===n)).filter(Boolean);
   const unique=chosen.filter((s,i,a)=>a.findIndex(x=>x.name===s.name)===i);
-  const filler=defaultHomeShowcase(owned).filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name));
+  const cap=homeShowcaseSlots();
+  const filler=defaultHomeShowcase(owned,cap).filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name));
   const overflow=owned.filter(s=>excluded.indexOf(s.name)<0&&!unique.some(x=>x.name===s.name)&&!filler.some(x=>x.name===s.name));
-  return unique.concat(filler,overflow).slice(0,HOME_SHOWCASE_LIMIT);
+  return unique.concat(filler,overflow).slice(0,cap);
 }
 function souvenirCat(name){
   if(/瓷|陶|窑|俑|砂|琉璃/.test(name)) return 'ceramic';
@@ -1496,7 +1512,7 @@ const STARTER = {companion:'🐱', name:'旅伴', star:0, food:5, trips:0, day:1
   houTerms:[], houDup:{}, houCycle:{}, titleLv:{}, titleCycle:{},
   chosen:false, xp:0, level:1, petId:null, gotRare:false, gotDay2Legend:false, dayOfFirstTrip:0,
   travelAdToday:0, supplyAdToday:0, shareToday:0, bonusAdToday:0, lastAdDate:'', lastLoginDate:'',
-  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], framedJournal:[], homeThemes:['seasonal'], activeHomeTheme:'seasonal', equipped:[], cosmetics:[], decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:HOME_SHOWCASE_DEFAULT.slice(), homeShowcaseExcluded:[],
+  giftToday:{}, friendSince:{dou:1}, giftStreak:0, lastGiftDay:0, bondLevel:0, bondFill:0, backpack:INIT_BACKPACK, firstAdSlots:false, journal:[], framedJournal:[], homeThemes:['seasonal'], activeHomeTheme:'seasonal', equipped:[], cosmetics:[], wardrobeSlots:WARDROBE_INITIAL, decorPositions:{}, visitorToday:null, titles:[], currentTitle:null, souvenirs:[], homeShowcase:[], homeShowcaseExcluded:[], homeShowcaseSlots:HOME_SHOWCASE_INITIAL,
   friends:{dou:{name:'豆豆',companion:'🐶',since:1,met:false}, hua:{name:'花花',companion:'🐰',since:1,met:false}}, metCount:0, photos:[], storybook:[], meetArcs:{}, visitorReplied:false, visitorLog:[], lastSeason:'', seasonOverride:null, seenSplash:false,
   audioPrefs:{bgmOn:true,sfxOn:true,bgmVol:0.2,sfxVol:0.4} };
 
@@ -1531,11 +1547,18 @@ function sanitize(s){
   if(!Array.isArray(s.souvenirs)) s.souvenirs=[];
   if(!Array.isArray(s.homeShowcase)) s.homeShowcase=[];
   s.homeShowcase=[...new Set(s.homeShowcase)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0).slice(0,HOME_SHOWCASE_LIMIT);
+  // 老存档已拥有的陈列不会因新增容量系统被收起；新角色从 3 位开始扩建。
+  if(!Number.isFinite(+s.homeShowcaseSlots)) s.homeShowcaseSlots=Math.max(HOME_SHOWCASE_INITIAL,Math.min(HOME_SHOWCASE_LIMIT,s.homeShowcase.length||HOME_SHOWCASE_INITIAL));
+  else s.homeShowcaseSlots=Math.max(HOME_SHOWCASE_INITIAL,Math.min(HOME_SHOWCASE_LIMIT,Math.floor(+s.homeShowcaseSlots)));
+  s.homeShowcase=s.homeShowcase.slice(0,s.homeShowcaseSlots);
   if(!Array.isArray(s.homeShowcaseExcluded)) s.homeShowcaseExcluded=[];
   s.homeShowcaseExcluded=[...new Set(s.homeShowcaseExcluded)].filter(n=>typeof n==='string'&&COMPLETE_SOUVENIR_NAMES.indexOf(n)>=0&&s.homeShowcase.indexOf(n)<0);
   if(!Array.isArray(s.cosmetics)) s.cosmetics=[];
   if(!Array.isArray(s.equipped)) s.equipped=[];
   s.equipped=[...new Set(s.equipped)].filter(id=>COSMETICS.some(c=>c.id===id)).slice(0,MAX_HOME_DECOR);
+  if(!Number.isFinite(+s.wardrobeSlots)) s.wardrobeSlots=Math.max(WARDROBE_INITIAL,Math.min(MAX_HOME_DECOR,s.equipped.length||WARDROBE_INITIAL));
+  else s.wardrobeSlots=Math.max(WARDROBE_INITIAL,Math.min(MAX_HOME_DECOR,Math.floor(+s.wardrobeSlots)));
+  s.equipped=s.equipped.slice(0,s.wardrobeSlots);
   if(typeof s.decorPositions!=='object'||s.decorPositions===null||Array.isArray(s.decorPositions)) s.decorPositions={};
   if(typeof s.friends!=='object'||Array.isArray(s.friends)) s.friends={dou:{name:'豆豆',companion:'🐶',since:1,met:false},hua:{name:'花花',companion:'🐰',since:1,met:false}};
   if(typeof s.metCount!=='number') s.metCount=0;
@@ -1577,11 +1600,12 @@ function buildFullDemoAccount(){
   d.hiddenUnlocked=Object.fromEntries(HIDDEN.map(x=>[x.id,true])); d.secret=true; d.tmap=99; d.tmapFrag=99;
   d.solarTerms=SOLAR_TERMS.map(x=>x.id); d.houTerms=SOLAR_TERMS.flatMap(x=>(x.hou||[]).map(h=>h.id));
   d.houDup=Object.fromEntries(d.houTerms.map(id=>[id,2])); d.festivals=FESTIVALS.map(x=>x.id);
-  d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['flower']; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
+  d.cosmetics=COSMETICS.map(x=>x.id); d.equipped=['flower']; d.wardrobeSlots=MAX_HOME_DECOR; d.titles=Object.keys(TITLES); d.currentTitle='lv30';
   d.titleLv=Object.fromEntries(Object.keys(TITLES).map(id=>[id,3])); d.titleCycle=Object.fromEntries(Object.keys(TITLES).map(id=>[id,1]));
   d.souvenirs=DEST.filter(x=>x.souvenir).map(x=>({...x.souvenir,destId:x.id}));
   d.homeShowcase=HOME_SHOWCASE_DEFAULT.slice();
   d.homeShowcaseExcluded=[];
+  d.homeShowcaseSlots=HOME_SHOWCASE_LIMIT;
   d.homeThemes=HOME_THEMES.map(t=>t.id); d.activeHomeTheme='stardeck';
   d.journal=REGIONS.map((r,i)=>{
     const x=DEST.find(dest=>dest.regionId===r.id&&dest.stories&&dest.stories.length);
@@ -1787,10 +1811,12 @@ function homeHTML(){
   </div>`;
   // P1 家园装饰：繁荣度 + 季节皮肤 + 陈列架（展示不管理）
   const _pros=homeProsperity();
+  const _showSlots=homeShowcaseSlots(), _showCount=homeSouvenirSelection().length, _showNext=homeShowcaseNextCost();
   h+=`<div class="card"><h3>${ic("home")} 小窝（繁荣度 ${_pros}）</h3>
-    <p class="muted">当前主题：<b>${_homeTheme.em} ${_homeTheme.name}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝陈列 14 件，每件都有对应的旅行实物。可在图鉴自由调整。</p>
+    <p class="muted">当前主题：<b>${_homeTheme.em} ${_homeTheme.name}</b> · 已收集 ${S.souvenirs.length} 件纪念品；小窝陈列 ${_showCount}/${_showSlots} 件。每件都有对应的旅行实物，可在图鉴自由调整。</p>
     <div class="home-theme-row">${HOME_THEMES.map(t=>{const owned=(S.homeThemes||[]).indexOf(t.id)>=0, active=S.activeHomeTheme===t.id; return `<button class="home-theme-btn ${active?'on':''}" type="button" data-home-theme="${t.id}" ${active?'aria-pressed="true"':''}>${t.em} ${t.name}${owned?(active?' · 使用中':' · 使用'):` · ${t.cost}⭐`}</button>`;}).join('')}</div>
     <p class="muted" style="font-size:11px;margin-top:8px">主题只改变小窝视觉，不购买残片、藏宝图或传说物；已拥有的主题可随时切换。</p>
+    ${_showNext?`<button class="btn ghost" type="button" data-home-showcase-upgrade style="margin:4px 0 8px">扩建第 ${_showSlots+1} 个陈列位 · ${_showNext}⭐</button>`:'<p class="muted" style="font-size:11px;margin:4px 0 8px">陈列位已全部扩建（14/14）</p>'}
     <div class="home-souvenir-grid">${homeShowcaseHTML()}</div>
   </div>`;
   if(S.onboard===0){
@@ -2014,6 +2040,7 @@ function bind(){
   };
   document.querySelectorAll('[data-showcase]').forEach(e=>e.onclick=()=>{ audio.emit('game:click'); showShowcaseDetail(e.dataset.showcase,e.dataset.showcaseId,e.dataset.showcaseVariant); });
   document.querySelectorAll('[data-home-theme]').forEach(e=>e.onclick=()=>selectHomeTheme(e.dataset.homeTheme));
+  const hsu=document.querySelector('[data-home-showcase-upgrade]'); if(hsu) hsu.onclick=upgradeHomeShowcaseSlot;
   document.querySelectorAll('[data-frame-journal]').forEach(e=>e.onclick=()=>frameJournal(e.dataset.frameJournal));
   document.querySelectorAll('[data-home-showcase]').forEach(e=>e.onclick=()=>{
     audio.emit('game:click');
@@ -2027,7 +2054,7 @@ function bind(){
       save(); render(); toast(`已将「${name}」移出手动陈列，小窝会自动补齐空位`);
       return;
     }
-    if(picked.length>=HOME_SHOWCASE_LIMIT){ toast(`小窝最多手动陈列 ${HOME_SHOWCASE_LIMIT} 件，请先移出一件`); return; }
+    if(picked.length>=homeShowcaseSlots()){ toast(`小窝当前最多陈列 ${homeShowcaseSlots()} 件，扩建后最多 ${HOME_SHOWCASE_LIMIT} 件`); return; }
     picked.push(name);
     S.homeShowcase=picked;
     S.homeShowcaseExcluded=(S.homeShowcaseExcluded||[]).filter(n=>n!==name);
@@ -2035,7 +2062,7 @@ function bind(){
   });
   const hsr=document.querySelector('[data-home-showcase-reset]'); if(hsr) hsr.onclick=()=>{
     audio.emit('game:click');
-    S.homeShowcase=HOME_SHOWCASE_DEFAULT.filter(n=>(S.souvenirs||[]).some(s=>s.name===n)).slice(0,HOME_SHOWCASE_LIMIT);
+    S.homeShowcase=HOME_SHOWCASE_DEFAULT.filter(n=>(S.souvenirs||[]).some(s=>s.name===n)).slice(0,homeShowcaseSlots());
     S.homeShowcaseExcluded=[];
     save(); render(); toast('已恢复推荐陈列');
   };
@@ -2088,10 +2115,11 @@ function bind(){
   // v1.2 故事书：根据 SB_OPEN 恢复展开高度（带过渡）
   Object.keys(SB_OPEN).forEach(id=>{ if(SB_OPEN[id]){ const b=document.getElementById('sb-'+id); if(b) b.style.maxHeight=(b.scrollHeight+24)+'px'; } });
   // L8 单宠装扮：穿戴/脱下（纯表达，非任务）
+  const wsu=document.querySelector('[data-wardrobe-slot-upgrade]'); if(wsu) wsu.onclick=upgradeWardrobeSlot;
   document.querySelectorAll('[data-cosmetic]').forEach(e=>e.onclick=()=>{
     audio.emit('game:click'); const id=e.dataset.cosmetic; const eq=equippedCosmetics(); const i=eq.indexOf(id);
     if(i>=0){ eq.splice(i,1); toast('已脱下'+COSMETICS.find(c=>c.id===id).name); }
-    else if(eq.length>=MAX_HOME_DECOR){ toast('小窝展示位已满（最多 '+MAX_HOME_DECOR+' 件），请先脱下一件。'); return; }
+    else if(eq.length>=wardrobeSlots()){ toast('衣柜展示位已满（当前 '+wardrobeSlots()+' 件，扩建后最多 '+MAX_HOME_DECOR+' 件）。'); return; }
     else { eq.push(id); toast('穿上了'+COSMETICS.find(c=>c.id===id).name+' ✨'); }
     S.equipped=eq; save(); render();
   });
@@ -2834,6 +2862,22 @@ function journalHTML(){
 function homeProsperity(){
   return (S.items||[]).length*2 + (S.souvenirs||[]).length*3 + (S.festivals||[]).length*5 + (S.solarTerms||[]).length*2 + (S.houTerms||[]).length*1;
 }
+function upgradeHomeShowcaseSlot(){
+  const current=homeShowcaseSlots(), cost=homeShowcaseNextCost();
+  if(!cost){ toast('小窝陈列位已全部扩建'); return; }
+  if(S.star<cost){ toast(`星屑不足，需要 ${cost}⭐`); return; }
+  S.star-=cost; S.homeShowcaseSlots=current+1;
+  track('economy_home_showcase_slot',{slot:current+1,cost});
+  audio.emit('game:unlock'); save(); render(); toast(`小窝新增了第 ${current+1} 个陈列位`);
+}
+function upgradeWardrobeSlot(){
+  const current=wardrobeSlots(), cost=wardrobeNextCost();
+  if(!cost){ toast('衣柜展示位已全部扩建'); return; }
+  if(S.star<cost){ toast(`星屑不足，需要 ${cost}⭐`); return; }
+  S.star-=cost; S.wardrobeSlots=current+1;
+  track('economy_wardrobe_slot',{slot:current+1,cost});
+  audio.emit('game:unlock'); save(); render(); toast(`衣柜新增了第 ${current+1} 个展示位`);
+}
 function selectHomeTheme(id){
   const theme=HOME_THEME_BY_ID[id];
   if(!theme) return;
@@ -2855,7 +2899,7 @@ function homeShowcaseHTML(){
   const souv=homeSouvenirSelection().map(s=>{ const art=souvenirArt(s); return `<button class="show-tile showcase-tile" type="button" data-showcase="souvenir" data-showcase-id="${s.name}" title="查看${s.name}的旅行故事" aria-label="查看纪念品${s.name}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}</button>`; });
   // 小窝固定陈列 14 件独立纪念品；整件及其变体保留在图鉴中，避免泛化图重复堆放。
   const all=souv;
-  if(!all.length) return '<span class="muted">架子还空着——去旅行，把纪念品带回来摆上吧。</span>';
+  if(!all.length) return '<p class="home-showcase-empty muted">架子还空着——去旅行，把纪念品带回来摆上吧。</p>';
   return all.join('');
 }
 function showShowcaseDetail(kind,id,variantKey){
@@ -3015,8 +3059,8 @@ function codexHTML(){
   h+='</div>';
   const showcasePicked=(S.homeShowcase||[]);
   const showcaseChoices=(S.souvenirs||[]).slice().sort((a,b)=>COMPLETE_SOUVENIR_NAMES.indexOf(a.name)-COMPLETE_SOUVENIR_NAMES.indexOf(b.name));
-  h+=`<div class="card codex-card" data-codexsec="home-showcase"><h3>🏡 小窝陈列设置（${showcasePicked.length}/${HOME_SHOWCASE_LIMIT}）</h3>
-    <p class="muted">从已带回的纪念品中自由挑选，最多 ${HOME_SHOWCASE_LIMIT} 件。小窝始终以 7×2 的完整两排呈现；少于 ${HOME_SHOWCASE_LIMIT} 件时会自动补齐收藏，避免出现空格。</p>
+  h+=`<div class="card codex-card" data-codexsec="home-showcase"><h3>🏡 小窝陈列设置（${showcasePicked.length}/${homeShowcaseSlots()}）</h3>
+    <p class="muted">从已带回的纪念品中自由挑选，当前最多 ${homeShowcaseSlots()} 件；小窝陈列位扩建至 14 位后，会以 7×2 的完整两排呈现。少于当前上限时会自动补齐收藏，避免出现空格。</p>
     <button class="btn ghost" type="button" data-home-showcase-reset>恢复推荐陈列</button>
     <div class="home-souvenir-picker">${showcaseChoices.map(s=>{ const selected=showcasePicked.indexOf(s.name)>=0; const art=souvenirArt(s); return `<button class="show-tile showcase-tile ${selected?'on':''}" type="button" data-home-showcase="${s.name}" title="${selected?'移出':'加入'}小窝陈列：${s.name}" aria-label="${selected?'移出':'加入'}小窝陈列：${s.name}" aria-pressed="${selected}">${art?`<img class="item-art" src="${art}" alt="${s.name}" onerror="this.outerHTML='${s.em||'🎁'}'">`:(s.em||'🎁')}${selected?'<span class="picker-check">✓</span>':''}</button>`; }).join('')}</div>
   </div>`;
@@ -3297,12 +3341,13 @@ function unlockHidden(id){
 
 /* ---------- 衣橱（L8 单宠装扮 + L9 世界观） ---------- */
 function wardrobeHTML(){
+  const _wardrobeSlots=wardrobeSlots(), _wardrobeNext=wardrobeNextCost();
   let h='<details class="card wardrobe-panel" open><summary><span class="wardrobe-panel-title">👗 我的旅伴</span></summary><div class="wardrobe-panel-body">';
   h+=`<div class="scene wardrobe-scene" style="background:linear-gradient(160deg,#eaf6e7,#f4faf0)">
       <div class="window-light"></div><div class="floor-shadow"></div>
       <div class="pet" style="font-size:54px">${companionHTML(false)}</div>
       <div class="wardrobe-decoration-layer">${wardrobeDecorHTML()}</div></div>`;
-  h+=`<p class="wardrobe-hint">小窝展示位 ${equippedCosmetics().length}/${MAX_HOME_DECOR} · 已穿戴的饰品可在小窝内自由拖动摆放。</p><p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。最多展示 ${MAX_HOME_DECOR} 件，点一下就能穿脱。</p></div></details>`;
+  h+=`<p class="wardrobe-hint">衣柜展示位 ${equippedCosmetics().length}/${_wardrobeSlots} · 已穿戴的饰品可在小窝内自由拖动摆放。</p><p class="muted">装扮是纯粹的自我表达，不是任务——偶尔出游会遇见小惊喜，也可能带回一件小物件。初始 2 位，最多 ${MAX_HOME_DECOR} 位；扩建只消耗星屑，不售卖装扮也不影响旅行掉落。</p>${_wardrobeNext?`<button class="btn ghost" type="button" data-wardrobe-slot-upgrade>扩建第 ${_wardrobeSlots+1} 个展示位 · ${_wardrobeNext}⭐</button>`:'<p class="muted" style="font-size:11px">衣柜展示位已全部扩建（8/8）</p>'}</div></details>`;
   // L8 装扮清单
   h+='<details class="card wardrobe-panel" open><summary><span class="wardrobe-panel-title">'+ic('wardrobe')+S.name+' 的衣橱 <span class="wardrobe-panel-count">（'+(S.cosmetics||[]).length+'/'+COSMETICS.length+'）</span></span></summary><div class="wardrobe-panel-body"><div class="cos-grid">';
   COSMETICS.forEach(c=>{
@@ -3410,7 +3455,9 @@ function revCalc(){
   const kFloor = SHARE_DAILY_CAP * REV.conv;
   const starCap = STAR_PER_TRIP*DAILY_TRIPS + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_STAR_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_STAR;
   const foodCap = LOGIN_FOOD + (AD_CAP_SUPPLY+SHARE_DAILY_CAP*shareFill)*AD_FOOD_REWARD + SHARE_DAILY_CAP*shareFill*SHARE_FOOD;
-  return {invPerPet,inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap,shareFill,activePets};
+  const showcaseSlots=homeShowcaseSlots(), showcaseRemaining=homeShowcaseRemainingCost();
+  const wardrobeSlotCount=wardrobeSlots(), wardrobeRemaining=wardrobeRemainingCost();
+  return {invPerPet,inv,eff,arpu,need,ok,revDay,kFloor,starCap,foodCap,shareFill,activePets,showcaseSlots,showcaseRemaining,wardrobeSlotCount,wardrobeRemaining};
 }
 function tuneHTML(){
   let g='';
@@ -3438,6 +3485,9 @@ function tuneHTML(){
      <div class="crow"><span>K 地板(仅主动邀请)</span><b>${c.kFloor.toFixed(2)}</b></div>
      <div class="crow"><span>星屑获取上限 / 宠 / 日</span><b>${c.starCap.toFixed(0)}</b></div>
      <div class="crow"><span>干粮获取上限 / 宠 / 日</span><b>${c.foodCap.toFixed(0)}</b></div>
+     <div class="crow"><span>小窝陈列位</span><b>${c.showcaseSlots}/14 · 余 ${c.showcaseRemaining}⭐</b></div>
+     <div class="crow"><span>衣柜展示位</span><b>${c.wardrobeSlotCount}/8 · 余 ${c.wardrobeRemaining}⭐</b></div>
+     <div class="crow"><span>长期展示位回收总额</span><b>${c.showcaseRemaining+c.wardrobeRemaining}⭐</b></div>
    </div>`;
   const overridesOn = Object.keys(O).length>0;
   let h='';
